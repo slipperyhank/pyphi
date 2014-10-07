@@ -1,0 +1,2202 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>CyPhi &mdash; CyPhi v0.0.2 documentation</title>
+  
+
+  
+  
+
+  
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+    <link rel="top" title="CyPhi v0.0.2 documentation" href="#"/>
+  <!-- remove before publishing --><script>document.write('<script src="http://' + (location.host || 'localhost').split(':')[0] + ':35729/livereload.js?snipver=1"></' + 'script>')</script>
+  <link rel="stylesheet" href="_static/custom.css">
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.6.2/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-nav-search">
+        <a href="#" class="fa fa-home"> CyPhi</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+        
+        
+            <!-- Local TOC -->
+            <div class="local-toc"><ul>
+<li><a class="reference internal" href="#">CyPhi</a><ul>
+<li><a class="reference internal" href="#configuration">Configuration</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#usage-and-examples">Usage and Examples</a></li>
+<li><a class="reference internal" href="#compute">Compute</a></li>
+<li><a class="reference internal" href="#network">Network</a></li>
+<li><a class="reference internal" href="#subsystem">Subsystem</a></li>
+<li><a class="reference internal" href="#constants">Constants</a><ul>
+<li><a class="reference internal" href="#system-resource-configuration">System resource configuration</a></li>
+<li><a class="reference internal" href="#caching-system-configuration">Caching system configuration</a></li>
+<li><a class="reference internal" href="#logging-configuration">Logging configuration</a></li>
+<li><a class="reference internal" href="#theoretical-configuration">Theoretical configuration</a></li>
+<li><a class="reference internal" href="#numerical-configuration">Numerical configuration</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#models">Models</a></li>
+<li><a class="reference internal" href="#concept-caching">Concept Caching</a></li>
+<li><a class="reference internal" href="#memory">Memory</a></li>
+<li><a class="reference internal" href="#database">Database</a></li>
+<li><a class="reference internal" href="#utilities">Utilities</a></li>
+<li><a class="reference internal" href="#validate">Validate</a></li>
+</ul>
+</div>
+        
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="#">CyPhi</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="#">Docs</a> &raquo;</li>
+      
+    <li>CyPhi</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          <a href="_sources/index.txt" rel="nofollow"> View page source</a>
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main">
+            
+  <span class="target" id="module-cyphi"></span><div class="section" id="cyphi">
+<h1>CyPhi<a class="headerlink" href="#cyphi" title="Permalink to this headline">¶</a></h1>
+<p>CyPhi is a Python library for computing integrated information.</p>
+<p>See the documentation for <a class="reference internal" href="#module-cyphi.examples" title="cyphi.examples"><tt class="xref py py-mod docutils literal"><span class="pre">cyphi.examples</span></tt></a> for information on how to use
+it.</p>
+<div class="section" id="configuration">
+<h2>Configuration<a class="headerlink" href="#configuration" title="Permalink to this headline">¶</a></h2>
+<p>There are several module-level options that control aspects of the computation.
+These are loaded from a YAML configuration file, <tt class="docutils literal"><span class="pre">cyphi_config.yml</span></tt>, which
+must be in the directory where CyPhi is run. See the documentation for
+<a class="reference internal" href="#module-cyphi.constants" title="cyphi.constants"><tt class="xref py py-mod docutils literal"><span class="pre">cyphi.constants</span></tt></a> for a description of the options and their defaults.</p>
+</div>
+</div>
+<span class="target" id="module-cyphi.examples"></span><div class="section" id="usage-and-examples">
+<h1>Usage and Examples<a class="headerlink" href="#usage-and-examples" title="Permalink to this headline">¶</a></h1>
+<p>The <tt class="xref py py-class docutils literal"><span class="pre">cyphi.Network</span></tt> object is the main object on which computations are
+performed. It represents the network of interest.</p>
+<p>The <tt class="xref py py-class docutils literal"><span class="pre">cyphi.Subsystem</span></tt> object is the secondary object; it represents a
+subsystem of a network. <span class="math">\(\Phi\)</span> is defined on subsystems.</p>
+<p>The <a class="reference internal" href="#module-cyphi.compute" title="cyphi.compute"><tt class="xref py py-mod docutils literal"><span class="pre">cyphi.compute</span></tt></a> module is the main entry-point for the library. It
+contains methods for calculating concepts, constellations, complexes, etc. See
+its documentation for details.</p>
+<hr class="docutils" />
+<p>Let&#8217;s make a simple 3-node network and compute its <span class="math">\(\Phi\)</span>.</p>
+<p>To make a network, we need a TPM, current state, past state, and optionally a
+connectivity matrix. The TPM can be in more than one form; see the
+documentation for <tt class="xref py py-class docutils literal"><span class="pre">cyphi.Network</span></tt>. Here we&#8217;ll use the 2-dimensional
+state-by-node form.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">cyphi</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">tpm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span>
+<span class="gp">... </span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+<span class="gp">... </span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+<span class="gp">... </span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+<span class="gp">... </span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+<span class="gp">... </span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+<span class="gp">... </span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+<span class="gp">... </span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+<span class="gp">... </span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]])</span>
+</pre></div>
+</div>
+<p>The current and past states should be <span class="math">\(n\)</span>-tuples, where <span class="math">\(n\)</span> is the number of
+nodes in the network, where the <span class="math">\(i^{\textrm{th}}\)</span> element is the state of the <span class="math">\(i^{\textrm{th}}\)</span> node in
+the network.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">current_state</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">past_state</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The connectivity matrix is a square matrix such that the <span class="math">\(i,j^{\textrm{th}}\)</span> entry is 1 if
+there is a connection from node <span class="math">\(i\)</span> to node <span class="math">\(j\)</span>, and 0 otherwise.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">cm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span>
+<span class="gp">... </span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+<span class="gp">... </span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+<span class="gp">... </span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]])</span>
+</pre></div>
+</div>
+<p>Now we construct the network itself with the arguments we just created:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">network</span> <span class="o">=</span> <span class="n">cyphi</span><span class="o">.</span><span class="n">Network</span><span class="p">(</span><span class="n">tpm</span><span class="p">,</span> <span class="n">current_state</span><span class="p">,</span> <span class="n">past_state</span><span class="p">,</span>
+<span class="gp">... </span>                        <span class="n">connectivity_matrix</span><span class="o">=</span><span class="n">cm</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The next step is to define a subsystem for which we want to evaluate <span class="math">\(\Phi\)</span>.
+To make a subsystem, we need the indices of subset of nodes which should be
+included in it and the network that the subsystem belongs to.</p>
+<p>In this case, we want the <span class="math">\(\Phi\)</span> of the entire network, so we simply include
+every node in the network in our subsystem:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">subsystem</span> <span class="o">=</span> <span class="n">Subsystem</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">network</span><span class="o">.</span><span class="n">size</span><span class="p">),</span> <span class="n">network</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Now we use <a class="reference internal" href="#cyphi.compute.big_phi" title="cyphi.compute.big_phi"><tt class="xref py py-func docutils literal"><span class="pre">cyphi.compute.big_phi()</span></tt></a> function to compute the <span class="math">\(\Phi\)</span> of
+our subsystem:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">phi</span> <span class="o">=</span> <span class="n">cyphi</span><span class="o">.</span><span class="n">compute</span><span class="o">.</span><span class="n">big_phi</span><span class="p">(</span><span class="n">subsystem</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">round</span><span class="p">(</span><span class="n">phi</span><span class="p">,</span> <span class="n">cyphi</span><span class="o">.</span><span class="n">constants</span><span class="o">.</span><span class="n">PRECISION</span><span class="p">)</span>
+<span class="go">2.312498</span>
+</pre></div>
+</div>
+<p>If we want to take a deeper look at the integrated-information-theoretic
+properties of our network, we can access all the intermediate quantities and
+structures that are caclulated in the course of arriving at a final <span class="math">\(\Phi\)</span>
+value by using <a class="reference internal" href="#cyphi.compute.big_mip" title="cyphi.compute.big_mip"><tt class="xref py py-func docutils literal"><span class="pre">cyphi.compute.big_mip()</span></tt></a>. This returns a deeply nested
+object, <a class="reference internal" href="#cyphi.models.BigMip" title="cyphi.models.BigMip"><tt class="xref py py-class docutils literal"><span class="pre">cyphi.models.BigMip</span></tt></a>, that contains data about the subsystem&#8217;s constellation of
+concepts, cause and effect repertoires, etc.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">mip</span> <span class="o">=</span> <span class="n">cyphi</span><span class="o">.</span><span class="n">compute</span><span class="o">.</span><span class="n">big_mip</span><span class="p">(</span><span class="n">subsystem</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>For instance, we can see that this network has 4 concepts:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="nb">len</span><span class="p">(</span><span class="n">mip</span><span class="o">.</span><span class="n">unpartitioned_constellation</span><span class="p">)</span>
+<span class="go">4</span>
+</pre></div>
+</div>
+<p>The documentation for <a class="reference internal" href="#module-cyphi.models" title="cyphi.models"><tt class="xref py py-mod docutils literal"><span class="pre">cyphi.models</span></tt></a> contains description of these
+structures.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The network and subsystem discussed here are returned by the
+<a class="reference internal" href="#cyphi.examples.network" title="cyphi.examples.network"><tt class="xref py py-func docutils literal"><span class="pre">cyphi.examples.network()</span></tt></a> and <a class="reference internal" href="#cyphi.examples.subsystem" title="cyphi.examples.subsystem"><tt class="xref py py-func docutils literal"><span class="pre">cyphi.examples.subsystem()</span></tt></a>
+functions.</p>
+</div>
+<dl class="function">
+<dt id="cyphi.examples.network">
+<tt class="descclassname">cyphi.examples.</tt><tt class="descname">network</tt><big>(</big><big>)</big><a class="headerlink" href="#cyphi.examples.network" title="Permalink to this definition">¶</a></dt>
+<dd><p>A simple 3-node network with roughly two bits of <span class="math">\(\Phi\)</span>.</p>
+<p>Diagram:</p>
+<div class="highlight-python"><div class="highlight"><pre>       +~~~~~~~~+
+  +~~~~|   A    |&lt;~~~~+
+  |    |  (OR)  +~~~+ |
+  |    +~~~~~~~~+   | |
+  |                 | |
+  |                 v |
++~+~~~~~~+      +~~~~~+~+
+|   B    |&lt;~~~~~+   C   |
+| (COPY) +~~~~~&gt;| (XOR) |
++~~~~~~~~+      +~~~~~~~+
+</pre></div>
+</div>
+<p>TPM:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="48%" />
+<col width="52%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Past state</th>
+<th class="head">Current state</th>
+</tr>
+<tr class="row-even"><th class="head">A, B, C</th>
+<th class="head">C, B, A</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-odd"><td>{0, 0, 0}</td>
+<td>{0, 0, 0}</td>
+</tr>
+<tr class="row-even"><td>{0, 0, 1}</td>
+<td>{0, 0, 1}</td>
+</tr>
+<tr class="row-odd"><td>{0, 1, 0}</td>
+<td>{1, 0, 1}</td>
+</tr>
+<tr class="row-even"><td>{0, 1, 1}</td>
+<td>{1, 0, 0}</td>
+</tr>
+<tr class="row-odd"><td>{1, 0, 0}</td>
+<td>{1, 1, 0}</td>
+</tr>
+<tr class="row-even"><td>{1, 0, 1}</td>
+<td>{1, 1, 1}</td>
+</tr>
+<tr class="row-odd"><td>{1, 1, 0}</td>
+<td>{1, 1, 1}</td>
+</tr>
+<tr class="row-even"><td>{1, 1, 1}</td>
+<td>{1, 1, 0}</td>
+</tr>
+</tbody>
+</table>
+<p>Connectivity matrix:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="25%" />
+<col width="25%" />
+<col width="25%" />
+<col width="25%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>.</td>
+<td>A</td>
+<td>B</td>
+<td>C</td>
+</tr>
+<tr class="row-even"><td>A</td>
+<td>0</td>
+<td>0</td>
+<td>1</td>
+</tr>
+<tr class="row-odd"><td>B</td>
+<td>1</td>
+<td>0</td>
+<td>1</td>
+</tr>
+<tr class="row-even"><td>C</td>
+<td>1</td>
+<td>1</td>
+<td>0</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last"><span class="math">\(CM_{i,j} = 1\)</span> means that node <span class="math">\(i\)</span> is connected to node <span class="math">\(j\)</span>.</p>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="cyphi.examples.subsystem">
+<tt class="descclassname">cyphi.examples.</tt><tt class="descname">subsystem</tt><big>(</big><big>)</big><a class="headerlink" href="#cyphi.examples.subsystem" title="Permalink to this definition">¶</a></dt>
+<dd><p>A subsystem containing all the nodes of the
+<a class="reference internal" href="#cyphi.examples.network" title="cyphi.examples.network"><tt class="xref py py-func docutils literal"><span class="pre">cyphi.examples.network()</span></tt></a>.</p>
+</dd></dl>
+
+</div>
+<span class="target" id="module-cyphi.compute"></span><div class="section" id="compute">
+<h1>Compute<a class="headerlink" href="#compute" title="Permalink to this headline">¶</a></h1>
+<p>Methods for computing concepts, constellations, and integrated information of
+subsystems.</p>
+<dl class="function">
+<dt id="cyphi.compute.concept">
+<tt class="descclassname">cyphi.compute.</tt><tt class="descname">concept</tt><big>(</big><em>subsystem</em>, <em>mechanism</em><big>)</big><a class="headerlink" href="#cyphi.compute.concept" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the concept specified by the a mechanism within a subsytem.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>subsystem</strong> (<em>Subsytem</em>) &#8211; The context in which the mechanism should be
+considered.</li>
+<li><strong>mechanism</strong> (<em>tuple(Node)</em>) &#8211; The candidate set of nodes.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><tt class="docutils literal"><span class="pre">Concept</span></tt> &#8211; The pair of maximally irreducible cause/effect
+repertoires that constitute the concept specified by the given
+mechanism.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The output is persistently cached by default to avoid recomputation.
+This may be disabled in the configuration file. See the documentation
+for <a class="reference internal" href="#module-cyphi.concept_caching" title="cyphi.concept_caching"><tt class="xref py py-mod docutils literal"><span class="pre">cyphi.concept_caching</span></tt></a> and <a class="reference internal" href="#module-cyphi.constants" title="cyphi.constants"><tt class="xref py py-mod docutils literal"><span class="pre">cyphi.constants</span></tt></a>.</p>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="cyphi.compute.constellation">
+<tt class="descclassname">cyphi.compute.</tt><tt class="descname">constellation</tt><big>(</big><em>subsystem</em><big>)</big><a class="headerlink" href="#cyphi.compute.constellation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the conceptual structure of this subsystem.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>subsystem</strong> (<em>Subsytem</em>) &#8211; The subsystem for which to determine the
+constellation.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><tt class="docutils literal"><span class="pre">tuple(Concept)</span></tt> &#8211; A tuple of all the Concepts in the constellation.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="cyphi.compute.concept_distance">
+<tt class="descclassname">cyphi.compute.</tt><tt class="descname">concept_distance</tt><big>(</big><em>c1</em>, <em>c2</em><big>)</big><a class="headerlink" href="#cyphi.compute.concept_distance" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the distance between two concepts in concept-space.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>c1</strong> (<em>Mice</em>) &#8211; The first concept.</li>
+<li><strong>c2</strong> (<em>Mice</em>) &#8211; The second concept.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><tt class="docutils literal"><span class="pre">float</span></tt> &#8211; The distance between the two concepts in concept-space.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="cyphi.compute.constellation_distance">
+<tt class="descclassname">cyphi.compute.</tt><tt class="descname">constellation_distance</tt><big>(</big><em>C1</em>, <em>C2</em>, <em>subsystem</em><big>)</big><a class="headerlink" href="#cyphi.compute.constellation_distance" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the distance between two constellations in concept-space.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>C1</strong> (<em>tuple(Concept)</em>) &#8211; The first constellation.</li>
+<li><strong>C2</strong> (<em>tuple(Concept)</em>) &#8211; The second constellation.</li>
+<li><strong>null_concept</strong> (<em>Concept</em>) &#8211; The null concept of a candidate set, <em>i.e</em> the
+&#8220;origin&#8221; of the concept space in which the given constellations
+reside.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><tt class="docutils literal"><span class="pre">float</span></tt> &#8211; The distance between the two constellations in
+concept-space.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="cyphi.compute.conceptual_information">
+<tt class="descclassname">cyphi.compute.</tt><tt class="descname">conceptual_information</tt><big>(</big><em>subsystem</em><big>)</big><a class="headerlink" href="#cyphi.compute.conceptual_information" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the conceptual information for a subsystem.</p>
+<p>This is the distance from the subsystem&#8217;s constellation to the null
+concept.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="cyphi.compute.big_mip">
+<tt class="descclassname">cyphi.compute.</tt><tt class="descname">big_mip</tt><big>(</big><em>cache_key</em>, <em>subsystem</em><big>)</big><a class="headerlink" href="#cyphi.compute.big_mip" title="Permalink to this definition">¶</a></dt>
+<dd><p>Memoized version of _big_mip(cache_key, subsystem)</p>
+<p># TODO document big_mip</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="cyphi.compute.big_phi">
+<tt class="descclassname">cyphi.compute.</tt><tt class="descname">big_phi</tt><big>(</big><em>subsystem</em><big>)</big><a class="headerlink" href="#cyphi.compute.big_phi" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the <span class="math">\(\Phi\)</span> value of a subsystem.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="cyphi.compute.main_complex">
+<tt class="descclassname">cyphi.compute.</tt><tt class="descname">main_complex</tt><big>(</big><em>network</em><big>)</big><a class="headerlink" href="#cyphi.compute.main_complex" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the main complex of the network.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="cyphi.compute.subsystems">
+<tt class="descclassname">cyphi.compute.</tt><tt class="descname">subsystems</tt><big>(</big><em>network</em><big>)</big><a class="headerlink" href="#cyphi.compute.subsystems" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a generator of all possible subsystems of a network.</p>
+<p>This is the just powerset of the network&#8217;s set of nodes.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="cyphi.compute.complexes">
+<tt class="descclassname">cyphi.compute.</tt><tt class="descname">complexes</tt><big>(</big><em>network</em><big>)</big><a class="headerlink" href="#cyphi.compute.complexes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a generator for all complexes of the network.</p>
+<p>This includes reducible, zero-phi complexes (which are not, strictly
+speaking, complexes at all).</p>
+</dd></dl>
+
+</div>
+<span class="target" id="module-cyphi.network"></span><div class="section" id="network">
+<h1>Network<a class="headerlink" href="#network" title="Permalink to this headline">¶</a></h1>
+<p>Represents the network of interest. This is the primary object of CyPhi and the
+context of all <span class="math">\(\varphi\)</span> and <span class="math">\(\Phi\)</span> computation.</p>
+<dl class="class">
+<dt id="cyphi.network.Network">
+<em class="property">class </em><tt class="descclassname">cyphi.network.</tt><tt class="descname">Network</tt><big>(</big><em>tpm</em>, <em>current_state</em>, <em>past_state</em>, <em>connectivity_matrix=None</em><big>)</big><a class="headerlink" href="#cyphi.network.Network" title="Permalink to this definition">¶</a></dt>
+<dd><p>A network of nodes.</p>
+<p>Represents the network we&#8217;re analyzing and holds auxilary data about it.</p>
+<p class="rubric">Example</p>
+<p>In a 3-node network, <tt class="docutils literal"><span class="pre">a_network.tpm[(0,</span> <span class="pre">0,</span> <span class="pre">1)]</span></tt> gives the transition
+probabilities for each node at <span class="math">\(t_0\)</span> given that state at <span class="math">\(t_{-1}\)</span> was
+<span class="math">\(\{0,0,1\}\)</span>.</p>
+<dl class="attribute">
+<dt id="cyphi.network.Network.size">
+<tt class="descname">size</tt><a class="headerlink" href="#cyphi.network.Network.size" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>int</em></p>
+<p>The number of nodes in the network.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.network.Network.tpm">
+<tt class="descname">tpm</tt><a class="headerlink" href="#cyphi.network.Network.tpm" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>np.ndarray</em></p>
+<p>The transition probability matrix that encodes the network&#8217;s
+mechanism. It can be provided in either state-by-node or
+state-by-state form. In state-by-state form, decimal indices must
+correspond to states so that lower-order bits of the binary
+representation of the index give the state of low-index nodes. See
+<tt class="xref py py-func docutils literal"><span class="pre">utils.state_by_state2state_by_node()</span></tt> for more info. If given
+in state-by-node form, it can be either 2-dimensional, so that
+<tt class="docutils literal"><span class="pre">tpm[i]</span></tt> gives the probabilities of each node being on if the
+past state is given by the binary representation of <span class="math">\(i\)</span>, or in N-D
+form, so that <tt class="docutils literal"><span class="pre">tpm[0][1][0]</span></tt> gives the probabilities of each node
+being on if the past state is <span class="math">\(\{0,1,0\}\)</span>. The shape of the
+2-dimensional form of the TPM must be <tt class="docutils literal"><span class="pre">(S,</span> <span class="pre">N)</span></tt>, and the shape of
+the N-D form of the TPM must be <tt class="docutils literal"><span class="pre">[2]</span>
+<span class="pre">*</span> <span class="pre">N</span> <span class="pre">+</span> <span class="pre">[N]</span></tt>, where <tt class="docutils literal"><span class="pre">S</span></tt> is the number of states and <tt class="docutils literal"><span class="pre">N</span></tt> is the
+number of nodes in the network.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.network.Network.current_state">
+<tt class="descname">current_state</tt><a class="headerlink" href="#cyphi.network.Network.current_state" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>tuple</em></p>
+<p>The current state of the network. <tt class="docutils literal"><span class="pre">current_state[i]</span></tt> gives the
+current state of node <span class="math">\(i\)</span>.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.network.Network.past_state">
+<tt class="descname">past_state</tt><a class="headerlink" href="#cyphi.network.Network.past_state" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>tuple</em></p>
+<p>The past state of the network. <tt class="docutils literal"><span class="pre">past_state[i]</span></tt> gives the past
+state of node <span class="math">\(i\)</span>.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.network.Network.connectivity_matrix">
+<tt class="descname">connectivity_matrix</tt><a class="headerlink" href="#cyphi.network.Network.connectivity_matrix" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>np.ndarray</em></p>
+<p>A square binary adjacency matrix indicating the connections between
+nodes in the network.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.network.Network.nodes">
+<tt class="descname">nodes</tt><a class="headerlink" href="#cyphi.network.Network.nodes" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>list(Node)</em></p>
+<p>A list of nodes in the network.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.network.Network.num_states">
+<tt class="descname">num_states</tt><a class="headerlink" href="#cyphi.network.Network.num_states" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>int</em></p>
+<p>The number of possible states of the network.</p>
+</dd></dl>
+
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name" colspan="2">Keyword Arguments:</th></tr>
+<tr class="field-odd field"><td>&nbsp;</td><td class="field-body"><strong>connectivity_matrix</strong> (<em>array or sequence</em>) &#8211;
+A square binary adjacency
+matrix indicating the connections between nodes in the network.
+<tt class="docutils literal"><span class="pre">connectivity_matrix[i][j]</span> <span class="pre">==</span> <span class="pre">1</span></tt> means that node <span class="math">\(i\)</span> is connected
+to node <span class="math">\(j\)</span>. If no connectivity matrix is given, every node is
+connected to every node <strong>(including itself)</strong>.</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="cyphi.network.Network.__eq__">
+<tt class="descname">__eq__</tt><big>(</big><em>other</em><big>)</big><a class="headerlink" href="#cyphi.network.Network.__eq__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return whether this network equals the other object.</p>
+<p>Two networks are equal if they have the same TPM, current state, and
+past state.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<span class="target" id="module-cyphi.subsystem"></span><div class="section" id="subsystem">
+<h1>Subsystem<a class="headerlink" href="#subsystem" title="Permalink to this headline">¶</a></h1>
+<p>Represents a candidate set for <span class="math">\(\varphi\)</span> calculation.</p>
+<dl class="class">
+<dt id="cyphi.subsystem.Subsystem">
+<em class="property">class </em><tt class="descclassname">cyphi.subsystem.</tt><tt class="descname">Subsystem</tt><big>(</big><em>node_indices</em>, <em>network</em>, <em>cut=None</em>, <em>mice_cache={}</em><big>)</big><a class="headerlink" href="#cyphi.subsystem.Subsystem" title="Permalink to this definition">¶</a></dt>
+<dd><p>A set of nodes in a network.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>nodes</strong> (<em>tuple(int)</em>) &#8211; A sequence of indices of the nodes in this
+subsystem.</li>
+<li><strong>network</strong> (<em>Network</em>) &#8211; The network the subsystem is part of.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="cyphi.subsystem.Subsystem.__eq__">
+<tt class="descname">__eq__</tt><big>(</big><em>other</em><big>)</big><a class="headerlink" href="#cyphi.subsystem.Subsystem.__eq__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return whether this subsystem is equal to the other object.</p>
+<p>Two subsystems are equal if their sets of nodes, current and past
+states, and networks are equal.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cyphi.subsystem.Subsystem.__bool__">
+<tt class="descname">__bool__</tt><big>(</big><big>)</big><a class="headerlink" href="#cyphi.subsystem.Subsystem.__bool__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return false if the subsystem has no nodes, true otherwise.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cyphi.subsystem.Subsystem.indices2nodes">
+<tt class="descname">indices2nodes</tt><big>(</big><em>indices</em><big>)</big><a class="headerlink" href="#cyphi.subsystem.Subsystem.indices2nodes" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cyphi.subsystem.Subsystem.cause_repertoire">
+<tt class="descname">cause_repertoire</tt><big>(</big><em>mechanism</em>, <em>purview</em><big>)</big><a class="headerlink" href="#cyphi.subsystem.Subsystem.cause_repertoire" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the cause repertoire of a mechanism over a purview.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>mechanism</strong> (<em>tuple(Node)</em>) &#8211; The mechanism for which to calculate the
+cause repertoire.</li>
+<li><strong>purview</strong> (<em>tuple(Node)</em>) &#8211; The purview over which to calculate the
+cause repertoire.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><tt class="docutils literal"><span class="pre">np.ndarray</span></tt> &#8211; The cause repertoire of the mechanism over the
+purview.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="cyphi.subsystem.Subsystem.effect_repertoire">
+<tt class="descname">effect_repertoire</tt><big>(</big><em>mechanism</em>, <em>purview</em><big>)</big><a class="headerlink" href="#cyphi.subsystem.Subsystem.effect_repertoire" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the effect repertoire of a mechanism over a purview.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>mechanism</strong> (<em>tuple(Node)</em>) &#8211; The mechanism for which to calculate the
+effect repertoire.</li>
+<li><strong>purview</strong> (<em>tuple(Node)</em>) &#8211; The purview over which to calculate the
+effect repertoire.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><tt class="docutils literal"><span class="pre">np.ndarray</span></tt> &#8211; The effect repertoire of the mechanism over the
+purview.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="cyphi.subsystem.Subsystem.unconstrained_cause_repertoire">
+<tt class="descname">unconstrained_cause_repertoire</tt><big>(</big><em>purview</em><big>)</big><a class="headerlink" href="#cyphi.subsystem.Subsystem.unconstrained_cause_repertoire" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the unconstrained cause repertoire for a purview.</p>
+<p>This is just the cause repertoire in the absence of any mechanism.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cyphi.subsystem.Subsystem.unconstrained_effect_repertoire">
+<tt class="descname">unconstrained_effect_repertoire</tt><big>(</big><em>purview</em><big>)</big><a class="headerlink" href="#cyphi.subsystem.Subsystem.unconstrained_effect_repertoire" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the unconstrained effect repertoire for a purview.</p>
+<p>This is just the effect repertoire in the absence of any mechanism.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cyphi.subsystem.Subsystem.expand_repertoire">
+<tt class="descname">expand_repertoire</tt><big>(</big><em>direction</em>, <em>purview</em>, <em>repertoire</em><big>)</big><a class="headerlink" href="#cyphi.subsystem.Subsystem.expand_repertoire" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the unconstrained cause or effect repertoire based on a
+direction.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cyphi.subsystem.Subsystem.expand_cause_repertoire">
+<tt class="descname">expand_cause_repertoire</tt><big>(</big><em>purview</em>, <em>repertoire</em><big>)</big><a class="headerlink" href="#cyphi.subsystem.Subsystem.expand_cause_repertoire" title="Permalink to this definition">¶</a></dt>
+<dd><p>Expand a partial cause repertoire over a purview to a distribution
+over the entire subsystem&#8217;s state space.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cyphi.subsystem.Subsystem.expand_effect_repertoire">
+<tt class="descname">expand_effect_repertoire</tt><big>(</big><em>purview</em>, <em>repertoire</em><big>)</big><a class="headerlink" href="#cyphi.subsystem.Subsystem.expand_effect_repertoire" title="Permalink to this definition">¶</a></dt>
+<dd><p>Expand a partial effect repertoire over a purview to a distribution
+over the entire subsystem&#8217;s state space.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cyphi.subsystem.Subsystem.cause_info">
+<tt class="descname">cause_info</tt><big>(</big><em>mechanism</em>, <em>purview</em><big>)</big><a class="headerlink" href="#cyphi.subsystem.Subsystem.cause_info" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the cause information for a mechanism over a purview.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cyphi.subsystem.Subsystem.effect_info">
+<tt class="descname">effect_info</tt><big>(</big><em>mechanism</em>, <em>purview</em><big>)</big><a class="headerlink" href="#cyphi.subsystem.Subsystem.effect_info" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the effect information for a mechanism over a purview.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cyphi.subsystem.Subsystem.cause_effect_info">
+<tt class="descname">cause_effect_info</tt><big>(</big><em>mechanism</em>, <em>purview</em><big>)</big><a class="headerlink" href="#cyphi.subsystem.Subsystem.cause_effect_info" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the cause-effect information for a mechanism over a
+purview.</p>
+<p>This is the minimum of the cause and effect information.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cyphi.subsystem.Subsystem.find_mip">
+<tt class="descname">find_mip</tt><big>(</big><em>direction</em>, <em>mechanism</em>, <em>purview</em><big>)</big><a class="headerlink" href="#cyphi.subsystem.Subsystem.find_mip" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the minimum information partition for a mechanism over a
+purview.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>direction</strong> (<em>str</em>) &#8211; Either <tt class="xref py py-const docutils literal"><span class="pre">DIRECTIONS[PAST]</span></tt> or <tt class="xref py py-const docutils literal"><span class="pre">DIRECTIONS[FUTURE]</span></tt>.</li>
+<li><strong>mechanism</strong> (<em>tuple(Node)</em>) &#8211; The nodes in the mechanism.</li>
+<li><strong>purview</strong> (<em>tuple(Node)</em>) &#8211; The nodes in the purview.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><a class="reference internal" href="#cyphi.models.Mip" title="cyphi.models.Mip"><tt class="xref py py-class docutils literal"><span class="pre">cyphi.models.Mip</span></tt></a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="cyphi.subsystem.Subsystem.mip_past">
+<tt class="descname">mip_past</tt><big>(</big><em>mechanism</em>, <em>purview</em><big>)</big><a class="headerlink" href="#cyphi.subsystem.Subsystem.mip_past" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the past minimum information partition.</p>
+<p>Alias for <a class="reference internal" href="#cyphi.subsystem.Subsystem.find_mip" title="cyphi.subsystem.Subsystem.find_mip"><tt class="xref py py-func docutils literal"><span class="pre">find_mip()</span></tt></a> with <tt class="docutils literal"><span class="pre">direction</span></tt> set to <tt class="xref py py-const docutils literal"><span class="pre">DIRECTIONS[PAST]</span></tt>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cyphi.subsystem.Subsystem.mip_future">
+<tt class="descname">mip_future</tt><big>(</big><em>mechanism</em>, <em>purview</em><big>)</big><a class="headerlink" href="#cyphi.subsystem.Subsystem.mip_future" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the future minimum information partition.</p>
+<p>Alias for <a class="reference internal" href="#cyphi.subsystem.Subsystem.find_mip" title="cyphi.subsystem.Subsystem.find_mip"><tt class="xref py py-func docutils literal"><span class="pre">find_mip()</span></tt></a> with <tt class="docutils literal"><span class="pre">direction</span></tt> set to <tt class="xref py py-const docutils literal"><span class="pre">DIRECTIONS[FUTURE]</span></tt>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cyphi.subsystem.Subsystem.phi_mip_past">
+<tt class="descname">phi_mip_past</tt><big>(</big><em>mechanism</em>, <em>purview</em><big>)</big><a class="headerlink" href="#cyphi.subsystem.Subsystem.phi_mip_past" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the <span class="math">\(\varphi\)</span> value of the past minimum information partition.</p>
+<p>This is the distance between the unpartitioned cause repertoire and the
+MIP cause repertoire.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cyphi.subsystem.Subsystem.phi_mip_future">
+<tt class="descname">phi_mip_future</tt><big>(</big><em>mechanism</em>, <em>purview</em><big>)</big><a class="headerlink" href="#cyphi.subsystem.Subsystem.phi_mip_future" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the <span class="math">\(\varphi\)</span> value of the future minimum information partition.</p>
+<p>This is the distance between the unpartitioned effect repertoire and
+the MIP cause repertoire.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cyphi.subsystem.Subsystem.phi">
+<tt class="descname">phi</tt><big>(</big><em>mechanism</em>, <em>purview</em><big>)</big><a class="headerlink" href="#cyphi.subsystem.Subsystem.phi" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the <span class="math">\(\varphi\)</span> value of a mechanism over a purview.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cyphi.subsystem.Subsystem.find_mice">
+<tt class="descname">find_mice</tt><big>(</big><em>direction</em>, <em>mechanism</em><big>)</big><a class="headerlink" href="#cyphi.subsystem.Subsystem.find_mice" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the maximally irreducible cause or effect for a mechanism.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>direction</strong> (<em>str</em>) &#8211; The temporal direction, specifying cause or
+effect.</li>
+<li><strong>mechanism</strong> (<em>tuple(Node)</em>) &#8211; The mechanism to be tested for
+irreducibility.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><a class="reference internal" href="#cyphi.models.Mice" title="cyphi.models.Mice"><tt class="xref py py-class docutils literal"><span class="pre">cyphi.models.Mice</span></tt></a></p>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Strictly speaking, the MICE is a pair of repertoires: the core
+cause repertoire and core effect repertoire of a mechanism, which
+are maximally different than the unconstrained cause/effect
+repertoires (<em>i.e.</em>, those that maximize <span class="math">\(\varphi\)</span>). Here, we return
+only information corresponding to one direction, <tt class="xref py py-const docutils literal"><span class="pre">DIRECTIONS[PAST]</span></tt> or
+<tt class="xref py py-const docutils literal"><span class="pre">DIRECTIONS[FUTURE]</span></tt>, i.e., we return a core cause or core effect, not the pair
+of them.</p>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="cyphi.subsystem.Subsystem.core_cause">
+<tt class="descname">core_cause</tt><big>(</big><em>mechanism</em><big>)</big><a class="headerlink" href="#cyphi.subsystem.Subsystem.core_cause" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the core cause repertoire of a mechanism.</p>
+<p>Alias for <a class="reference internal" href="#cyphi.subsystem.Subsystem.find_mice" title="cyphi.subsystem.Subsystem.find_mice"><tt class="xref py py-func docutils literal"><span class="pre">find_mice()</span></tt></a> with <tt class="docutils literal"><span class="pre">direction</span></tt> set to <tt class="xref py py-const docutils literal"><span class="pre">DIRECTIONS[PAST]</span></tt>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cyphi.subsystem.Subsystem.core_effect">
+<tt class="descname">core_effect</tt><big>(</big><em>mechanism</em><big>)</big><a class="headerlink" href="#cyphi.subsystem.Subsystem.core_effect" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the core effect repertoire of a mechanism.</p>
+<p>Alias for <a class="reference internal" href="#cyphi.subsystem.Subsystem.find_mice" title="cyphi.subsystem.Subsystem.find_mice"><tt class="xref py py-func docutils literal"><span class="pre">find_mice()</span></tt></a> with <tt class="docutils literal"><span class="pre">direction</span></tt> set to <tt class="xref py py-const docutils literal"><span class="pre">DIRECTIONS[PAST]</span></tt>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cyphi.subsystem.Subsystem.phi_max">
+<tt class="descname">phi_max</tt><big>(</big><em>mechanism</em><big>)</big><a class="headerlink" href="#cyphi.subsystem.Subsystem.phi_max" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the <span class="math">\(\varphi^{\textrm{max}}\)</span> of a mechanism.</p>
+<p>This is the maximum of <span class="math">\(\varphi\)</span> taken over all possible purviews.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.subsystem.Subsystem.null_concept">
+<tt class="descname">null_concept</tt><a class="headerlink" href="#cyphi.subsystem.Subsystem.null_concept" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the null concept of this subsystem, a point in concept space
+identified with the unconstrained cause and effect repertoire of this
+subsystem.</p>
+<p>For information on the indices used in the returned array, see
+:ref:concept-space.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cyphi.subsystem.Subsystem.concept">
+<tt class="descname">concept</tt><big>(</big><em>mechanism</em><big>)</big><a class="headerlink" href="#cyphi.subsystem.Subsystem.concept" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate a concept.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<span class="target" id="module-cyphi.constants"></span><div class="section" id="constants">
+<h1>Constants<a class="headerlink" href="#constants" title="Permalink to this headline">¶</a></h1>
+<p>This module contains package-wide constants, some of which are configurable.</p>
+<p>The configuration is loaded upon import from a YAML file in the directory where
+CyPhi is run: <tt class="docutils literal"><span class="pre">cyphi_config.yml</span></tt>. If no file is found, the default
+configuration is used.</p>
+<p>The various options are listed here with their defaults.</p>
+<div class="section" id="system-resource-configuration">
+<h2>System resource configuration<a class="headerlink" href="#system-resource-configuration" title="Permalink to this headline">¶</a></h2>
+<p>These settings control how much processing power and memory is available for
+CyPhi to use. The default values may not be appropriate for your use-case or
+machine, so <strong>please check these settings before running anything</strong>. Otherwise,
+there is a risk that simulations might crash (potentially after running for a
+long time!), resulting in data loss.</p>
+<ul>
+<li><p class="first">CyPhi employs several in-memory LRU-caches to speed up computation. However,
+these can quickly use up all the memory on a system; to avoid thrashing, this
+options limits the percentage of a system&#8217;s RAM that the LRU caches can use.
+<strong>NOTE:</strong> If you are running multiple instances of CyPhi on the same machine,
+then the number of CyPhi instances multiplied by this number should be less
+than ~80.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">cyphi</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">cyphi</span><span class="o">.</span><span class="n">constants</span><span class="o">.</span><span class="n">MAXIMUM_CACHE_MEMORY_PERCENTAGE</span>
+<span class="go">50</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">Control whether system cuts are evaluated in parallel, which requires more
+memory. If cuts are evaluated sequentially, only two <a href="#id1"><span class="problematic" id="id2">|</span></a>BigMip|s need to be in
+memory at once.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">cyphi</span><span class="o">.</span><span class="n">constants</span><span class="o">.</span><span class="n">PARALLEL_CUT_EVALUATION</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">Control the number of CPU cores to evaluate unidirectional cuts. Negative
+numbers count backwards from the total number of available cores, with <tt class="docutils literal"><span class="pre">-1</span></tt>
+meaning &#8220;use all available cores&#8221;.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">cyphi</span><span class="o">.</span><span class="n">constants</span><span class="o">.</span><span class="n">NUMBER_OF_CORES</span>
+<span class="go">-1</span>
+</pre></div>
+</div>
+</li>
+</ul>
+</div>
+<div class="section" id="caching-system-configuration">
+<h2>Caching system configuration<a class="headerlink" href="#caching-system-configuration" title="Permalink to this headline">¶</a></h2>
+<p>CyPhi is equipped with a transparent caching system for <a href="#id3"><span class="problematic" id="id4">|</span></a>BigMip|s and
+<a href="#id5"><span class="problematic" id="id6">|</span></a>Concept|s, which stores them as they are computed to avoid having to recompute
+them later. This makes it easy to play around interactively with the program,
+or to accumulate results with minimal effort. For larger projects, however, it
+is recommended that you manage the results explicitly, rather than relying on
+the cache. For this reason it is disabled by default.</p>
+<ul>
+<li><p class="first">Control whether <a href="#id7"><span class="problematic" id="id8">|</span></a>BigMip|s are cached and retreived.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">cyphi</span><span class="o">.</span><span class="n">constants</span><span class="o">.</span><span class="n">CACHE_BIGMIPS</span>
+<span class="go">False</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">Control whether the concept caching system is used.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">cyphi</span><span class="o">.</span><span class="n">constants</span><span class="o">.</span><span class="n">CACHE_CONCEPTS</span>
+<span class="go">False</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">Control whether precomputed results are stored and read from a database or
+from a local filesystem-based cache in the current directory. Set this to
+&#8216;fs&#8217; for the filesystem, &#8216;db&#8217; for the database. Caching results on the
+filesystem is the easiest to use but least robust caching system. Caching
+results in a database is more robust, but requires installing MongoDB.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">cyphi</span><span class="o">.</span><span class="n">constants</span><span class="o">.</span><span class="n">CACHING_BACKEND</span>
+<span class="go">&#39;fs&#39;</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">If the caching backend is set to use the filesystem, the cache will be stored
+in this directory. This directory can be copied and moved around if you want
+to reuse results _e.g._ on a another computer, but it must be in the same
+directory from which CyPhi is being run.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">cyphi</span><span class="o">.</span><span class="n">constants</span><span class="o">.</span><span class="n">PERSISTENT_CACHE_DIRECTORY</span>
+<span class="go">&#39;__cyphi_cache__&#39;</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">Set the configuration for the MongoDB database backend. This only has an
+effect if the caching backend is set to use the database.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">cyphi</span><span class="o">.</span><span class="n">constants</span><span class="o">.</span><span class="n">MONGODB_CONFIG</span><span class="p">[</span><span class="s">&#39;host&#39;</span><span class="p">]</span>
+<span class="go">&#39;localhost&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">cyphi</span><span class="o">.</span><span class="n">constants</span><span class="o">.</span><span class="n">MONGODB_CONFIG</span><span class="p">[</span><span class="s">&#39;port&#39;</span><span class="p">]</span>
+<span class="go">27017</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">cyphi</span><span class="o">.</span><span class="n">constants</span><span class="o">.</span><span class="n">MONGODB_CONFIG</span><span class="p">[</span><span class="s">&#39;database_name&#39;</span><span class="p">]</span>
+<span class="go">&#39;cyphi&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">cyphi</span><span class="o">.</span><span class="n">constants</span><span class="o">.</span><span class="n">MONGODB_CONFIG</span><span class="p">[</span><span class="s">&#39;collection_name&#39;</span><span class="p">]</span>
+<span class="go">&#39;test&#39;</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">Control whether TPMs should be normalized as part of concept normalization.
+TPM normalization increases the chances that a precomputed concept can be
+used again, but is expensive.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">cyphi</span><span class="o">.</span><span class="n">constants</span><span class="o">.</span><span class="n">NORMALIZE_TPMS</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+</li>
+</ul>
+</div>
+<div class="section" id="logging-configuration">
+<h2>Logging configuration<a class="headerlink" href="#logging-configuration" title="Permalink to this headline">¶</a></h2>
+<p>These are the settings for CyPhi logging. You can control the format of the
+logs and the name of the log file. Logs can be written to standard output, a
+file, both, or none. See the <a class="reference external" href="https://docs.python.org/3.4/library/logging.html">documentation on Python&#8217;s logger</a> for more information.</p>
+<ul>
+<li><p class="first">Control whether logs are written to a file.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">cyphi</span><span class="o">.</span><span class="n">constants</span><span class="o">.</span><span class="n">LOGGING_CONFIG</span><span class="p">[</span><span class="s">&#39;file&#39;</span><span class="p">][</span><span class="s">&#39;enabled&#39;</span><span class="p">]</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">Control the name of the logfile.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">cyphi</span><span class="o">.</span><span class="n">constants</span><span class="o">.</span><span class="n">LOGGING_CONFIG</span><span class="p">[</span><span class="s">&#39;file&#39;</span><span class="p">][</span><span class="s">&#39;filename&#39;</span><span class="p">]</span>
+<span class="go">&#39;cyphi.log&#39;</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">Control the concern level of file logging. Can be one of <tt class="docutils literal"><span class="pre">'DEBUG'</span></tt>,
+<tt class="docutils literal"><span class="pre">'INFO'</span></tt>, <tt class="docutils literal"><span class="pre">'WARNING'</span></tt>, <tt class="docutils literal"><span class="pre">'ERROR'</span></tt>, or <tt class="docutils literal"><span class="pre">'CRITICAL'</span></tt>.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">cyphi</span><span class="o">.</span><span class="n">constants</span><span class="o">.</span><span class="n">LOGGING_CONFIG</span><span class="p">[</span><span class="s">&#39;file&#39;</span><span class="p">][</span><span class="s">&#39;level&#39;</span><span class="p">]</span>
+<span class="go">&#39;INFO&#39;</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">Control whether logs are written to standard output.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">cyphi</span><span class="o">.</span><span class="n">constants</span><span class="o">.</span><span class="n">LOGGING_CONFIG</span><span class="p">[</span><span class="s">&#39;stdout&#39;</span><span class="p">][</span><span class="s">&#39;enabled&#39;</span><span class="p">]</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">Control the concern level of standard output logging. Takes the same levels
+as file logging.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">cyphi</span><span class="o">.</span><span class="n">constants</span><span class="o">.</span><span class="n">LOGGING_CONFIG</span><span class="p">[</span><span class="s">&#39;stdout&#39;</span><span class="p">][</span><span class="s">&#39;level&#39;</span><span class="p">]</span>
+<span class="go">&#39;INFO&#39;</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">If parallel computation is enabled, it will have its own, separate messages,
+which are always sent to standard output. This setting controls their verbosity
+(0&#8211;100).</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">cyphi</span><span class="o">.</span><span class="n">constants</span><span class="o">.</span><span class="n">PARALLEL_VERBOSITY</span>
+<span class="go">20</span>
+</pre></div>
+</div>
+</li>
+</ul>
+</div>
+<div class="section" id="theoretical-configuration">
+<h2>Theoretical configuration<a class="headerlink" href="#theoretical-configuration" title="Permalink to this headline">¶</a></h2>
+<ul>
+<li><p class="first">If set to <tt class="docutils literal"><span class="pre">True</span></tt>, this defines the Phi value of subsystems containing only
+a single node with a self-loop to be <tt class="docutils literal"><span class="pre">0.5</span></tt>. If set to False, their
+<span class="math">\(\Phi\)</span> will be actually be computed (to be zero, in this implementation).</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">cyphi</span><span class="o">.</span><span class="n">constants</span><span class="o">.</span><span class="n">SINGLE_NODES_WITH_SELFLOOPS_HAVE_PHI</span>
+<span class="go">False</span>
+</pre></div>
+</div>
+</li>
+</ul>
+</div>
+<div class="section" id="numerical-configuration">
+<h2>Numerical configuration<a class="headerlink" href="#numerical-configuration" title="Permalink to this headline">¶</a></h2>
+<ul>
+<li><p class="first">Computations in CyPhi rely on finding the Earth Mover&#8217;s Distance. This is
+done via an external C++ library that uses flow-optimization to find a good
+approximation of the EMD. Consequently, systems with zero <span class="math">\(\Phi\)</span> will
+sometimes be computed to have a small but non-zero amount. This setting
+controls the number of decimal places to which CyPhi will consider EMD
+calculations accurate. Values of <span class="math">\(\Phi\)</span> lower than <tt class="docutils literal"><span class="pre">10e-PRECISION</span></tt> will
+be considered insignificant and treated as zero. The default value is about
+as accurate as the EMD computations get.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">cyphi</span><span class="o">.</span><span class="n">constants</span><span class="o">.</span><span class="n">PRECISION</span>
+<span class="go">6</span>
+</pre></div>
+</div>
+</li>
+</ul>
+<dl class="function">
+<dt id="cyphi.constants.load_config">
+<tt class="descclassname">cyphi.constants.</tt><tt class="descname">load_config</tt><big>(</big><em>config</em><big>)</big><a class="headerlink" href="#cyphi.constants.load_config" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load a configuration.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="cyphi.constants.print_config">
+<tt class="descclassname">cyphi.constants.</tt><tt class="descname">print_config</tt><big>(</big><em>config</em><big>)</big><a class="headerlink" href="#cyphi.constants.print_config" title="Permalink to this definition">¶</a></dt>
+<dd><p>Prints the current configuration.</p>
+</dd></dl>
+
+</div>
+</div>
+<span class="target" id="module-cyphi.models"></span><div class="section" id="models">
+<h1>Models<a class="headerlink" href="#models" title="Permalink to this headline">¶</a></h1>
+<p>Containers for MICE, MIP, cut, partition, and concept data.</p>
+<dl class="class">
+<dt id="cyphi.models.Cut">
+<em class="property">class </em><tt class="descclassname">cyphi.models.</tt><tt class="descname">Cut</tt><a class="headerlink" href="#cyphi.models.Cut" title="Permalink to this definition">¶</a></dt>
+<dd><p>Represents a unidirectional cut.</p>
+<dl class="attribute">
+<dt id="cyphi.models.Cut.severed">
+<tt class="descname">severed</tt><a class="headerlink" href="#cyphi.models.Cut.severed" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>tuple(Node)</em></p>
+<p>Connections from this group of nodes to those in <tt class="docutils literal"><span class="pre">intact</span></tt> are
+severed.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.models.Cut.intact">
+<tt class="descname">intact</tt><a class="headerlink" href="#cyphi.models.Cut.intact" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>tuple(Node)</em></p>
+<p>Connections to this group of nodes from those in <tt class="docutils literal"><span class="pre">severed</span></tt> are
+severed.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="cyphi.models.Part">
+<em class="property">class </em><tt class="descclassname">cyphi.models.</tt><tt class="descname">Part</tt><a class="headerlink" href="#cyphi.models.Part" title="Permalink to this definition">¶</a></dt>
+<dd><p>Represents one part of a bipartition.</p>
+<dl class="attribute">
+<dt id="cyphi.models.Part.mechanism">
+<tt class="descname">mechanism</tt><a class="headerlink" href="#cyphi.models.Part.mechanism" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>tuple(Node)</em></p>
+<p>The nodes in the mechanism for this part.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.models.Part.purview">
+<tt class="descname">purview</tt><a class="headerlink" href="#cyphi.models.Part.purview" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>tuple(Node)</em></p>
+<p>The nodes in the mechanism for this part.</p>
+</dd></dl>
+
+<p class="rubric">Example</p>
+<p>When calculating <span class="math">\(\varphi\)</span> of a 3-node subsystem, we partition the
+system in the following way:</p>
+<div class="highlight-python"><div class="highlight"><pre>mechanism:   A C        B
+            -----  X  -----
+  purview:    B        A C
+</pre></div>
+</div>
+<p>This class represents one term in the above product.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="cyphi.models.Mip">
+<em class="property">class </em><tt class="descclassname">cyphi.models.</tt><tt class="descname">Mip</tt><a class="headerlink" href="#cyphi.models.Mip" title="Permalink to this definition">¶</a></dt>
+<dd><p>A minimum information partition for <span class="math">\(\varphi\)</span> calculation.</p>
+<p>MIPs may be compared with the built-in Python comparison operators
+(<tt class="docutils literal"><span class="pre">&lt;</span></tt>, <tt class="docutils literal"><span class="pre">&gt;</span></tt>, etc.). First, <tt class="docutils literal"><span class="pre">phi</span></tt> values are compared. Then, if these
+are equal up to <tt class="xref py py-const docutils literal"><span class="pre">constants.PRECISION</span></tt>, the size of the mechanism is compared
+(exclusion principle).</p>
+<dl class="attribute">
+<dt id="cyphi.models.Mip.phi">
+<tt class="descname">phi</tt><a class="headerlink" href="#cyphi.models.Mip.phi" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>float</em></p>
+<p>This is the difference between the mechanism&#8217;s unpartitioned and
+partitioned repertoires.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.models.Mip.direction">
+<tt class="descname">direction</tt><a class="headerlink" href="#cyphi.models.Mip.direction" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>str</em></p>
+<p>The temporal direction specifiying whether this MIP should be
+calculated with cause or effect repertoires.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.models.Mip.mechanism">
+<tt class="descname">mechanism</tt><a class="headerlink" href="#cyphi.models.Mip.mechanism" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>list(Node)</em></p>
+<p>The mechanism over which to evaluate the MIP.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.models.Mip.purview">
+<tt class="descname">purview</tt><a class="headerlink" href="#cyphi.models.Mip.purview" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>list(Node)</em></p>
+<p>The purview over which the unpartitioned repertoire differs the
+least from the partitioned repertoire.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.models.Mip.partition">
+<tt class="descname">partition</tt><a class="headerlink" href="#cyphi.models.Mip.partition" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>tuple(Part, Part)</em></p>
+<p>The partition that makes the least difference to the mechanism&#8217;s
+repertoire.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.models.Mip.unpartitioned_repertoire">
+<tt class="descname">unpartitioned_repertoire</tt><a class="headerlink" href="#cyphi.models.Mip.unpartitioned_repertoire" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>np.ndarray</em></p>
+<p>The unpartitioned repertoire of the mecanism.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.models.Mip.partitioned_repertoire">
+<tt class="descname">partitioned_repertoire</tt><a class="headerlink" href="#cyphi.models.Mip.partitioned_repertoire" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>np.ndarray</em></p>
+<p>The partitioned repertoire of the mechanism. This is the product of
+the repertoires of each part of the partition.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cyphi.models.Mip.__bool__">
+<tt class="descname">__bool__</tt><big>(</big><big>)</big><a class="headerlink" href="#cyphi.models.Mip.__bool__" title="Permalink to this definition">¶</a></dt>
+<dd><p>A Mip is truthy if it is not reducible; i.e. if it has a significant
+amount of <a href="#id9"><span class="problematic" id="id10">|small_phi|</span></a>.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="cyphi.models.Mice">
+<em class="property">class </em><tt class="descclassname">cyphi.models.</tt><tt class="descname">Mice</tt><big>(</big><em>mip</em><big>)</big><a class="headerlink" href="#cyphi.models.Mice" title="Permalink to this definition">¶</a></dt>
+<dd><p>A maximally irreducible cause or effect (i.e., &#8220;core cause&#8221; or &#8220;core
+effect&#8221;).</p>
+<p>MICEs may be compared with the built-in Python comparison operators
+(<tt class="docutils literal"><span class="pre">&lt;</span></tt>, <tt class="docutils literal"><span class="pre">&gt;</span></tt>, etc.). First, <tt class="docutils literal"><span class="pre">phi</span></tt> values are compared. Then, if these
+are equal up to <tt class="xref py py-const docutils literal"><span class="pre">constants.PRECISION</span></tt>, the size of the mechanism is compared
+(exclusion principle).</p>
+<dl class="attribute">
+<dt id="cyphi.models.Mice.phi">
+<tt class="descname">phi</tt><a class="headerlink" href="#cyphi.models.Mice.phi" title="Permalink to this definition">¶</a></dt>
+<dd><p><tt class="docutils literal"><span class="pre">float</span></tt> &#8211; The difference between the mechanism&#8217;s unpartitioned and
+partitioned repertoires.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.models.Mice.direction">
+<tt class="descname">direction</tt><a class="headerlink" href="#cyphi.models.Mice.direction" title="Permalink to this definition">¶</a></dt>
+<dd><p><tt class="docutils literal"><span class="pre">str</span></tt> &#8211; Either &#8216;past&#8217; or &#8216;future&#8217;. If &#8216;past&#8217; (&#8216;future&#8217;), this
+represents a maximally irreducible cause (effect).</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.models.Mice.mechanism">
+<tt class="descname">mechanism</tt><a class="headerlink" href="#cyphi.models.Mice.mechanism" title="Permalink to this definition">¶</a></dt>
+<dd><p><tt class="docutils literal"><span class="pre">list(Node)</span></tt> &#8211; The mechanism for which the MICE is evaluated.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.models.Mice.purview">
+<tt class="descname">purview</tt><a class="headerlink" href="#cyphi.models.Mice.purview" title="Permalink to this definition">¶</a></dt>
+<dd><p><tt class="docutils literal"><span class="pre">list(Node)</span></tt> &#8211; The purview over which this mechanism&#8217;s <span class="math">\(\varphi\)</span> is
+maximal.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.models.Mice.repertoire">
+<tt class="descname">repertoire</tt><a class="headerlink" href="#cyphi.models.Mice.repertoire" title="Permalink to this definition">¶</a></dt>
+<dd><p><tt class="docutils literal"><span class="pre">np.ndarray</span></tt> &#8211; The unpartitioned repertoire of the mechanism over
+the purview.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.models.Mice.mip">
+<tt class="descname">mip</tt><a class="headerlink" href="#cyphi.models.Mice.mip" title="Permalink to this definition">¶</a></dt>
+<dd><p><tt class="docutils literal"><span class="pre">Mip</span></tt> &#8211; The minimum information partition for this mechanism.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="cyphi.models.Concept">
+<em class="property">class </em><tt class="descclassname">cyphi.models.</tt><tt class="descname">Concept</tt><a class="headerlink" href="#cyphi.models.Concept" title="Permalink to this definition">¶</a></dt>
+<dd><p>A star in concept-space.</p>
+<p><cite>phi</cite> is the small-phi_max value. <cite>cause</cite> and <cite>effect</cite> are the MICE objects
+for the past and future, respectively.</p>
+<p>Concepts may be compared with the built-in Python comparison operators
+(<tt class="docutils literal"><span class="pre">&lt;</span></tt>, <tt class="docutils literal"><span class="pre">&gt;</span></tt>, etc.). First, <tt class="docutils literal"><span class="pre">phi</span></tt> values are compared. Then, if these
+are equal up to <tt class="xref py py-const docutils literal"><span class="pre">constants.PRECISION</span></tt>, the size of the mechanism is compared.</p>
+<dl class="attribute">
+<dt id="cyphi.models.Concept.phi">
+<tt class="descname">phi</tt><a class="headerlink" href="#cyphi.models.Concept.phi" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>float</em></p>
+<p>The size of the concept. This is the minimum of the <span class="math">\(\varphi\)</span> values of
+the concept&#8217;s core cause and core effect.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.models.Concept.mechanism">
+<tt class="descname">mechanism</tt><a class="headerlink" href="#cyphi.models.Concept.mechanism" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>tuple(Node)</em></p>
+<p>The mechanism that the concept consists of.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.models.Concept.cause">
+<tt class="descname">cause</tt><a class="headerlink" href="#cyphi.models.Concept.cause" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>Mice</em></p>
+<p>The <a class="reference internal" href="#cyphi.models.Mice" title="cyphi.models.Mice"><tt class="xref py py-class docutils literal"><span class="pre">Mice</span></tt></a> representing the core cause of this concept.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.models.Concept.effect">
+<tt class="descname">effect</tt><a class="headerlink" href="#cyphi.models.Concept.effect" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>Mice</em></p>
+<p>The <a class="reference internal" href="#cyphi.models.Mice" title="cyphi.models.Mice"><tt class="xref py py-class docutils literal"><span class="pre">Mice</span></tt></a> representing the core effect of this concept.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.models.Concept.subsystem">
+<tt class="descname">subsystem</tt><a class="headerlink" href="#cyphi.models.Concept.subsystem" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>Subsystem</em></p>
+<p>This Concept&#8217;s parent subsystem.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.models.Concept.location">
+<tt class="descname">location</tt><a class="headerlink" href="#cyphi.models.Concept.location" title="Permalink to this definition">¶</a></dt>
+<dd><p><tt class="docutils literal"><span class="pre">tuple(np.ndarray)</span></tt> &#8211; The concept&#8217;s location in concept space. The
+two elements of the tuple are the cause and effect repertoires.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cyphi.models.Concept.__bool__">
+<tt class="descname">__bool__</tt><big>(</big><big>)</big><a class="headerlink" href="#cyphi.models.Concept.__bool__" title="Permalink to this definition">¶</a></dt>
+<dd><p>A Concept is truthy if it is not reducible; i.e. if it has a
+significant amount of <span class="math">\(\Phi\)</span>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cyphi.models.Concept.eq_repertoires">
+<tt class="descname">eq_repertoires</tt><big>(</big><em>other</em><big>)</big><a class="headerlink" href="#cyphi.models.Concept.eq_repertoires" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return whether this concept has the same cause and effect
+repertoires as another.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cyphi.models.Concept.emd_eq">
+<tt class="descname">emd_eq</tt><big>(</big><em>other</em><big>)</big><a class="headerlink" href="#cyphi.models.Concept.emd_eq" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return whether this concept is equal to another in the context of an
+EMD calculation.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cyphi.models.Concept.expand_cause_repertoire">
+<tt class="descname">expand_cause_repertoire</tt><big>(</big><big>)</big><a class="headerlink" href="#cyphi.models.Concept.expand_cause_repertoire" title="Permalink to this definition">¶</a></dt>
+<dd><p>Expands a cause repertoire to be a distribution over an entire
+network.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cyphi.models.Concept.expand_effect_repertoire">
+<tt class="descname">expand_effect_repertoire</tt><big>(</big><big>)</big><a class="headerlink" href="#cyphi.models.Concept.expand_effect_repertoire" title="Permalink to this definition">¶</a></dt>
+<dd><p>Expands an effect repertoire to be a distribution over an entire
+network.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="cyphi.models.BigMip">
+<em class="property">class </em><tt class="descclassname">cyphi.models.</tt><tt class="descname">BigMip</tt><a class="headerlink" href="#cyphi.models.BigMip" title="Permalink to this definition">¶</a></dt>
+<dd><p>A minimum information partition for <span class="math">\(\Phi\)</span> calculation.</p>
+<p>BigMIPs may be compared with the built-in Python comparison operators
+(<tt class="docutils literal"><span class="pre">&lt;</span></tt>, <tt class="docutils literal"><span class="pre">&gt;</span></tt>, etc.). First, <tt class="docutils literal"><span class="pre">phi</span></tt> values are compared. Then, if these
+are equal up to <tt class="xref py py-const docutils literal"><span class="pre">constants.PRECISION</span></tt>, the size of the mechanism is compared
+(exclusion principle).</p>
+<dl class="attribute">
+<dt id="cyphi.models.BigMip.phi">
+<tt class="descname">phi</tt><a class="headerlink" href="#cyphi.models.BigMip.phi" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>float</em></p>
+<p>The <span class="math">\(\Phi\)</span> value for the subsystem when taken against
+this MIP, <em>i.e.</em> the difference between the unpartitioned
+constellation and this MIP&#8217;s partitioned constellation.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.models.BigMip.cut">
+<tt class="descname">cut</tt><a class="headerlink" href="#cyphi.models.BigMip.cut" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>Cut</em></p>
+<p>The unidirectional cut that makes the least difference to
+the subsystem.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.models.BigMip.unpartitioned_constellation">
+<tt class="descname">unpartitioned_constellation</tt><a class="headerlink" href="#cyphi.models.BigMip.unpartitioned_constellation" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>tuple(Concept)</em></p>
+<p>The constellation of the
+whole subsystem.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.models.BigMip.partitioned_constellation">
+<tt class="descname">partitioned_constellation</tt><a class="headerlink" href="#cyphi.models.BigMip.partitioned_constellation" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>tuple(Concept)</em></p>
+<p>The constellation when the
+subsystem is cut.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.models.BigMip.subsystem">
+<tt class="descname">subsystem</tt><a class="headerlink" href="#cyphi.models.BigMip.subsystem" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>Subsystem</em></p>
+<p>The subsystem this MIP was calculated for.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.models.BigMip.cut_subsystem">
+<tt class="descname">cut_subsystem</tt><a class="headerlink" href="#cyphi.models.BigMip.cut_subsystem" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>Subsystem</em></p>
+<p>The subsystem with the minimal cut applied.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt>
+<tt class="descname">cut</tt></dt>
+<dd><p><em>Cut</em></p>
+<p>The minimal cut.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt>
+<tt class="descname">cut</tt></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cyphi.models.BigMip.__bool__">
+<tt class="descname">__bool__</tt><big>(</big><big>)</big><a class="headerlink" href="#cyphi.models.BigMip.__bool__" title="Permalink to this definition">¶</a></dt>
+<dd><p>A BigMip is truthy if it is not reducible; i.e. if it has a
+significant amount of <span class="math">\(\Phi\)</span>.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<span class="target" id="module-cyphi.node"></span><dl class="class">
+<dt id="cyphi.node.Node">
+<em class="property">class </em><tt class="descclassname">cyphi.node.</tt><tt class="descname">Node</tt><big>(</big><em>network</em>, <em>index</em>, <em>context</em>, <em>label=None</em><big>)</big><a class="headerlink" href="#cyphi.node.Node" title="Permalink to this definition">¶</a></dt>
+<dd><p>A node in a context.</p>
+<dl class="attribute">
+<dt id="cyphi.node.Node.network">
+<tt class="descname">network</tt><a class="headerlink" href="#cyphi.node.Node.network" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>network</em></p>
+<p>The network the node belongs to.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.node.Node.index">
+<tt class="descname">index</tt><a class="headerlink" href="#cyphi.node.Node.index" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>int</em></p>
+<p>The node&#8217;s index in the network&#8217;s list of nodes.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.node.Node.context">
+<tt class="descname">context</tt><a class="headerlink" href="#cyphi.node.Node.context" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>context</em></p>
+<p>The context the node belongs to.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.node.Node.label">
+<tt class="descname">label</tt><a class="headerlink" href="#cyphi.node.Node.label" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>str</em></p>
+<p>An optional label for the node.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.node.Node.inputs">
+<tt class="descname">inputs</tt><a class="headerlink" href="#cyphi.node.Node.inputs" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>list(Node)</em></p>
+<p>A list of nodes that have connections to this node.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.node.Node.past_tpm">
+<tt class="descname">past_tpm</tt><a class="headerlink" href="#cyphi.node.Node.past_tpm" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>np.ndarray</em></p>
+<p>The TPM for this node, conditioned on the past state of the
+boundary nodes, whose states are fixed. <tt class="docutils literal"><span class="pre">this_node.past_tpm[0]</span></tt>
+and <tt class="docutils literal"><span class="pre">this_node.past_tpm[1]</span></tt> gives the probability tables that
+this node is off and on, respectively, indexed by context state,
+<strong>after marginalizing-out nodes that don&#8217;t connect to this node</strong>.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.node.Node.current_tpm">
+<tt class="descname">current_tpm</tt><a class="headerlink" href="#cyphi.node.Node.current_tpm" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>np.ndarray</em></p>
+<p>Same as <tt class="docutils literal"><span class="pre">past_tpm</span></tt>, but conditioned on the current state of the
+boundary nodes.</p>
+</dd></dl>
+
+<p class="rubric">Examples</p>
+<p>In a 3-node context, <tt class="docutils literal"><span class="pre">self.past_tpm[0][(0,</span> <span class="pre">1,</span> <span class="pre">0)]</span></tt> gives the
+probability that this node is off at <span class="math">\(t_0\)</span> if the state of the network
+is <span class="math">\(\{0,1,0\}\)</span> at <span class="math">\(t_{-1}\)</span>.</p>
+<p>Similarly, <tt class="docutils literal"><span class="pre">self.current_tpm[0][(0,</span> <span class="pre">1,</span> <span class="pre">0)]</span></tt> gives the probability
+that this node is off at <a href="#id11"><span class="problematic" id="id12">|t_1|</span></a> if the state of the network is <span class="math">\(\{0,1,0\}\)</span>
+at <span class="math">\(t_0\)</span>.</p>
+<dl class="method">
+<dt id="cyphi.node.Node.__eq__">
+<tt class="descname">__eq__</tt><big>(</big><em>other</em><big>)</big><a class="headerlink" href="#cyphi.node.Node.__eq__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return whether this node equals the other object.</p>
+<p>Two nodes are equal if they belong to the same context and have the
+same index (their TPMs must be the same in that case, so this method
+doesn&#8217;t need to check TPM equality).</p>
+<p>Labels are for display only, so two equal nodes may have different
+labels.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.node.Node.current_marbl">
+<tt class="descname">current_marbl</tt><a class="headerlink" href="#cyphi.node.Node.current_marbl" title="Permalink to this definition">¶</a></dt>
+<dd><p>The normalized representation of this node&#8217;s Markov blanket,
+conditioned on the fixed state of boundary-condition nodes in the
+current timestep.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cyphi.node.Node.get_marbl">
+<tt class="descname">get_marbl</tt><big>(</big><em>direction</em>, <em>normalize=True</em><big>)</big><a class="headerlink" href="#cyphi.node.Node.get_marbl" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate a Marbl for this node, using either the past or current
+TPM.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt>
+<tt class="descname">inputs</tt></dt>
+<dd><p>The set of nodes with connections to this node.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.node.Node.outputs">
+<tt class="descname">outputs</tt><a class="headerlink" href="#cyphi.node.Node.outputs" title="Permalink to this definition">¶</a></dt>
+<dd><p>The set of nodes this node has connections to.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.node.Node.past_marbl">
+<tt class="descname">past_marbl</tt><a class="headerlink" href="#cyphi.node.Node.past_marbl" title="Permalink to this definition">¶</a></dt>
+<dd><p>The normalized representation of this node&#8217;s Markov blanket,
+conditioned on the fixed state of boundary-condition nodes in the
+previous timestep.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.node.Node.raw_current_marbl">
+<tt class="descname">raw_current_marbl</tt><a class="headerlink" href="#cyphi.node.Node.raw_current_marbl" title="Permalink to this definition">¶</a></dt>
+<dd><p>The un-normalized representation of this node&#8217;s Markov blanket,
+conditioned on the fixed state of boundary-condition nodes in the
+current timestep.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.node.Node.raw_past_marbl">
+<tt class="descname">raw_past_marbl</tt><a class="headerlink" href="#cyphi.node.Node.raw_past_marbl" title="Permalink to this definition">¶</a></dt>
+<dd><p>The un-normalized representation of this node&#8217;s Markov blanket,
+conditioned on the fixed state of boundary-condition nodes in the
+previous timestep.</p>
+</dd></dl>
+
+</dd></dl>
+
+<span class="target" id="module-cyphi.concept_caching"></span><div class="section" id="concept-caching">
+<h1>Concept Caching<a class="headerlink" href="#concept-caching" title="Permalink to this headline">¶</a></h1>
+<p>Objects and functions for managing the normalization, caching, and retrieval of
+concepts.</p>
+<dl class="class">
+<dt id="cyphi.concept_caching.NormalizedMechanism">
+<em class="property">class </em><tt class="descclassname">cyphi.concept_caching.</tt><tt class="descname">NormalizedMechanism</tt><big>(</big><em>mechanism</em>, <em>subsystem</em>, <em>normalize_tpms=True</em><big>)</big><a class="headerlink" href="#cyphi.concept_caching.NormalizedMechanism" title="Permalink to this definition">¶</a></dt>
+<dd><p>A mechanism rendered into a normal form, suitable for use as a cache key
+in concept memoization.</p>
+<p>The broad outline for the normalization procedure is as follows:</p>
+<ul class="simple">
+<li>Get the set of all nodes that input to (output from) at least one
+mechanism node.</li>
+<li>Sort the Marbls in a stable way (this is done by marbl-python, when the
+MarblSet is initialized).</li>
+<li>Iterate over the sorted Marbls; for each one, iterate over its
+corresponding mechanism node&#8217;s inputs (outputs).</li>
+<li>Label each input (output) with a unique integer. These are the
+&#8220;normalized indices&#8221; of the inputs (outputs).</li>
+<li>Record the inverse mapping, which sends a normalized index to a real
+index.</li>
+<li>Record the state of the mechanism and all input/ouptut nodes.</li>
+</ul>
+<p>Then two normalized mechanisms are the same if they have the same
+MarblSets, inputs, outputs, state, and input/output state.</p>
+<dl class="attribute">
+<dt id="cyphi.concept_caching.NormalizedMechanism.marblset">
+<tt class="descname">marblset</tt><a class="headerlink" href="#cyphi.concept_caching.NormalizedMechanism.marblset" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>MarblSet</em></p>
+<p>A dictionary where keys are directions, and values
+are MarblSets containing Marbls generated from the TPMs of the
+mechanism nodes&#8217; corresponding to the direction.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.concept_caching.NormalizedMechanism.normalized_indices">
+<tt class="descname">normalized_indices</tt><a class="headerlink" href="#cyphi.concept_caching.NormalizedMechanism.normalized_indices" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>dict</em></p>
+<p>A dictionary where keys are directions, and
+values are dictionaries mapping mechanism node indices to their
+normalized indices for that direction.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.concept_caching.NormalizedMechanism.unnormalized_indices">
+<tt class="descname">unnormalized_indices</tt><a class="headerlink" href="#cyphi.concept_caching.NormalizedMechanism.unnormalized_indices" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>dict</em></p>
+<p>The inverse of <tt class="docutils literal"><span class="pre">normalized_indices</span></tt>.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.concept_caching.NormalizedMechanism.inputs">
+<tt class="descname">inputs</tt><a class="headerlink" href="#cyphi.concept_caching.NormalizedMechanism.inputs" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>tuple(tuple(int))</em></p>
+<p>A tuple where the <span class="math">\(i^{\textrm{th}}\)</span> element contains a
+tuple of the normalized indices of the <span class="math">\(i^{\textrm{th}}\)</span> node, where <span class="math">\(i\)</span> is a
+normalized index.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.concept_caching.NormalizedMechanism.outputs">
+<tt class="descname">outputs</tt><a class="headerlink" href="#cyphi.concept_caching.NormalizedMechanism.outputs" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>tuple(tuple(int))</em></p>
+<p>The same as <tt class="docutils literal"><span class="pre">inputs</span></tt>, but the elements
+contain normalized indices of the outputs.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.concept_caching.NormalizedMechanism.permutation">
+<tt class="descname">permutation</tt><a class="headerlink" href="#cyphi.concept_caching.NormalizedMechanism.permutation" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>dict()</em></p>
+<p>A dictionary where the keys are directions and
+the values are the permutations that maps mechanism nodes to the
+position of their marbl in the marblset for that direction.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="cyphi.concept_caching.NormalizedMice">
+<em class="property">class </em><tt class="descclassname">cyphi.concept_caching.</tt><tt class="descname">NormalizedMice</tt><a class="headerlink" href="#cyphi.concept_caching.NormalizedMice" title="Permalink to this definition">¶</a></dt>
+<dd><p>A lightweight container for MICE data.</p>
+<p>See <a class="reference internal" href="#cyphi.models.Mice" title="cyphi.models.Mice"><tt class="xref py py-class docutils literal"><span class="pre">cyphi.models.Mice</span></tt></a> for its unnormalized counterpart.</p>
+<dl class="attribute">
+<dt id="cyphi.concept_caching.NormalizedMice.phi">
+<tt class="descname">phi</tt><a class="headerlink" href="#cyphi.concept_caching.NormalizedMice.phi" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>float</em></p>
+<p>The difference between the mechanism&#8217;s unpartitioned and
+partitioned repertoires.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.concept_caching.NormalizedMice.direction">
+<tt class="descname">direction</tt><a class="headerlink" href="#cyphi.concept_caching.NormalizedMice.direction" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>str</em></p>
+<p>Either &#8216;past&#8217; or &#8216;future&#8217;. If &#8216;past&#8217; (&#8216;future&#8217;), this represents a
+maximally irreducible cause (effect).</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.concept_caching.NormalizedMice.mechanism">
+<tt class="descname">mechanism</tt><a class="headerlink" href="#cyphi.concept_caching.NormalizedMice.mechanism" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>tuple(int)</em></p>
+<p>The normalized indices of the MICE&#8217;s mechanism.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.concept_caching.NormalizedMice.purview">
+<tt class="descname">purview</tt><a class="headerlink" href="#cyphi.concept_caching.NormalizedMice.purview" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>tuple(int)</em></p>
+<p>A normalized purview. This is a tuple of the normalized indices of
+its nodes.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.concept_caching.NormalizedMice.repertoire">
+<tt class="descname">repertoire</tt><a class="headerlink" href="#cyphi.concept_caching.NormalizedMice.repertoire" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>np.ndarray</em></p>
+<p>The normalized unpartitioned repertoire of the mechanism over the
+purview. A repertoire is normalized by squeezing and then
+reordering its dimensions so they correspond to the normalized
+purview.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="cyphi.concept_caching.NormalizedConcept">
+<em class="property">class </em><tt class="descclassname">cyphi.concept_caching.</tt><tt class="descname">NormalizedConcept</tt><big>(</big><em>normalized_mechanism</em>, <em>concept</em><big>)</big><a class="headerlink" href="#cyphi.concept_caching.NormalizedConcept" title="Permalink to this definition">¶</a></dt>
+<dd><p>A precomputed concept in a form suitable for memoization.</p>
+<p>Upon initialization, the normal form of the concept to be cached is
+computed, and data relating its cause and effect purviews are stored,
+which the concept to be reconstituted in a different subsystem.</p>
+<dl class="attribute">
+<dt id="cyphi.concept_caching.NormalizedConcept.mechanism">
+<tt class="descname">mechanism</tt><a class="headerlink" href="#cyphi.concept_caching.NormalizedConcept.mechanism" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>NormalizedMechanism</em></p>
+<p>The mechanism the concept consists of.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.concept_caching.NormalizedConcept.phi">
+<tt class="descname">phi</tt><a class="headerlink" href="#cyphi.concept_caching.NormalizedConcept.phi" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>float</em></p>
+<p>The <span class="math">\(\varphi\)</span> value of the concept.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.concept_caching.NormalizedConcept.cause">
+<tt class="descname">cause</tt><a class="headerlink" href="#cyphi.concept_caching.NormalizedConcept.cause" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>NormalizedMice</em></p>
+<p>The concept&#8217;s normalized core cause.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.concept_caching.NormalizedConcept.effect">
+<tt class="descname">effect</tt><a class="headerlink" href="#cyphi.concept_caching.NormalizedConcept.effect" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>NormalizedMice</em></p>
+<p>The concept&#8217;s normalized core effect.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="cyphi.concept_caching.concept">
+<tt class="descclassname">cyphi.concept_caching.</tt><tt class="descname">concept</tt><big>(</big><em>subsystem</em>, <em>mechanism</em><big>)</big><a class="headerlink" href="#cyphi.concept_caching.concept" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find the concept specified by a mechanism, returning a cached value if
+one is found and computing and caching it otherwise.</p>
+</dd></dl>
+
+</div>
+<span class="target" id="module-cyphi.memory"></span><div class="section" id="memory">
+<h1>Memory<a class="headerlink" href="#memory" title="Permalink to this headline">¶</a></h1>
+<p>Decorators and objects for memoization.</p>
+<dl class="function">
+<dt id="cyphi.memory.cache">
+<tt class="descclassname">cyphi.memory.</tt><tt class="descname">cache</tt><big>(</big><em>ignore=[]</em><big>)</big><a class="headerlink" href="#cyphi.memory.cache" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decorator for memoizing a function using either the filesystem or a
+database.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="cyphi.memory.DbMemoizedFunc">
+<em class="property">class </em><tt class="descclassname">cyphi.memory.</tt><tt class="descname">DbMemoizedFunc</tt><big>(</big><em>func</em>, <em>ignore</em><big>)</big><a class="headerlink" href="#cyphi.memory.DbMemoizedFunc" title="Permalink to this definition">¶</a></dt>
+<dd><p>A memoized function, with a databse backing the cache.</p>
+<dl class="method">
+<dt id="cyphi.memory.DbMemoizedFunc.get_output_key">
+<tt class="descname">get_output_key</tt><big>(</big><em>args</em>, <em>kwargs</em><big>)</big><a class="headerlink" href="#cyphi.memory.DbMemoizedFunc.get_output_key" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the key that the output should be cached with,
+given arguments, keyword arguments, and a list of arguments to ignore.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cyphi.memory.DbMemoizedFunc.load_output">
+<tt class="descname">load_output</tt><big>(</big><em>args</em>, <em>kwargs</em><big>)</big><a class="headerlink" href="#cyphi.memory.DbMemoizedFunc.load_output" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return cached output.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<span class="target" id="module-cyphi.db"></span><div class="section" id="database">
+<h1>Database<a class="headerlink" href="#database" title="Permalink to this headline">¶</a></h1>
+<p>Interface to MongoDB that exposes it as a key-value store.</p>
+<dl class="function">
+<dt id="cyphi.db.find">
+<tt class="descclassname">cyphi.db.</tt><tt class="descname">find</tt><big>(</big><em>key</em><big>)</big><a class="headerlink" href="#cyphi.db.find" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the value associated with a key.</p>
+<p>If there is no value with the given key, returns <tt class="docutils literal"><span class="pre">None</span></tt>.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="cyphi.db.insert">
+<tt class="descclassname">cyphi.db.</tt><tt class="descname">insert</tt><big>(</big><em>key</em>, <em>value</em><big>)</big><a class="headerlink" href="#cyphi.db.insert" title="Permalink to this definition">¶</a></dt>
+<dd><p>Store a value with a key.</p>
+<p>If the key is already present in the database, this does nothing.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="cyphi.db.generate_key">
+<tt class="descclassname">cyphi.db.</tt><tt class="descname">generate_key</tt><big>(</big><em>filtered_args</em><big>)</big><a class="headerlink" href="#cyphi.db.generate_key" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a key from some input.</p>
+<p>This function should be used whenever a key is needed, to keep keys
+consistent.</p>
+</dd></dl>
+
+</div>
+<span class="target" id="module-cyphi.utils"></span><div class="section" id="utilities">
+<h1>Utilities<a class="headerlink" href="#utilities" title="Permalink to this headline">¶</a></h1>
+<p>Functions used by more than one CyPhi module or class, or that might be of
+external use.</p>
+<dl class="function">
+<dt id="cyphi.utils.condition_tpm">
+<tt class="descclassname">cyphi.utils.</tt><tt class="descname">condition_tpm</tt><big>(</big><em>tpm</em>, <em>fixed_nodes</em>, <em>state</em><big>)</big><a class="headerlink" href="#cyphi.utils.condition_tpm" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a TPM conditioned on the given fixed node indices, whose states
+are fixed according to the given state-tuple.</p>
+<p>The dimensions of the new TPM that correspond to the fixed nodes are
+collapsed onto their state, making those dimensions singletons suitable for
+broadcasting. The number of dimensions of the conditioned TPM will be the
+same as the unconditioned TPM.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="cyphi.utils.state_by_state2state_by_node">
+<tt class="descclassname">cyphi.utils.</tt><tt class="descname">state_by_state2state_by_node</tt><big>(</big><em>tpm</em><big>)</big><a class="headerlink" href="#cyphi.utils.state_by_state2state_by_node" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert a state-by-state TPM to a state-by-node TPM.</p>
+<p>The binary representations of the indices of the rows and columns
+correspond to states of the network.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">This function uses the convention that that low-order bits correspond
+to low-index nodes; i.e., the least significant bit gives the state of
+the first node, the second-least significant bit gives the state of the
+second node, and so on.</p>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>tpm</strong> (<em>list(list) or np.ndarray</em>) &#8211; A square state-by-state TPM.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><tt class="docutils literal"><span class="pre">np.ndarray</span></tt> &#8211; A state-by-node TPM.</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Examples</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">cyphi.utils</span> <span class="kn">import</span> <span class="n">state_by_state2state_by_node</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">tpm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">],</span>
+<span class="gp">... </span>                <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">],</span>
+<span class="gp">... </span>                <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.8</span><span class="p">],</span>
+<span class="gp">... </span>                <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.7</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">]])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">state_by_state2state_by_node</span><span class="p">(</span><span class="n">tpm</span><span class="p">)</span>
+<span class="go">array([[[ 0.5,  0. ],</span>
+<span class="go">        [ 1. ,  0.8]],</span>
+
+<span class="go">       [[ 1. ,  0. ],</span>
+<span class="go">        [ 0.3,  0.7]]])</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="cyphi.utils.index2state">
+<tt class="descclassname">cyphi.utils.</tt><tt class="descname">index2state</tt><big>(</big><em>i</em>, <em>number_of_nodes</em><big>)</big><a class="headerlink" href="#cyphi.utils.index2state" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert a decimal integer to a CyPhi state tuple.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">This function uses the convention that that low-order bits correspond
+to low-index nodes; i.e., the least significant bit gives the state of
+the first node, the second-least significant bit gives the state of the
+second node, and so on.</p>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>index</strong> (<em>int</em>) &#8211; A decimal integer corresponding to a network state.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><tt class="docutils literal"><span class="pre">tuple(int)</span></tt> &#8211; A state-tuple where the <span class="math">\(i^{\textrm{th}}\)</span> element of the tuple
+gives the state of the <span class="math">\(i^{\textrm{th}}\)</span> node.</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Examples</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">cyphi.utils</span> <span class="kn">import</span> <span class="n">index2state</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">number_of_nodes</span> <span class="o">=</span> <span class="mi">5</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">index2state</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">number_of_nodes</span><span class="p">)</span>
+<span class="go">(1, 0, 0, 0, 0)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">number_of_nodes</span> <span class="o">=</span> <span class="mi">8</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">index2state</span><span class="p">(</span><span class="mi">7</span><span class="p">,</span> <span class="n">number_of_nodes</span><span class="p">)</span>
+<span class="go">(1, 1, 1, 0, 0, 0, 0, 0)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="cyphi.utils.nodes2indices">
+<tt class="descclassname">cyphi.utils.</tt><tt class="descname">nodes2indices</tt><big>(</big><em>nodes</em><big>)</big><a class="headerlink" href="#cyphi.utils.nodes2indices" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="cyphi.utils.apply_cut">
+<tt class="descclassname">cyphi.utils.</tt><tt class="descname">apply_cut</tt><big>(</big><em>cut</em>, <em>connectivity_matrix</em><big>)</big><a class="headerlink" href="#cyphi.utils.apply_cut" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a modified connectivity matrix where the connections from one
+set of nodes to the other are destroyed.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="cyphi.utils.apply_boundary_conditions_to_cm">
+<tt class="descclassname">cyphi.utils.</tt><tt class="descname">apply_boundary_conditions_to_cm</tt><big>(</big><em>external_indices</em>, <em>connectivity_matrix</em><big>)</big><a class="headerlink" href="#cyphi.utils.apply_boundary_conditions_to_cm" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a connectivity matrix with all connections to or from external
+nodes removed.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="cyphi.utils.get_inputs_from_cm">
+<tt class="descclassname">cyphi.utils.</tt><tt class="descname">get_inputs_from_cm</tt><big>(</big><em>index</em>, <em>connectivity_matrix</em><big>)</big><a class="headerlink" href="#cyphi.utils.get_inputs_from_cm" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a tuple of node indices that have connections to the node with
+the given index.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="cyphi.utils.get_outputs_from_cm">
+<tt class="descclassname">cyphi.utils.</tt><tt class="descname">get_outputs_from_cm</tt><big>(</big><em>index</em>, <em>connectivity_matrix</em><big>)</big><a class="headerlink" href="#cyphi.utils.get_outputs_from_cm" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a tuple of node indices that the node with the given index has
+connections to.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="cyphi.utils.np_hash">
+<tt class="descclassname">cyphi.utils.</tt><tt class="descname">np_hash</tt><big>(</big><em>a</em><big>)</big><a class="headerlink" href="#cyphi.utils.np_hash" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a hash of a NumPy array.</p>
+<p>This is much faster than <tt class="docutils literal"><span class="pre">np.toString</span></tt> for large arrays.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="cyphi.utils.phi_eq">
+<tt class="descclassname">cyphi.utils.</tt><tt class="descname">phi_eq</tt><big>(</big><em>x</em>, <em>y</em><big>)</big><a class="headerlink" href="#cyphi.utils.phi_eq" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compare two phi values up to <tt class="xref py py-const docutils literal"><span class="pre">constants.PRECISION</span></tt>.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="cyphi.utils.combs">
+<tt class="descclassname">cyphi.utils.</tt><tt class="descname">combs</tt><big>(</big><em>a</em>, <em>r</em><big>)</big><a class="headerlink" href="#cyphi.utils.combs" title="Permalink to this definition">¶</a></dt>
+<dd><p>NumPy implementation of itertools.combinations.</p>
+<p>Return successive <span class="math">\(r\)</span>-length combinations of elements in the array <tt class="docutils literal"><span class="pre">a</span></tt>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>a</strong> (<em>np.ndarray</em>) &#8211; The array from which to get combinations.</li>
+<li><strong>r</strong> (<em>int</em>) &#8211; The length of the combinations.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><tt class="docutils literal"><span class="pre">np.ndarray</span></tt> &#8211; An array of combinations.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="cyphi.utils.comb_indices">
+<tt class="descclassname">cyphi.utils.</tt><tt class="descname">comb_indices</tt><big>(</big><em>n</em>, <em>k</em><big>)</big><a class="headerlink" href="#cyphi.utils.comb_indices" title="Permalink to this definition">¶</a></dt>
+<dd><p>N-D version of itertools.combinations.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>a</strong> (<em>np.ndarray</em>) &#8211; The array from which to get combinations.</li>
+<li><strong>k</strong> (<em>int</em>) &#8211; The desired length of the combinations.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><tt class="docutils literal"><span class="pre">np.ndarray</span></tt> &#8211; Indices that give the <span class="math">\(k\)</span>-combinations of <span class="math">\(n\)</span>
+elements.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Example</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">n</span><span class="p">,</span> <span class="n">k</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">2</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">6</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">data</span><span class="p">[:,</span> <span class="n">comb_indices</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">k</span><span class="p">)]</span>
+<span class="go">array([[[0, 1],</span>
+<span class="go">        [0, 2],</span>
+<span class="go">        [1, 2]],</span>
+
+<span class="go">       [[3, 4],</span>
+<span class="go">        [3, 5],</span>
+<span class="go">        [4, 5]]])</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="cyphi.utils.powerset">
+<tt class="descclassname">cyphi.utils.</tt><tt class="descname">powerset</tt><big>(</big><em>iterable</em><big>)</big><a class="headerlink" href="#cyphi.utils.powerset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the power set of an iterable (see <a class="reference external" href="http://docs.python.org/2/library/itertools.html#recipes">itertools recipes</a>).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>iterable</strong> (<em>Iterable</em>) &#8211; The iterable from which to generate the power set.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><tt class="docutils literal"><span class="pre">chain</span></tt> &#8211; An chained iterator over the power set.</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Example</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">ps</span> <span class="o">=</span> <span class="n">powerset</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">print</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">ps</span><span class="p">))</span>
+<span class="go">[(), (0,), (1,), (0, 1)]</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="cyphi.utils.uniform_distribution">
+<tt class="descclassname">cyphi.utils.</tt><tt class="descname">uniform_distribution</tt><big>(</big><em>number_of_nodes</em><big>)</big><a class="headerlink" href="#cyphi.utils.uniform_distribution" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the uniform distribution for a set of binary nodes, indexed by state
+(so there is one dimension per node, the size of which is the number of
+possible states for that node).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>nodes</strong> (<em>np.ndarray</em>) &#8211; A set of indices of binary nodes.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><tt class="docutils literal"><span class="pre">np.ndarray</span></tt> &#8211; The uniform distribution over the set of nodes.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="cyphi.utils.marginalize_out">
+<tt class="descclassname">cyphi.utils.</tt><tt class="descname">marginalize_out</tt><big>(</big><em>node</em>, <em>tpm</em><big>)</big><a class="headerlink" href="#cyphi.utils.marginalize_out" title="Permalink to this definition">¶</a></dt>
+<dd><p>Marginalize out a node from a TPM.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>node</strong> (<em>Node</em>) &#8211; The node to be marginalized out.</li>
+<li><strong>tpm</strong> (<em>np.ndarray</em>) &#8211; The TPM to marginalize the node out of.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><tt class="docutils literal"><span class="pre">np.ndarray</span></tt> &#8211; A TPM with the same number of dimensions, with the
+node marginalized out.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="cyphi.utils.max_entropy_distribution">
+<tt class="descclassname">cyphi.utils.</tt><tt class="descname">max_entropy_distribution</tt><big>(</big><em>node_indices</em>, <em>number_of_nodes</em><big>)</big><a class="headerlink" href="#cyphi.utils.max_entropy_distribution" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the maximum entropy distribution over a set of nodes.</p>
+<p>This is different from the network&#8217;s uniform distribution because nodes
+outside the are fixed and treated as if they have only 1 state.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>nodes</strong> (<em>tuple(Nodes)</em>) &#8211; The set of nodes over which to take the
+distribution.</li>
+<li><strong>network</strong> (<em>Network</em>) &#8211; The network the nodes belong to.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><tt class="docutils literal"><span class="pre">np.ndarray</span></tt> &#8211; The maximum entropy distribution over the set of
+nodes.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="cyphi.utils.hamming_emd">
+<tt class="descclassname">cyphi.utils.</tt><tt class="descname">hamming_emd</tt><big>(</big><em>d1</em>, <em>d2</em><big>)</big><a class="headerlink" href="#cyphi.utils.hamming_emd" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the Earth Mover&#8217;s Distance between two distributions (indexed
+by state, one dimension per node).</p>
+<p>Singleton dimensions are sqeezed out.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="cyphi.utils.bipartition">
+<tt class="descclassname">cyphi.utils.</tt><tt class="descname">bipartition</tt><big>(</big><em>a</em><big>)</big><a class="headerlink" href="#cyphi.utils.bipartition" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a list of bipartitions for a sequence.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>a</strong> (<em>Iterable</em>) &#8211; The iterable to partition.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><tt class="docutils literal"><span class="pre">list</span></tt> &#8211; A list of tuples containing each of the two partitions.</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Example</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">cyphi.utils</span> <span class="kn">import</span> <span class="n">bipartition</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">bipartition</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+<span class="go">[((), (1, 2, 3)), ((1,), (2, 3)), ((2,), (1, 3)), ((1, 2), (3,))]</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="cyphi.utils.bipartition_indices">
+<tt class="descclassname">cyphi.utils.</tt><tt class="descname">bipartition_indices</tt><big>(</big><em>N</em><big>)</big><a class="headerlink" href="#cyphi.utils.bipartition_indices" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns indices for bipartitions of a sequence.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>N</strong> (<em>int</em>) &#8211; The length of the sequence.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><tt class="docutils literal"><span class="pre">list</span></tt> &#8211; A list of tuples containing the indices for each of the two
+partitions.</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Example</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">cyphi.utils</span> <span class="kn">import</span> <span class="n">bipartition_indices</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">N</span> <span class="o">=</span> <span class="mi">3</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">bipartition_indices</span><span class="p">(</span><span class="n">N</span><span class="p">)</span>
+<span class="go">[((), (0, 1, 2)), ((0,), (1, 2)), ((1,), (0, 2)), ((0, 1), (2,))]</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="cyphi.utils.connectivity_matrix_to_tpm">
+<tt class="descclassname">cyphi.utils.</tt><tt class="descname">connectivity_matrix_to_tpm</tt><big>(</big><em>network</em><big>)</big><a class="headerlink" href="#cyphi.utils.connectivity_matrix_to_tpm" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate a TPM from a connectivity matrix and nodes that implement
+logical functions.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>network</strong> (<em>Network</em>) &#8211; The network for which to generate the TPM.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><tt class="docutils literal"><span class="pre">np.ndarray</span></tt> &#8211; A transition probability matrix.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="cyphi.utils.print_repertoire">
+<tt class="descclassname">cyphi.utils.</tt><tt class="descname">print_repertoire</tt><big>(</big><em>r</em><big>)</big><a class="headerlink" href="#cyphi.utils.print_repertoire" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="cyphi.utils.print_repertoire_horiz">
+<tt class="descclassname">cyphi.utils.</tt><tt class="descname">print_repertoire_horiz</tt><big>(</big><em>r</em><big>)</big><a class="headerlink" href="#cyphi.utils.print_repertoire_horiz" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="cyphi.utils.print_partition">
+<tt class="descclassname">cyphi.utils.</tt><tt class="descname">print_partition</tt><big>(</big><em>p</em><big>)</big><a class="headerlink" href="#cyphi.utils.print_partition" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<span class="target" id="module-cyphi.validate"></span><div class="section" id="validate">
+<h1>Validate<a class="headerlink" href="#validate" title="Permalink to this headline">¶</a></h1>
+<p>Methods for validating common types of input.</p>
+<dl class="exception">
+<dt id="cyphi.validate.StateUnreachableError">
+<em class="property">exception </em><tt class="descclassname">cyphi.validate.</tt><tt class="descname">StateUnreachableError</tt><big>(</big><em>current_state</em>, <em>past_state</em>, <em>tpm</em>, <em>message</em><big>)</big><a class="headerlink" href="#cyphi.validate.StateUnreachableError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Raised when the current state of a network cannot be reached, either
+from any state or from a given past state.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="cyphi.validate.direction">
+<tt class="descclassname">cyphi.validate.</tt><tt class="descname">direction</tt><big>(</big><em>direction</em><big>)</big><a class="headerlink" href="#cyphi.validate.direction" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="cyphi.validate.nodelist">
+<tt class="descclassname">cyphi.validate.</tt><tt class="descname">nodelist</tt><big>(</big><em>nodes</em>, <em>name</em><big>)</big><a class="headerlink" href="#cyphi.validate.nodelist" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="cyphi.validate.tpm">
+<tt class="descclassname">cyphi.validate.</tt><tt class="descname">tpm</tt><big>(</big><em>tpm</em><big>)</big><a class="headerlink" href="#cyphi.validate.tpm" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="cyphi.validate.connectivity_matrix">
+<tt class="descclassname">cyphi.validate.</tt><tt class="descname">connectivity_matrix</tt><big>(</big><em>cm</em><big>)</big><a class="headerlink" href="#cyphi.validate.connectivity_matrix" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="cyphi.validate.state">
+<tt class="descclassname">cyphi.validate.</tt><tt class="descname">state</tt><big>(</big><em>network</em><big>)</big><a class="headerlink" href="#cyphi.validate.state" title="Permalink to this definition">¶</a></dt>
+<dd><p>Validate a network&#8217;s current and past state.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="cyphi.validate.network">
+<tt class="descclassname">cyphi.validate.</tt><tt class="descname">network</tt><big>(</big><em>network</em><big>)</big><a class="headerlink" href="#cyphi.validate.network" title="Permalink to this definition">¶</a></dt>
+<dd><p>Validate TPM, connectivity matrix, and current and past state.</p>
+</dd></dl>
+
+</div>
+
+
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2014, Will Mayner.
+      Last updated on Oct 07, 2014.
+    </p>
+  </div>
+
+  <a href="https://github.com/snide/sphinx_rtd_theme">Sphinx theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'v0.0.2',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>
