@@ -7,7 +7,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>CyPhi &mdash; v0.0.2 documentation</title>
+  <title>CyPhi &mdash; v0.1.0 documentation</title>
   
 
   
@@ -28,7 +28,7 @@
   
 
   
-    <link rel="top" title="v0.0.2 documentation" href="#"/>
+    <link rel="top" title="v0.1.0 documentation" href="#"/>
   <link rel="stylesheet" href="_static/custom.css">
 
 
@@ -44,7 +44,7 @@
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-nav-search">
-        <a href="#" class="fa fa-home"> CyPhi v0.0.2</a>
+        <a href="#" class="fa fa-home"> CyPhi v0.1.0</a>
         <div role="search">
   <form id ="rtd-search-form" class="wy-form" action="search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" />
@@ -93,7 +93,7 @@
       
       <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
         <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="#">CyPhi v0.0.2</a>
+        <a href="#">CyPhi v0.1.0</a>
       </nav>
 
 
@@ -468,13 +468,28 @@ context of all <span class="math">\(\varphi\)</span> and <span class="math">\(\P
 <p>In a 3-node network, <tt class="docutils literal"><span class="pre">a_network.tpm[(0,</span> <span class="pre">0,</span> <span class="pre">1)]</span></tt> gives the transition
 probabilities for each node at <span class="math">\(t_0\)</span> given that state at <span class="math">\(t_{-1}\)</span> was
 <span class="math">\(\{0,0,1\}\)</span>.</p>
-<dl class="attribute">
-<dt id="cyphi.network.Network.size">
-<tt class="descname">size</tt><a class="headerlink" href="#cyphi.network.Network.size" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>int</em></p>
-<p>The number of nodes in the network.</p>
-</dd></dl>
-
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>tpm</strong> (<em>np.ndarray</em>) &#8211; See the corresponding attribute.</li>
+<li><strong>current_state</strong> (<em>tuple</em>) &#8211; See the corresponding attribute.</li>
+<li><strong>past_state</strong> (<em>tuple</em>) &#8211; See the corresponding attribute.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name" colspan="2">Keyword Arguments:</th></tr>
+<tr class="field-even field"><td>&nbsp;</td><td class="field-body"><p class="first last"><strong>connectivity_matrix</strong> (<em>array or sequence</em>) &#8211;
+A square binary adjacency
+matrix indicating the connections between nodes in the network.
+<tt class="docutils literal"><span class="pre">connectivity_matrix[i][j]</span> <span class="pre">==</span> <span class="pre">1</span></tt> means that node <span class="math">\(i\)</span> is connected
+to node <span class="math">\(j\)</span>. If no connectivity matrix is given, every node is
+connected to every node <strong>(including itself)</strong>.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <dl class="attribute">
 <dt id="cyphi.network.Network.tpm">
 <tt class="descname">tpm</tt><a class="headerlink" href="#cyphi.network.Network.tpm" title="Permalink to this definition">¶</a></dt>
@@ -521,10 +536,10 @@ nodes in the network.</p>
 </dd></dl>
 
 <dl class="attribute">
-<dt id="cyphi.network.Network.nodes">
-<tt class="descname">nodes</tt><a class="headerlink" href="#cyphi.network.Network.nodes" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>list(Node)</em></p>
-<p>A list of nodes in the network.</p>
+<dt id="cyphi.network.Network.size">
+<tt class="descname">size</tt><a class="headerlink" href="#cyphi.network.Network.size" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>int</em></p>
+<p>The number of nodes in the network.</p>
 </dd></dl>
 
 <dl class="attribute">
@@ -534,20 +549,6 @@ nodes in the network.</p>
 <p>The number of possible states of the network.</p>
 </dd></dl>
 
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name" colspan="2">Keyword Arguments:</th></tr>
-<tr class="field-odd field"><td>&nbsp;</td><td class="field-body"><strong>connectivity_matrix</strong> (<em>array or sequence</em>) &#8211;
-A square binary adjacency
-matrix indicating the connections between nodes in the network.
-<tt class="docutils literal"><span class="pre">connectivity_matrix[i][j]</span> <span class="pre">==</span> <span class="pre">1</span></tt> means that node <span class="math">\(i\)</span> is connected
-to node <span class="math">\(j\)</span>. If no connectivity matrix is given, every node is
-connected to every node <strong>(including itself)</strong>.</td>
-</tr>
-</tbody>
-</table>
 <dl class="method">
 <dt id="cyphi.network.Network.__eq__">
 <tt class="descname">__eq__</tt><big>(</big><em>other</em><big>)</big><a class="headerlink" href="#cyphi.network.Network.__eq__" title="Permalink to this definition">¶</a></dt>
@@ -573,12 +574,70 @@ past state.</p>
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>nodes</strong> (<em>tuple(int)</em>) &#8211; A sequence of indices of the nodes in this
 subsystem.</li>
-<li><strong>network</strong> (<em>Network</em>) &#8211; The network the subsystem is part of.</li>
+<li><strong>network</strong> (<em>Network</em>) &#8211; The network the subsystem belongs to.</li>
 </ul>
 </td>
 </tr>
 </tbody>
 </table>
+<dl class="attribute">
+<dt id="cyphi.subsystem.Subsystem.nodes">
+<tt class="descname">nodes</tt><a class="headerlink" href="#cyphi.subsystem.Subsystem.nodes" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>list(Node)</em></p>
+<p>A list of nodes in the subsystem.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.subsystem.Subsystem.node_indices">
+<tt class="descname">node_indices</tt><a class="headerlink" href="#cyphi.subsystem.Subsystem.node_indices" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>tuple(int)</em></p>
+<p>The indices of the nodes in the subsystem.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.subsystem.Subsystem.size">
+<tt class="descname">size</tt><a class="headerlink" href="#cyphi.subsystem.Subsystem.size" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>int</em></p>
+<p>The number of nodes in the subsystem.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.subsystem.Subsystem.network">
+<tt class="descname">network</tt><a class="headerlink" href="#cyphi.subsystem.Subsystem.network" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>Network</em></p>
+<p>The network the subsystem belongs to.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.subsystem.Subsystem.cut">
+<tt class="descname">cut</tt><a class="headerlink" href="#cyphi.subsystem.Subsystem.cut" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>Cut</em></p>
+<p>The cut that has been applied to this subsystem.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.subsystem.Subsystem.null_cut">
+<tt class="descname">null_cut</tt><a class="headerlink" href="#cyphi.subsystem.Subsystem.null_cut" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>Cut</em></p>
+<p>The cut object representing no cut.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.subsystem.Subsystem.past_tpm">
+<tt class="descname">past_tpm</tt><a class="headerlink" href="#cyphi.subsystem.Subsystem.past_tpm" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>np.array</em></p>
+<p>The TPM conditioned on the past state of the
+external nodes (nodes outside the subsystem).</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cyphi.subsystem.Subsystem.current_tpm">
+<tt class="descname">current_tpm</tt><a class="headerlink" href="#cyphi.subsystem.Subsystem.current_tpm" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>np.array</em></p>
+<p>The TPM conditioned on the current state of the
+external nodes.</p>
+</dd></dl>
+
 <dl class="method">
 <dt id="cyphi.subsystem.Subsystem.__eq__">
 <tt class="descname">__eq__</tt><big>(</big><em>other</em><big>)</big><a class="headerlink" href="#cyphi.subsystem.Subsystem.__eq__" title="Permalink to this definition">¶</a></dt>
@@ -2170,7 +2229,7 @@ from any state or from a given past state.</p>
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'v0.0.2',
+            VERSION:'v0.1.0',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true
