@@ -7,7 +7,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>CyPhi &mdash; CyPhi v0.0.2 documentation</title>
+  <title>CyPhi &mdash; v0.0.2 documentation</title>
   
 
   
@@ -28,7 +28,8 @@
   
 
   
-    <link rel="top" title="CyPhi v0.0.2 documentation" href="#"/>
+    <link rel="top" title="v0.0.2 documentation" href="#"/>
+  <!-- remove before publishing --><script>document.write('<script src="http://' + (location.host || 'localhost').split(':')[0] + ':35729/livereload.js?snipver=1"></' + 'script>')</script>
   <link rel="stylesheet" href="_static/custom.css">
 
 
@@ -44,7 +45,7 @@
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-nav-search">
-        <a href="#" class="fa fa-home"> CyPhi</a>
+        <a href="#" class="fa fa-home"> CyPhi v0.0.2</a>
         <div role="search">
   <form id ="rtd-search-form" class="wy-form" action="search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" />
@@ -93,7 +94,7 @@
       
       <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
         <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="#">CyPhi</a>
+        <a href="#">CyPhi v0.0.2</a>
       </nav>
 
 
@@ -861,8 +862,8 @@ than ~80.</p>
 </div>
 </li>
 <li><p class="first">Control whether system cuts are evaluated in parallel, which requires more
-memory. If cuts are evaluated sequentially, only two <a href="#id1"><span class="problematic" id="id2">|</span></a>BigMip|s need to be in
-memory at once.</p>
+memory. If cuts are evaluated sequentially, only two <a class="reference internal" href="#cyphi.models.BigMip" title="cyphi.models.BigMip"><tt class="xref py py-class docutils literal"><span class="pre">cyphi.models.BigMip</span></tt></a> instances need
+to be in memory at once.</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">cyphi</span><span class="o">.</span><span class="n">constants</span><span class="o">.</span><span class="n">PARALLEL_CUT_EVALUATION</span>
 <span class="go">True</span>
 </pre></div>
@@ -880,14 +881,14 @@ meaning &#8220;use all available cores&#8221;.</p>
 </div>
 <div class="section" id="caching-system-configuration">
 <h2>Caching system configuration<a class="headerlink" href="#caching-system-configuration" title="Permalink to this headline">¶</a></h2>
-<p>CyPhi is equipped with a transparent caching system for <a href="#id3"><span class="problematic" id="id4">|</span></a>BigMip|s and
-<a href="#id5"><span class="problematic" id="id6">|</span></a>Concept|s, which stores them as they are computed to avoid having to recompute
-them later. This makes it easy to play around interactively with the program,
-or to accumulate results with minimal effort. For larger projects, however, it
-is recommended that you manage the results explicitly, rather than relying on
-the cache. For this reason it is disabled by default.</p>
+<p>CyPhi is equipped with a transparent caching system for the <a class="reference internal" href="#cyphi.models.BigMip" title="cyphi.models.BigMip"><tt class="xref py py-class docutils literal"><span class="pre">cyphi.models.BigMip</span></tt></a> and
+<a class="reference internal" href="#cyphi.models.Concept" title="cyphi.models.Concept"><tt class="xref py py-class docutils literal"><span class="pre">cyphi.models.Concept</span></tt></a> objects, which stores them as they are computed to avoid having to
+recompute them later. This makes it easy to play around interactively with the
+program, or to accumulate results with minimal effort. For larger projects,
+however, it is recommended that you manage the results explicitly, rather than
+relying on the cache. For this reason it is disabled by default.</p>
 <ul>
-<li><p class="first">Control whether <a href="#id7"><span class="problematic" id="id8">|</span></a>BigMip|s are cached and retreived.</p>
+<li><p class="first">Control whether <a class="reference internal" href="#cyphi.models.BigMip" title="cyphi.models.BigMip"><tt class="xref py py-class docutils literal"><span class="pre">cyphi.models.BigMip</span></tt></a> objects are cached and retreived.</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">cyphi</span><span class="o">.</span><span class="n">constants</span><span class="o">.</span><span class="n">CACHE_BIGMIPS</span>
 <span class="go">False</span>
 </pre></div>
@@ -972,16 +973,16 @@ file, both, or none. See the <a class="reference external" href="https://docs.py
 </pre></div>
 </div>
 </li>
-<li><p class="first">Control the concern level of standard output logging. Takes the same levels
-as file logging.</p>
+<li><p class="first">Control the concern level of standard output logging. Same possible values as
+file logging.</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">cyphi</span><span class="o">.</span><span class="n">constants</span><span class="o">.</span><span class="n">LOGGING_CONFIG</span><span class="p">[</span><span class="s">&#39;stdout&#39;</span><span class="p">][</span><span class="s">&#39;level&#39;</span><span class="p">]</span>
 <span class="go">&#39;INFO&#39;</span>
 </pre></div>
 </div>
 </li>
 <li><p class="first">If parallel computation is enabled, it will have its own, separate messages,
-which are always sent to standard output. This setting controls their verbosity
-(0&#8211;100).</p>
+which are always sent to standard output. This setting controls their
+verbosity, an integer from 0 to 100.</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">cyphi</span><span class="o">.</span><span class="n">constants</span><span class="o">.</span><span class="n">PARALLEL_VERBOSITY</span>
 <span class="go">20</span>
 </pre></div>
@@ -1028,7 +1029,7 @@ as accurate as the EMD computations get.</p>
 <dl class="function">
 <dt id="cyphi.constants.print_config">
 <tt class="descclassname">cyphi.constants.</tt><tt class="descname">print_config</tt><big>(</big><em>config</em><big>)</big><a class="headerlink" href="#cyphi.constants.print_config" title="Permalink to this definition">¶</a></dt>
-<dd><p>Prints the current configuration.</p>
+<dd><p>Print the current configuration.</p>
 </dd></dl>
 
 </div>
@@ -1153,7 +1154,7 @@ the repertoires of each part of the partition.</p>
 <dt id="cyphi.models.Mip.__bool__">
 <tt class="descname">__bool__</tt><big>(</big><big>)</big><a class="headerlink" href="#cyphi.models.Mip.__bool__" title="Permalink to this definition">¶</a></dt>
 <dd><p>A Mip is truthy if it is not reducible; i.e. if it has a significant
-amount of <a href="#id9"><span class="problematic" id="id10">|small_phi|</span></a>.</p>
+amount of <a href="#id1"><span class="problematic" id="id2">|small_phi|</span></a>.</p>
 </dd></dl>
 
 </dd></dl>
@@ -1438,7 +1439,7 @@ boundary nodes.</p>
 probability that this node is off at <span class="math">\(t_0\)</span> if the state of the network
 is <span class="math">\(\{0,1,0\}\)</span> at <span class="math">\(t_{-1}\)</span>.</p>
 <p>Similarly, <tt class="docutils literal"><span class="pre">self.current_tpm[0][(0,</span> <span class="pre">1,</span> <span class="pre">0)]</span></tt> gives the probability
-that this node is off at <a href="#id11"><span class="problematic" id="id12">|t_1|</span></a> if the state of the network is <span class="math">\(\{0,1,0\}\)</span>
+that this node is off at <a href="#id3"><span class="problematic" id="id4">|t_1|</span></a> if the state of the network is <span class="math">\(\{0,1,0\}\)</span>
 at <span class="math">\(t_0\)</span>.</p>
 <dl class="method">
 <dt id="cyphi.node.Node.__eq__">
@@ -2149,8 +2150,8 @@ from any state or from a given past state.</p>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2014, Will Mayner.
-      Last updated on Oct 07, 2014.
+        &copy; Copyright 2014 Will Mayner.
+      Last updated on Oct 08, 2014.
     </p>
   </div>
 
