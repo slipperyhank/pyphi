@@ -7,7 +7,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>CyPhi &mdash; v0.1.0 documentation</title>
+  <title>CyPhi &mdash; v0.1.1 documentation</title>
   
 
   
@@ -28,7 +28,7 @@
   
 
   
-    <link rel="top" title="v0.1.0 documentation" href="#"/>
+    <link rel="top" title="v0.1.1 documentation" href="#"/>
   <link rel="stylesheet" href="_static/custom.css">
 
 
@@ -44,7 +44,7 @@
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-nav-search">
-        <a href="#" class="fa fa-home"> CyPhi v0.1.0</a>
+        <a href="#" class="fa fa-home"> CyPhi v0.1.1</a>
         <div role="search">
   <form id ="rtd-search-form" class="wy-form" action="search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" />
@@ -93,7 +93,7 @@
       
       <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
         <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="#">CyPhi v0.1.0</a>
+        <a href="#">CyPhi v0.1.1</a>
       </nav>
 
 
@@ -144,6 +144,7 @@ connectivity matrix. The TPM can be in more than one form; see the
 documentation for <tt class="xref py py-class docutils literal"><span class="pre">cyphi.Network</span></tt>. Here we&#8217;ll use the 2-dimensional
 state-by-node form.</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">cyphi</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">tpm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span>
 <span class="gp">... </span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
 <span class="gp">... </span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
@@ -180,7 +181,7 @@ To make a subsystem, we need the indices of subset of nodes which should be
 included in it and the network that the subsystem belongs to.</p>
 <p>In this case, we want the <span class="math">\(\Phi\)</span> of the entire network, so we simply include
 every node in the network in our subsystem:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">subsystem</span> <span class="o">=</span> <span class="n">Subsystem</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">network</span><span class="o">.</span><span class="n">size</span><span class="p">),</span> <span class="n">network</span><span class="p">)</span>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">subsystem</span> <span class="o">=</span> <span class="n">cyphi</span><span class="o">.</span><span class="n">Subsystem</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">network</span><span class="o">.</span><span class="n">size</span><span class="p">),</span> <span class="n">network</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>Now we use <a class="reference internal" href="#cyphi.compute.big_phi" title="cyphi.compute.big_phi"><tt class="xref py py-func docutils literal"><span class="pre">cyphi.compute.big_phi()</span></tt></a> function to compute the <span class="math">\(\Phi\)</span> of
@@ -343,9 +344,11 @@ mechanism.</p>
 </table>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
-<p class="last">The output is persistently cached by default to avoid recomputation.
-This may be disabled in the configuration file. See the documentation
-for <a class="reference internal" href="#module-cyphi.concept_caching" title="cyphi.concept_caching"><tt class="xref py py-mod docutils literal"><span class="pre">cyphi.concept_caching</span></tt></a> and <a class="reference internal" href="#module-cyphi.constants" title="cyphi.constants"><tt class="xref py py-mod docutils literal"><span class="pre">cyphi.constants</span></tt></a>.</p>
+<p class="last">The output can be persistently cached to avoid recomputation. This may
+be enabled in the configuration file&#8212;however, it is only available if
+the caching backend is a database (not the filesystem). See the
+documentation for <a class="reference internal" href="#module-cyphi.concept_caching" title="cyphi.concept_caching"><tt class="xref py py-mod docutils literal"><span class="pre">cyphi.concept_caching</span></tt></a> and
+<a class="reference internal" href="#module-cyphi.constants" title="cyphi.constants"><tt class="xref py py-mod docutils literal"><span class="pre">cyphi.constants</span></tt></a>.</p>
 </div>
 </dd></dl>
 
@@ -423,9 +426,7 @@ concept.</p>
 <dl class="function">
 <dt id="cyphi.compute.big_mip">
 <tt class="descclassname">cyphi.compute.</tt><tt class="descname">big_mip</tt><big>(</big><em>cache_key</em>, <em>subsystem</em><big>)</big><a class="headerlink" href="#cyphi.compute.big_mip" title="Permalink to this definition">¶</a></dt>
-<dd><p>Memoized version of _big_mip(cache_key, subsystem)</p>
-<p># TODO document big_mip</p>
-</dd></dl>
+<dd></dd></dl>
 
 <dl class="function">
 <dt id="cyphi.compute.big_phi">
@@ -2229,7 +2230,7 @@ from any state or from a given past state.</p>
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'v0.1.0',
+            VERSION:'v0.1.1',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true
