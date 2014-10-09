@@ -947,28 +947,36 @@ program, or to accumulate results with minimal effort. For larger projects,
 however, it is recommended that you manage the results explicitly, rather than
 relying on the cache. For this reason it is disabled by default.</p>
 <ul>
-<li><p class="first">Control whether <a class="reference internal" href="#cyphi.models.BigMip" title="cyphi.models.BigMip"><tt class="xref py py-class docutils literal"><span class="pre">cyphi.models.BigMip</span></tt></a> objects are cached and retreived.</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">cyphi</span><span class="o">.</span><span class="n">constants</span><span class="o">.</span><span class="n">CACHE_BIGMIPS</span>
-<span class="go">False</span>
-</pre></div>
-</div>
-</li>
-<li><p class="first">Control whether the concept caching system is used.</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">cyphi</span><span class="o">.</span><span class="n">constants</span><span class="o">.</span><span class="n">CACHE_CONCEPTS</span>
-<span class="go">False</span>
-</pre></div>
-</div>
-</li>
 <li><p class="first">Control whether precomputed results are stored and read from a database or
 from a local filesystem-based cache in the current directory. Set this to
 &#8216;fs&#8217; for the filesystem, &#8216;db&#8217; for the database. Caching results on the
 filesystem is the easiest to use but least robust caching system. Caching
-results in a database is more robust, but requires installing MongoDB.</p>
+results in a database is more robust and allows for caching individual
+concepts, but requires installing MongoDB.</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">cyphi</span><span class="o">.</span><span class="n">constants</span><span class="o">.</span><span class="n">CACHING_BACKEND</span>
 <span class="go">&#39;fs&#39;</span>
 </pre></div>
 </div>
 </li>
+<li><p class="first">Control whether <a class="reference internal" href="#cyphi.models.BigMip" title="cyphi.models.BigMip"><tt class="xref py py-class docutils literal"><span class="pre">cyphi.models.BigMip</span></tt></a> objects are cached and automatically retreived.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">cyphi</span><span class="o">.</span><span class="n">constants</span><span class="o">.</span><span class="n">CACHE_BIGMIPS</span>
+<span class="go">False</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">Control whether <a class="reference internal" href="#cyphi.models.Concept" title="cyphi.models.Concept"><tt class="xref py py-class docutils literal"><span class="pre">cyphi.models.Concept</span></tt></a> objects are cached and automatically retrieved.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">cyphi</span><span class="o">.</span><span class="n">constants</span><span class="o">.</span><span class="n">CACHE_CONCEPTS</span>
+<span class="go">False</span>
+</pre></div>
+</div>
+</li>
+</ul>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Concept caching only has an effect when a database is used as the the
+caching backend.</p>
+</div>
+<ul>
 <li><p class="first">If the caching backend is set to use the filesystem, the cache will be stored
 in this directory. This directory can be copied and moved around if you want
 to reuse results _e.g._ on a another computer, but it must be in the same
