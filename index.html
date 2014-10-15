@@ -7,7 +7,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>PyPhi &mdash; v0.1.2 documentation</title>
+  <title>PyPhi &mdash; v0.1.3 documentation</title>
   
 
   
@@ -28,7 +28,7 @@
   
 
   
-    <link rel="top" title="v0.1.2 documentation" href="#"/>
+    <link rel="top" title="v0.1.3 documentation" href="#"/>
   <link rel="stylesheet" href="_static/custom.css">
 
 
@@ -44,7 +44,7 @@
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-nav-search">
-        <a href="#" class="fa fa-home"> PyPhi v0.1.2</a>
+        <a href="#" class="fa fa-home"> PyPhi v0.1.3</a>
         <div role="search">
   <form id ="rtd-search-form" class="wy-form" action="search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" />
@@ -60,7 +60,7 @@
             <!-- Local TOC -->
             <div class="local-toc"><ul>
 <li><a class="reference internal" href="#">PyPhi</a><ul>
-<li><a class="reference internal" href="#configuration">Configuration</a></li>
+<li><a class="reference internal" href="#configuration-optional">Configuration (optional)</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#usage-and-examples">Usage and Examples</a></li>
@@ -93,7 +93,7 @@
       
       <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
         <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="#">PyPhi v0.1.2</a>
+        <a href="#">PyPhi v0.1.3</a>
       </nav>
 
 
@@ -120,12 +120,17 @@
 <p>PyPhi is a Python library for computing integrated information.</p>
 <p>See the documentation for <a class="reference internal" href="#module-pyphi.examples" title="pyphi.examples"><tt class="xref py py-mod docutils literal"><span class="pre">pyphi.examples</span></tt></a> for information on how to use
 it.</p>
-<div class="section" id="configuration">
-<h2>Configuration<a class="headerlink" href="#configuration" title="Permalink to this headline">¶</a></h2>
-<p>There are several module-level options that control aspects of the computation.
-These are loaded from a YAML configuration file, <tt class="docutils literal"><span class="pre">pyphi_config.yml</span></tt>, which
-must be in the directory where PyPhi is run. See the documentation for
-<a class="reference internal" href="#module-pyphi.constants" title="pyphi.constants"><tt class="xref py py-mod docutils literal"><span class="pre">pyphi.constants</span></tt></a> for a description of the options and their defaults.</p>
+<p>To report issues, please use the issue tracker on the <a class="reference external" href="https://github.com/wmayner/pyphi">GitHub repository</a>. Bug reports and pull requests are
+welcome.</p>
+<div class="section" id="configuration-optional">
+<h2>Configuration (optional)<a class="headerlink" href="#configuration-optional" title="Permalink to this headline">¶</a></h2>
+<p>There are several module-level options that control aspects of the computation.</p>
+<p>These are loaded from a YAML configuration file, <tt class="docutils literal"><span class="pre">pyphi_config.yml</span></tt>. <strong>This
+file must be in the directory where PyPhi is run</strong>. If there is no such file,
+the default configuration will be used.</p>
+<p>You can download an example configuration file <a class="reference external" href="https://github.com/wmayner/pyphi/blob/master/pyphi_config.yml">here</a>.</p>
+<p>See the documentation for <a class="reference internal" href="#module-pyphi.constants" title="pyphi.constants"><tt class="xref py py-mod docutils literal"><span class="pre">pyphi.constants</span></tt></a> for a description of the
+options and their defaults.</p>
 </div>
 </div>
 <span class="target" id="module-pyphi.examples"></span><div class="section" id="usage-and-examples">
@@ -2224,7 +2229,7 @@ from any state or from a given past state.</p>
   <div role="contentinfo">
     <p>
         &copy; Copyright 2014 Will Mayner.
-      Last updated on Oct 10, 2014.
+      Last updated on Oct 15, 2014.
     </p>
   </div>
 
@@ -2244,7 +2249,7 @@ from any state or from a given past state.</p>
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'v0.1.2',
+            VERSION:'v0.1.3',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true
