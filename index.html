@@ -494,17 +494,17 @@ connected to every node <strong>(including itself)</strong>.</p>
 mechanism. It can be provided in either state-by-node or
 state-by-state form. In state-by-state form, decimal indices must
 correspond to states so that lower-order bits of the binary
-representation of the index give the state of low-index nodes. See
-<tt class="xref py py-func docutils literal"><span class="pre">utils.state_by_state2state_by_node()</span></tt> for more info. If given
-in state-by-node form, it can be either 2-dimensional, so that
-<tt class="docutils literal"><span class="pre">tpm[i]</span></tt> gives the probabilities of each node being on if the
-past state is given by the binary representation of <span class="math">\(i\)</span>, or in N-D
-form, so that <tt class="docutils literal"><span class="pre">tpm[0][1][0]</span></tt> gives the probabilities of each node
-being on if the past state is <span class="math">\(\{0,1,0\}\)</span>. The shape of the
-2-dimensional form of the TPM must be <tt class="docutils literal"><span class="pre">(S,</span> <span class="pre">N)</span></tt>, and the shape of
-the N-D form of the TPM must be <tt class="docutils literal"><span class="pre">[2]</span>
-<span class="pre">*</span> <span class="pre">N</span> <span class="pre">+</span> <span class="pre">[N]</span></tt>, where <tt class="docutils literal"><span class="pre">S</span></tt> is the number of states and <tt class="docutils literal"><span class="pre">N</span></tt> is the
-number of nodes in the network.</p>
+representation of the index give the state of low-index nodes (see
+note below). If given in state-by-node form, it can be either
+2-dimensional, so that <tt class="docutils literal"><span class="pre">tpm[i]</span></tt> gives the probabilities of each
+node being on if the past state is given by the binary
+representation of <span class="math">\(i\)</span>, where again, low-order bits correspond to
+low-index nodes, or in N-D form, so that <tt class="docutils literal"><span class="pre">tpm[0][1][0]</span></tt> gives the
+probabilities of each node being on if the past state is <span class="math">\(\{0,1,0\}\)</span>.
+The shape of the 2-dimensional form of the TPM must be <tt class="docutils literal"><span class="pre">(S,</span> <span class="pre">N)</span></tt>,
+and the shape of the N-D form of the TPM must be <tt class="docutils literal"><span class="pre">[2]</span> <span class="pre">*</span> <span class="pre">N</span> <span class="pre">+</span> <span class="pre">[N]</span></tt>,
+where <tt class="docutils literal"><span class="pre">S</span></tt> is the number of states and <tt class="docutils literal"><span class="pre">N</span></tt> is the number of
+nodes in the network.</p>
 </dd></dl>
 
 <dl class="attribute">
@@ -545,6 +545,15 @@ nodes in the network.</p>
 <p>The number of possible states of the network.</p>
 </dd></dl>
 
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Throughout PyPhi, when decimal indices are used to represent the state
+of a set of binary nodes, the low-order bits of the binary
+representation of the decimal index correspond to the low-index nodes.
+The rationale is that this low-order to low-index mapping is more
+stable under changes in the number of nodes, in that the same bit
+always corresponds to the same node index.</p>
+</div>
 <dl class="method">
 <dt id="pyphi.network.Network.__eq__">
 <tt class="descname">__eq__</tt><big>(</big><em>other</em><big>)</big><a class="headerlink" href="#pyphi.network.Network.__eq__" title="Permalink to this definition">¶</a></dt>
