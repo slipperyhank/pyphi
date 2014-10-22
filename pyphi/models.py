@@ -12,7 +12,7 @@ from collections import namedtuple, Iterable
 import numpy as np
 
 from .constants import DIRECTIONS, PAST, FUTURE
-from . import utils, constants
+from . import utils, constants, json
 
 # TODO use properties to avoid data duplication
 
@@ -29,8 +29,11 @@ class Cut(namedtuple('Cut', ['severed', 'intact'])):
             Connections to this group of nodes from those in ``severed`` are
             severed.
     """
-
-    pass
+    def json_dict(self):
+        return {
+            'severed': json.make_encodable(self.severed),
+            'intact': json.make_encodable(self.intact)
+        }
 
 
 class Part(namedtuple('Part', ['mechanism', 'purview'])):
@@ -53,8 +56,11 @@ class Part(namedtuple('Part', ['mechanism', 'purview'])):
 
         This class represents one term in the above product.
     """
-
-    pass
+    def json_dict(self):
+        return {
+            'mechanism': json.make_encodable(self.mechanism),
+            'purview': json.make_encodable(self.purview)
+        }
 
 
 # Phi-ordering methods
@@ -225,6 +231,12 @@ class Mip(namedtuple('Mip', _mip_attributes)):
         return hash((self.phi, self.direction, self.mechanism, self.purview,
                      utils.np_hash(self.unpartitioned_repertoire)))
 
+    def json_dict(self):
+        return {
+            attr: json.make_encodable(getattr(self, attr))
+            for attr in _mip_attributes
+        }
+
     # Order by phi value, then by mechanism size
     __lt__ = _phi_then_mechanism_size_lt
     __gt__ = _phi_then_mechanism_size_gt
@@ -312,6 +324,11 @@ class Mice:
 
     def __hash__(self):
         return hash(('Mice', self._mip))
+
+    def json_dict(self):
+        return {
+            "mip": json.make_encodable(self._mip)
+        }
 
     # Order by phi value, then by mechanism size
     __lt__ = _phi_then_mechanism_size_lt
@@ -413,6 +430,12 @@ class Concept(namedtuple('Concept', _concept_attributes)):
                                                 self.effect.purview,
                                                 self.effect.repertoire)
 
+    def json_dict(self):
+        return {
+            attr: json.make_encodable(getattr(self, attr))
+            for attr in ['phi', 'mechanism', 'cause', 'effect']
+        }
+
     # Order by phi value, then by mechanism size
     __lt__ = _phi_then_mechanism_size_lt
     __gt__ = _phi_then_mechanism_size_gt
@@ -500,3 +523,9 @@ class BigMip(namedtuple('BigMip', _bigmip_attributes)):
     def __ge__(self, other):
         return (self.__gt__(other) or
                 _phi_eq(self, other))
+
+    def json_dict(self):
+        return {
+            attr: json.make_encodable(getattr(self, attr))
+            for attr in _bigmip_attributes
+        }
