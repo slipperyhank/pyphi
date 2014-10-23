@@ -112,8 +112,10 @@ class Network:
                                order="F").astype(float)
 
         self.connectivity_matrix = connectivity_matrix
-        self.current_state = current_state
-        self.past_state = past_state
+        # Coerce current and past state to tuples so they can be properly used
+        # as np.array indices.
+        self.current_state = tuple(current_state)
+        self.past_state = tuple(past_state)
         # Make the TPM and connectivity matrix immutable (for hashing).
         self.tpm.flags.writeable = False
         self.connectivity_matrix.flags.writeable = False
