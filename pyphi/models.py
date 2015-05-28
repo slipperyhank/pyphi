@@ -9,7 +9,7 @@ Containers for MICE, MIP, cut, partition, and concept data.
 from collections import namedtuple, Iterable
 import numpy as np
 
-from . import utils, convert, json
+from . import utils, convert
 
 # TODO use properties to avoid data duplication
 
@@ -28,8 +28,8 @@ class Cut(namedtuple('Cut', ['severed', 'intact'])):
     """
     def json_dict(self):
         return {
-            'severed': json.make_encodable(self.severed),
-            'intact': json.make_encodable(self.intact)
+            'severed': convert.make_encodable(self.severed),
+            'intact': convert.make_encodable(self.intact)
         }
 
 
@@ -55,8 +55,8 @@ class Part(namedtuple('Part', ['mechanism', 'purview'])):
     """
     def json_dict(self):
         return {
-            'mechanism': json.make_encodable(self.mechanism),
-            'purview': json.make_encodable(self.purview)
+            'mechanism': convert.make_encodable(self.mechanism),
+            'purview': convert.make_encodable(self.purview)
         }
 
 
@@ -236,7 +236,7 @@ class Mip(namedtuple('Mip', _mip_attributes)):
 
     def json_dict(self):
         return {
-            attr: json.make_encodable(getattr(self, attr))
+            attr: convert.make_encodable(getattr(self, attr))
             for attr in _mip_attributes
         }
 
@@ -346,7 +346,7 @@ class Mice:
 
     def json_dict(self):
         return {
-            "mip": json.make_encodable(self._mip)
+            "mip": convert.make_encodable(self._mip)
         }
 
     # Order by phi value, then by mechanism size
@@ -480,17 +480,17 @@ class Concept:
 
     def json_dict(self):
         d = {
-            attr: json.make_encodable(getattr(self, attr))
+            attr: convert.make_encodable(getattr(self, attr))
             for attr in ['phi', 'mechanism', 'cause', 'effect', 'time']
         }
         # Expand the repertoires.
-        d['cause']['repertoire'] = json.make_encodable(
+        d['cause']['repertoire'] = convert.make_encodable(
             self.expand_cause_repertoire().flatten())
-        d['effect']['repertoire'] = json.make_encodable(
+        d['effect']['repertoire'] = convert.make_encodable(
             self.expand_effect_repertoire().flatten())
-        d['cause']['partitioned_repertoire'] = json.make_encodable(
+        d['cause']['partitioned_repertoire'] = convert.make_encodable(
             self.expand_partitioned_cause_repertoire().flatten())
-        d['effect']['partitioned_repertoire'] = json.make_encodable(
+        d['effect']['partitioned_repertoire'] = convert.make_encodable(
             self.expand_partitioned_effect_repertoire().flatten())
         return d
 
@@ -600,6 +600,6 @@ class BigMip:
 
     def json_dict(self):
         return {
-            attr: json.make_encodable(getattr(self, attr))
+            attr: convert.make_encodable(getattr(self, attr))
             for attr in _bigmip_attributes + ['time', 'small_phi_time']
         }

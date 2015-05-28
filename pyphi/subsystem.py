@@ -10,7 +10,7 @@ import os
 import psutil
 import numpy as np
 from .constants import DIRECTIONS, PAST, FUTURE
-from . import constants, config, validate, utils, convert, json
+from . import constants, config, validate, utils, convert
 from .config import PRECISION
 from .models import Cut, Mip, Part, Mice, Concept
 from .node import Node
@@ -153,8 +153,8 @@ class Subsystem:
 
     def json_dict(self):
         return {
-            'node_indices': json.make_encodable(self.node_indices),
-            'cut': json.make_encodable(self.cut),
+            'node_indices': convert.make_encodable(self.node_indices),
+            'cut': convert.make_encodable(self.cut),
         }
 
     def indices2nodes(self, indices):
@@ -731,8 +731,8 @@ class Subsystem:
             are maximally different than the unconstrained cause/effect
             repertoires (*i.e.*, those that maximize |small_phi|). Here, we
             return only information corresponding to one direction, |past| or
-            |future|, i.e., we return a core cause or core effect, not the pair of
-            them.
+            |future|, i.e., we return a core cause or core effect, not the pair
+            of them.
         """
         # Return a cached MICE if there's a hit.
         cached_mice = self._get_cached_mice(direction, mechanism)

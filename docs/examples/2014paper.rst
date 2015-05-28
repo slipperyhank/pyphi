@@ -445,7 +445,7 @@ graphical user interface for PyPhi available online at
 http://integratedinformationtheory.org/calculate.html. You can build the
 networks shown in the figure there, and then use the **Export** button to
 obtain a `JSON <http://en.wikipedia.org/wiki/JSON>`_ file representing the
-network. You can then import the file into Python with the ``json`` module:
+network. You can then import the file into Python with the ``convert`` module:
 
 .. code-block:: python
 

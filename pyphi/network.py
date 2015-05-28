@@ -10,7 +10,7 @@ context of all |small_phi| and |big_phi| computation.
 import json
 import numpy as np
 from . import validate, utils, convert, config
-from .json import make_encodable
+from .convert import make_encodable
 from .constants import DIRECTIONS, PAST, FUTURE
 
 # TODO!!! raise error if user tries to change TPM or CM, double-check and
