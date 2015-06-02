@@ -745,20 +745,21 @@ class Subsystem:
         cached_mice = self._get_cached_mice(direction, mechanism)
         if cached_mice:
             return cached_mice
-
+        # TODO re-implement potential purview caching
+        # Needs to work with network/subsystem index differences
         # Get cached purviews if available.
-        if config.CACHE_POTENTIAL_PURVIEWS:
-            purviews = self.network.purview_cache[
-                (direction, convert.nodes2indices(mechanism))]
+        #if config.CACHE_POTENTIAL_PURVIEWS:
+        #    purviews = self.network.purview_cache[
+        #        (direction, convert.nodes2indices(mechanism))]
+        #else:
+        if direction == DIRECTIONS[PAST]:
+            purviews = list_past_purview(self.network,
+                                         convert.nodes2indices(mechanism))
+        elif direction == DIRECTIONS[FUTURE]:
+            purviews = list_future_purview(self.network,
+                                           convert.nodes2indices(mechanism))
         else:
-            if direction == DIRECTIONS[PAST]:
-                purviews = list_past_purview(self.network,
-                                             convert.nodes2indices(mechanism))
-            elif direction == DIRECTIONS[FUTURE]:
-                purviews = list_future_purview(self.network,
-                                               convert.nodes2indices(mechanism))
-            else:
-                validate.direction(direction)
+            validate.direction(direction)
 
         # Filter out purviews that aren't in the subsystem.
         purviews = [purview for purview in purviews if
