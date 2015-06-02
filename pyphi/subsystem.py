@@ -84,7 +84,8 @@ class Subsystem:
         self.tpm = utils.condition_tpm(
             self.network.tpm, self.external_indices,
             self.network.current_state)
-        self.tpm = np.squeeze(self.tpm)[..., self.node_indices]
+        if self.network.size > 1:
+            self.tpm = np.squeeze(self.tpm)[..., self.node_indices]
         # Generate the nodes.
         self.nodes = tuple(Node(i, self) for i in
                            self.subsystem_indices)
@@ -241,7 +242,6 @@ class Subsystem:
         # TODO extend to nonbinary nodes
         cjd = np.ones(tuple(2 if i in purview_indices else
                             1 for i in self.subsystem_indices))
-        print(cjd.shape)
         # Loop over all nodes in this mechanism, successively taking the
         # product (with expansion/broadcasting of singleton dimensions) of each
         # individual node's TPM (conditioned on that node's state) in order to
@@ -255,7 +255,6 @@ class Subsystem:
             # table for the node being in that state.
             node_state = self.current_state[mechanism_node.index]
             conditioned_tpm = mechanism_node.tpm[node_state]
-            print(conditioned_tpm.shape)
             # Collect the nodes that are not in the purview and have
             # connections to this node.
             non_purview_inputs = inputs - set(purview)
