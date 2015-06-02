@@ -32,7 +32,7 @@ def cut_mechanism_indices(subsystem, cut):
     def split_by_cut(indices):
         return ((set(indices) & set(cut[0])) and
                 (set(indices) & set(cut[1])))
-    return tuple(filter(split_by_cut, powerset(subsystem.node_indices)))
+    return tuple(filter(split_by_cut, powerset(subsystem.internal_indices)))
 
 
 def mechanism_split_by_cut(mechanism_indices, cut):

@@ -18,7 +18,7 @@ s = example_networks.s()
 directions = ('past', 'future')
 cuts = (None, Cut((1, 2), (0,)))
 subsystem = {
-    cut: Subsystem(s.node_indices, s.network, cut=cut)
+    cut: Subsystem(s.internal_indices, s.network, cut=cut)
     for cut in cuts
 }
 

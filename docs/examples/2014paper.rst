@@ -654,9 +654,9 @@ which exists in the paper no longer exists.
     >>> len(condensed)
     2
     >>> ABC, FG = condensed
-    >>> (ABC.subsystem.node_indices, ABC.phi)
+    >>> (ABC.subsystem.internal_indices, ABC.phi)
     ((0, 1, 2), 1.916663)
-    >>> (FG.subsystem.node_indices, FG.phi)
+    >>> (FG.subsystem.internal_indices, FG.phi)
     ((5, 6), 0.069445)
 
 There are several other functions available for working with complexes; see the

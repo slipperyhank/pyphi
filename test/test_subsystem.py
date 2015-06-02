@@ -38,13 +38,13 @@ def test_hash(s):
 
 def test_find_cut_matrix(s, big_subsys_0_thru_3):
     cut = Cut((0,), (1,2))
-    cut_s = Subsystem(s.node_indices,
+    cut_s = Subsystem(s.internal_indices,
                       s.network,
                       cut=cut,
                       mice_cache=s._mice_cache)
     answer_s = np.array([[0, 1, 1], [0, 0, 0], [0, 0, 0]])
     cut = Cut((0,1), (2,3))
-    cut_big = Subsystem(big_subsys_0_thru_3.node_indices,
+    cut_big = Subsystem(big_subsys_0_thru_3.internal_indices,
                         big_subsys_0_thru_3.network,
                         cut=cut,
                         mice_cache=big_subsys_0_thru_3._mice_cache)

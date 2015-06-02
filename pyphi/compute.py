@@ -113,7 +113,7 @@ def parallel_constellation(subsystem, mechanism_indices_to_check=None):
             constellation.
     """
     if not mechanism_indices_to_check:
-        mechanism_indices_to_check = utils.powerset(subsystem.node_indices)
+        mechanism_indices_to_check = utils.powerset(subsystem.internal_indices)
     if config.NUMBER_OF_CORES < 0:
         number_of_processes = (multiprocessing.cpu_count() +
                                config.NUMBER_OF_CORES + 1)
@@ -301,7 +301,7 @@ def _evaluate_cut(uncut_subsystem, cut, unpartitioned_constellation):
     """Find the ``BigMip`` for a given cut."""
     log.debug("Evaluating cut {}...".format(cut))
 
-    cut_subsystem = Subsystem(uncut_subsystem.node_indices,
+    cut_subsystem = Subsystem(uncut_subsystem.internal_indices,
                               uncut_subsystem.network,
                               cut=cut,
                               mice_cache=uncut_subsystem._mice_cache)
@@ -456,7 +456,7 @@ def _big_mip(cache_key, subsystem):
                  'immediately.'.format(subsystem))
         return time_annotated(_null_bigmip(subsystem))
     # Get the connectivity of just the subsystem nodes.
-    submatrix_indices = np.ix_(subsystem.node_indices, subsystem.node_indices)
+    submatrix_indices = np.ix_(subsystem.internal_indices, subsystem.internal_indices)
     cm = subsystem.network.connectivity_matrix[submatrix_indices]
     # Get the number of strongly connected components.
     num_components, _ = connected_components(csr_matrix(cm),
@@ -467,11 +467,11 @@ def _big_mip(cache_key, subsystem):
         return time_annotated(_null_bigmip(subsystem))
     # =========================================================================
     if config.CUT_ONE_APPROXIMATION:
-        bipartitions = utils.directed_bipartition_of_one(subsystem.node_indices)
+        bipartitions = utils.directed_bipartition_of_one(subsystem.internal_indices)
     else:
         # The first and last bipartitions are the null cut (trivial
         # bipartition), so skip them.
-        bipartitions = utils.directed_bipartition(subsystem.node_indices)[1:-1]
+        bipartitions = utils.directed_bipartition(subsystem.internal_indices)[1:-1]
     cuts = [Cut(bipartition[0], bipartition[1])
             for bipartition in bipartitions]
 
@@ -576,8 +576,8 @@ def condensed(network):
     covered_nodes = set()
     log.info("Condensing {}...".format(network))
     for c in reversed(sorted(complexes(network))):
-        if not any(n in covered_nodes for n in c.subsystem.node_indices):
+        if not any(n in covered_nodes for n in c.subsystem.internal_indices):
             condensed.append(c)
-            covered_nodes = covered_nodes | set(c.subsystem.node_indices)
+            covered_nodes = covered_nodes | set(c.subsystem.internal_indices)
     log.info("Finished condensing {}.".format(network))
     return condensed

@@ -49,7 +49,7 @@ def test_node_neq_by_index(s):
 
 def test_node_neq_by_context(s):
     other_network = Network(s.network.tpm, (0, 0, 0))
-    other_s = Subsystem(s.node_indices, other_network)
+    other_s = Subsystem(s.internal_indices, other_network)
     assert s.nodes[0] != Node(0, other_s)
 
 

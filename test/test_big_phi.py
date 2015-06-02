@@ -284,7 +284,7 @@ def test_find_mip_sequential_standard_example(s, flushcache, restore_fs_cache):
     config.PARALLEL_CUT_EVALUATION = False
 
     unpartitioned_constellation = constellation(s)
-    bipartitions = utils.directed_bipartition(s.node_indices)[1:-1]
+    bipartitions = utils.directed_bipartition(s.internal_indices)[1:-1]
     cuts = [Cut(bipartition[0], bipartition[1])
             for bipartition in bipartitions]
     min_mip = _null_bigmip(s)
@@ -301,7 +301,7 @@ def test_find_mip_parallel_standard_example(s, flushcache, restore_fs_cache):
     config.PARALLEL_CUT_EVALUATION, config.NUMBER_OF_CORES = True, -2
 
     unpartitioned_constellation = constellation(s)
-    bipartitions = utils.directed_bipartition(s.node_indices)[1:-1]
+    bipartitions = utils.directed_bipartition(s.internal_indices)[1:-1]
     cuts = [Cut(bipartition[0], bipartition[1])
             for bipartition in bipartitions]
     min_mip = _null_bigmip(s)
@@ -319,7 +319,7 @@ def test_find_mip_sequential_noised_example(s_noised, flushcache,
     config.PARALLEL_CUT_EVALUATION = False
 
     unpartitioned_constellation = constellation(s_noised)
-    bipartitions = utils.directed_bipartition(s_noised.node_indices)[1:-1]
+    bipartitions = utils.directed_bipartition(s_noised.internal_indices)[1:-1]
     cuts = [Cut(bipartition[0], bipartition[1])
             for bipartition in bipartitions]
     min_mip = _null_bigmip(s_noised)
@@ -338,7 +338,7 @@ def test_find_mip_parallel_noised_example(s_noised, flushcache,
     config.PARALLEL_CUT_EVALUATION, config.NUMBER_OF_CORES = True, -2
 
     unpartitioned_constellation = constellation(s_noised)
-    bipartitions = utils.directed_bipartition(s_noised.node_indices)[1:-1]
+    bipartitions = utils.directed_bipartition(s_noised.internal_indices)[1:-1]
     cuts = [Cut(bipartition[0], bipartition[1])
             for bipartition in bipartitions]
     min_mip = _null_bigmip(s_noised)
@@ -444,8 +444,8 @@ def test_rule152_complexes_no_caching(rule152):
         # Check the phi value of the main complex.
         assert utils.phi_eq(main.phi, result['phi'])
         # Check that the nodes are the same.
-        assert (main.subsystem.node_indices ==
-                complexes[result['main_complex'] - 1].subsystem.node_indices)
+        assert (main.subsystem.internal_indices ==
+                complexes[result['main_complex'] - 1].subsystem.internal_indices)
         # Check that the concept's phi values are the same.
         result_concepts = [c for c in result['concepts'] if c['is_irreducible']]
         z = list(zip([c.phi for c in main.unpartitioned_constellation],
@@ -464,7 +464,7 @@ def test_find_mip_parallel_micro(micro_s, flushcache, restore_fs_cache):
     config.PARALLEL_CUT_EVALUATION = True
 
     unpartitioned_constellation = constellation(micro_s)
-    bipartitions = utils.directed_bipartition(micro_s.node_indices)[1:-1]
+    bipartitions = utils.directed_bipartition(micro_s.internal_indices)[1:-1]
     cuts = [Cut(bipartition[0], bipartition[1])
             for bipartition in bipartitions]
     min_mip = _null_bigmip(micro_s)
@@ -483,7 +483,7 @@ def test_find_mip_sequential_micro(micro_s, flushcache, restore_fs_cache):
     config.PARALLEL_CUT_EVALUATION = False
 
     unpartitioned_constellation = constellation(micro_s)
-    bipartitions = utils.directed_bipartition(micro_s.node_indices)[1:-1]
+    bipartitions = utils.directed_bipartition(micro_s.internal_indices)[1:-1]
     cuts = [Cut(bipartition[0], bipartition[1])
             for bipartition in bipartitions]
     min_mip = _null_bigmip(micro_s)

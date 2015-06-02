@@ -9,7 +9,7 @@ from pyphi import utils, constants, models
 sub = pyphi.examples.basic_subsystem()
 mip = pyphi.compute.big_mip(sub)
 cut = pyphi.models.Cut((0,), (1, 2))
-s_cut = pyphi.subsystem.Subsystem(sub.node_indices, sub.network, cut,
+s_cut = pyphi.subsystem.Subsystem(sub.internal_indices, sub.network, cut,
                                   sub._mice_cache)
 
 

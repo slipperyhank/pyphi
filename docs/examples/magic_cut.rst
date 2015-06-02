@@ -44,7 +44,7 @@ There are several equivalent cuts for this example, to be explicit we will cut c
 nodes (0,1) to (2,)
 
    >>> cut = pyphi.models.Cut(severed=(0, 1), intact=(2,))
-   >>> cut_subsystem = pyphi.Subsystem(subsystem.node_indices, subsystem.network, cut=cut)
+   >>> cut_subsystem = pyphi.Subsystem(subsystem.internal_indices, subsystem.network, cut=cut)
    >>> cut_constellation = pyphi.compute.constellation(cut_subsystem)
 
 Lets investigate the concepts in the unpartitioned constellation,
