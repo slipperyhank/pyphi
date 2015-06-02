@@ -40,17 +40,17 @@ def test_node_init_inputs(s):
 
 
 def test_node_eq(s):
-    assert s.nodes[1] == Node(s.network, 1, s)
+    assert s.nodes[1] == Node(1, s)
 
 
 def test_node_neq_by_index(s):
-    assert s.nodes[0] != Node(s.network, 1, s)
+    assert s.nodes[0] != Node(1, s)
 
 
 def test_node_neq_by_context(s):
     other_network = Network(s.network.tpm, (0, 0, 0))
     other_s = Subsystem(s.node_indices, other_network)
-    assert s.nodes[0] != Node(other_network, 0, other_s)
+    assert s.nodes[0] != Node(0, other_s)
 
 
 def test_repr(s):

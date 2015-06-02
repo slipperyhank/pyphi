@@ -54,11 +54,13 @@ class Subsystem:
                  repertoire_cache=None, cache_info=None):
         # The network this subsystem belongs to.
         self.network = network
+        self.current_state = tuple(self.network.current_state[index] for index in node_indices)
         # Remove duplicates, sort, and ensure indices are native Python `int`s
         # (for JSON serialization).
         self.node_indices = tuple(sorted(list(set(map(int, node_indices)))))
         # Get the size of this subsystem.
         self.size = len(self.node_indices)
+        self.subsystem_indices = list(range(self.size))
         # Get the external nodes.
         self.external_indices = tuple(
             set(range(network.size)) - set(self.node_indices))
@@ -71,17 +73,21 @@ class Subsystem:
         # Get the subsystem's connectivity matrix. This is the network's
         # connectivity matrix, but with the cut applied, and with all
         # connections to/from external nodes severed.
-        self.connectivity_matrix = utils.apply_cut(
-            cut, network.connectivity_matrix)
+        if self.node_indices:
+            self.connectivity_matrix = utils.apply_cut(
+                cut, network.connectivity_matrix)[np.ix_(self.node_indices, self.node_indices)]
+        else:
+            self.connectivity_matrix = np.array([[]])
         # Get the perturbation probabilities for each node in the network
-        self.perturb_vector = network.perturb_vector
+        self.perturb_vector = list(network.perturb_vector[index] for index in node_indices)
         # The TPM conditioned on the current state of the external nodes.
         self.tpm = utils.condition_tpm(
             self.network.tpm, self.external_indices,
             self.network.current_state)
+        self.tpm = np.squeeze(self.tpm)[..., self.node_indices]
         # Generate the nodes.
-        self.nodes = tuple(Node(self.network, i, self) for i in
-                           self.node_indices)
+        self.nodes = tuple(Node(i, self) for i in
+                           self.subsystem_indices)
         # The matrix of connections which are severed due to the cut
         self.null_cut_matrix = np.zeros((len(self), len(self)))
         self.cut_matrix = (self._find_cut_matrix(cut) if cut is not None
@@ -225,7 +231,7 @@ class Subsystem:
         # return it.
         max_entropy_dist = utils.max_entropy_distribution(
             purview_indices,
-            self.network.size,
+            self.size,
             tuple(self.perturb_vector[i] for i in purview_indices))
         if not mechanism:
             self._set_cached_repertoire(DIRECTIONS[PAST], mechanism, purview,
@@ -234,7 +240,8 @@ class Subsystem:
         # Preallocate the mechanism's conditional joint distribution.
         # TODO extend to nonbinary nodes
         cjd = np.ones(tuple(2 if i in purview_indices else
-                            1 for i in self.network.node_indices))
+                            1 for i in self.subsystem_indices))
+        print(cjd.shape)
         # Loop over all nodes in this mechanism, successively taking the
         # product (with expansion/broadcasting of singleton dimensions) of each
         # individual node's TPM (conditioned on that node's state) in order to
@@ -246,8 +253,9 @@ class Subsystem:
             # TODO extend to nonbinary nodes
             # We're conditioning on this node's state, so take the probability
             # table for the node being in that state.
-            node_state = self.network.current_state[mechanism_node.index]
+            node_state = self.current_state[mechanism_node.index]
             conditioned_tpm = mechanism_node.tpm[node_state]
+            print(conditioned_tpm.shape)
             # Collect the nodes that are not in the purview and have
             # connections to this node.
             non_purview_inputs = inputs - set(purview)
@@ -321,8 +329,8 @@ class Subsystem:
         # Preallocate the purview's joint distribution
         # TODO extend to nonbinary nodes
         accumulated_cjd = np.ones(
-            [1] * self.network.size + [2 if i in purview_indices else
-                                       1 for i in self.network.node_indices])
+            [1] * self.size + [2 if i in purview_indices else
+                                       1 for i in self.subsystem_indices])
         # Loop over all nodes in the purview, successively taking the product
         # (with 'expansion'/'broadcasting' of singleton dimensions) of each
         # individual node's TPM in order to get the joint distribution for the
@@ -349,7 +357,7 @@ class Subsystem:
             tpm = tpm.transpose(list(range(tpm.ndim))[1:] + [0])
             # Expand the dimensions so the TPM can be indexed as described
             first_half_shape = list(tpm.shape[:-1])
-            second_half_shape = [1] * self.network.size
+            second_half_shape = [1] * self.size
             second_half_shape[purview_node.index] = 2
             tpm = tpm.reshape(first_half_shape + second_half_shape)
             # Marginalize-out non-mechanism purview inputs.
@@ -371,14 +379,14 @@ class Subsystem:
         # Initialize the conditioning indices, taking the slices as singleton
         # lists-of-lists for later flattening with `chain`.
         accumulated_cjd = utils.condition_tpm(
-            accumulated_cjd, fixed_inputs, self.network.current_state)
+            accumulated_cjd, fixed_inputs, self.current_state)
         # The distribution still has twice as many dimensions as the network
         # has nodes, with the first half of the shape now all singleton
         # dimensions, so we reshape to eliminate those singleton dimensions
         # (the second half of the shape may also contain singleton dimensions,
         # depending on how many nodes are in the purview).
         accumulated_cjd = accumulated_cjd.reshape(
-            accumulated_cjd.shape[self.network.size:])
+            accumulated_cjd.shape[self.size:])
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # Note that we're not returning a distribution over all the nodes in
         # the network, only a distribution over the nodes in the purview. This
