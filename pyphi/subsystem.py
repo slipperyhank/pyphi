@@ -665,13 +665,11 @@ class Subsystem:
         # If either set of nodes is empty, return (vacuously) True.
         if not nodes1 or not nodes2:
             return True
-        # Apply the cut to the network's connectivity matrix.
-        cm = utils.apply_cut(self.cut, self.network.connectivity_matrix)
         # Get the connectivity matrix representing the connections from the
         # first node list to the second.
         submatrix_indices = np.ix_([node.index for node in nodes1],
                                    [node.index for node in nodes2])
-        cm = cm[submatrix_indices]
+        cm = self.connectivity_matrix[submatrix_indices]
         # Check that all nodes have at least one connection by summing over
         # rows of connectivity submatrix.
         if len(nodes1) == 1:

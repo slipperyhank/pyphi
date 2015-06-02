@@ -38,10 +38,14 @@ has integrated information :math:`\Phi = 1.35708`. Now that we have identified t
 main complex of the system, we can explore its conceptual structure and the
 effect of the **MIP**.
 
-   >>> constellation = main_complex.unpartitioned_constellation
-   >>> main_complex.cut
-   Cut(severed=(0, 1), intact=(2,))
-   >>> cut_constellation = main_complex.partitioned_constellation
+   >>> constellation = pyphi.compute.constellation(subsystem)
+
+There are several equivalent cuts for this example, to be explicit we will cut connections from
+nodes (0,1) to (2,)
+
+   >>> cut = pyphi.models.Cut(severed=(0, 1), intact=(2,))
+   >>> cut_subsystem = pyphi.Subsystem(subsystem.node_indices, subsystem.network, cut=cut)
+   >>> cut_constellation = pyphi.compute.constellation(cut_subsystem)
 
 Lets investigate the concepts in the unpartitioned constellation,
 
@@ -49,7 +53,7 @@ Lets investigate the concepts in the unpartitioned constellation,
    [(n0,), (n1,), (n2,), (n0, n1), (n0, n2), (n1, n2)]
    >>> [concept.phi for concept in constellation]
    [0.125, 0.125, 0.125, 0.499999, 0.499999, 0.499999]
-   >>> sum(_)
+   >>> sum([concept.phi for concept in constellation])
    1.8749970000000002
 
 and also the concepts of the partitioned constellation.
@@ -58,7 +62,7 @@ and also the concepts of the partitioned constellation.
    [(n0,), (n1,), (n2,), (n0, n1), (n1, n2), (n0, n1, n2)]
    >>> [concept.phi for concept in cut_constellation]
    [0.125, 0.125, 0.125, 0.499999, 0.266666, 0.333333]
-   >>> sum(_)
+   >>> sum([concept.phi for concept in cut_constellation])
    1.4749980000000003
 
 The unpartitioned constellation includes all possible first and second order
@@ -109,7 +113,6 @@ for any purview, so the cause information is reducible.
 Next, lets look at the cut subsystem to understand how the new concept
 comes into existence.
 
-   >>> cut_subsystem = main_complex.cut_subsystem
    >>> ABC = cut_subsystem.nodes
    >>> C = (cut_subsystem.nodes[2],)
    >>> AB = cut_subsystem.nodes[0:2]
@@ -190,9 +193,9 @@ The unpartitioned constellation has mechanisms |n0|, |n1| and |n0, n1| with
 
    >>> partitioned_constellation = mip.partitioned_constellation
    >>> [concept.mechanism for concept in partitioned_constellation]
-   [(n0, n1), (n0,), (n1,)]
+   [(n0,), (n1,), (n0, n1)]
    >>> [concept.phi for concept in partitioned_constellation]
-   [0.214286, 0.25, 0.166667]
+   [0.25, 0.166667, 0.214286]
    >>> sum([concept.phi for concept in partitioned_constellation])
    0.630953
 
