@@ -309,13 +309,15 @@ def _evaluate_cut(uncut_subsystem, cut, unpartitioned_constellation):
         mechanism_indices_to_check = set(
             map(nodes2indices,
                 [c.mechanism for c in unpartitioned_constellation]))
+        partitioned_constellation = constellation(cut_subsystem,
+                                                  mechanism_indices_to_check)
     else:
-        mechanism_indices_to_check = set(
-            tuple(map(nodes2indices,
-                      [c.mechanism for c in unpartitioned_constellation])) +
-            utils.cut_mechanism_indices(uncut_subsystem, cut))
-    partitioned_constellation = constellation(cut_subsystem,
-                                              mechanism_indices_to_check)
+        # TODO re-implement only checking mechanisms that are cut
+        # mechanism_indices_to_check = set(
+        #   tuple(map(nodes2indices,
+        #              [c.mechanism for c in unpartitioned_constellation])) +
+        #    utils.cut_mechanism_indices(uncut_subsystem, cut))
+        partitioned_constellation = constellation(cut_subsystem)
 
     log.debug("Finished evaluating cut {}.".format(cut))
 

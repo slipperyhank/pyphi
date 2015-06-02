@@ -10,12 +10,11 @@ import os
 import psutil
 import numpy as np
 from .constants import DIRECTIONS, PAST, FUTURE
-from . import constants, config, validate, utils, convert
+from . import constants, config, utils, convert
 from .config import PRECISION
 from .models import Cut, Mip, Part, Mice, Concept
 from .node import Node
 import itertools
-from .network import list_past_purview, list_future_purview
 
 
 from collections import namedtuple
@@ -329,7 +328,7 @@ class Subsystem:
         # TODO extend to nonbinary nodes
         accumulated_cjd = np.ones(
             [1] * self.size + [2 if i in purview_indices else
-                                       1 for i in self.subsystem_indices])
+                               1 for i in self.subsystem_indices])
         # Loop over all nodes in the purview, successively taking the product
         # (with 'expansion'/'broadcasting' of singleton dimensions) of each
         # individual node's TPM in order to get the joint distribution for the
@@ -742,28 +741,20 @@ class Subsystem:
             of them.
         """
         # Return a cached MICE if there's a hit.
-        cached_mice = self._get_cached_mice(direction, mechanism)
-        if cached_mice:
-            return cached_mice
+        # TODO re-implement mice caching
+        # cached_mice = self._get_cached_mice(direction, mechanism)
+        # if cached_mice:
+        #    return cached_mice
         # TODO re-implement potential purview caching
         # Needs to work with network/subsystem index differences
         # Get cached purviews if available.
-        #if config.CACHE_POTENTIAL_PURVIEWS:
+        # if config.CACHE_POTENTIAL_PURVIEWS:
         #    purviews = self.network.purview_cache[
         #        (direction, convert.nodes2indices(mechanism))]
-        #else:
-        if direction == DIRECTIONS[PAST]:
-            purviews = list_past_purview(self.network,
-                                         convert.nodes2indices(mechanism))
-        elif direction == DIRECTIONS[FUTURE]:
-            purviews = list_future_purview(self.network,
-                                           convert.nodes2indices(mechanism))
-        else:
-            validate.direction(direction)
-
-        # Filter out purviews that aren't in the subsystem.
-        purviews = [purview for purview in purviews if
-                    set(purview).issubset(convert.nodes2indices(self.nodes))]
+        # else:
+        purviews = utils.build_purview_list(self.connectivity_matrix,
+                                            convert.nodes2indices(mechanism),
+                                            direction)
 
         purviews = [self.indices2nodes(purview) for purview in purviews]
 

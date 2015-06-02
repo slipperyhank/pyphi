@@ -55,9 +55,9 @@ Lets investigate the concepts in the unpartitioned constellation,
 and also the concepts of the partitioned constellation.
 
    >>> [concept.mechanism for concept in cut_constellation]
-   [(n0, n1), (n1, n2), (n0,), (n1,), (n0, n1, n2), (n2,)]
+   [(n0,), (n1,), (n2,), (n0, n1), (n1, n2), (n0, n1, n2)]
    >>> [concept.phi for concept in cut_constellation]
-   [0.499999, 0.266666, 0.125, 0.125, 0.333333, 0.125]
+   [0.125, 0.125, 0.125, 0.499999, 0.266666, 0.333333]
    >>> sum(_)
    1.4749980000000003
 

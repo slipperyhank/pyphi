@@ -17,6 +17,7 @@ from scipy.spatial.distance import cdist
 from pyemd import emd
 from .cache import cache
 from . import constants
+from .constants import DIRECTIONS, PAST, FUTURE
 
 # Create a logger for this module.
 log = logging.getLogger(__name__)
@@ -483,6 +484,15 @@ def connectivity_matrix_to_tpm(network):
         tpm (``np.ndarray``): A transition probability matrix.
     """
     pass
+
+
+def build_purview_list(connectivity_matrix, mechanism, direction):
+    if direction == DIRECTIONS[PAST]:
+        return [purview for purview in powerset(range(len(connectivity_matrix)))
+                if not_block_reducible(connectivity_matrix, purview, mechanism)]
+    elif direction == DIRECTIONS[FUTURE]:
+        return [purview for purview in powerset(range(len(connectivity_matrix)))
+                if not_block_reducible(connectivity_matrix, mechanism, purview)]
 
 
 def block_cm(cm):
