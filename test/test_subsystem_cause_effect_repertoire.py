@@ -88,21 +88,21 @@ scenarios = [
     (
         'cause_repertoire',
         Subsystem((1, 2), standard, cut=Cut((1,), (2,))),
-        [2],
-        [1, 2],
-        np.array([0.25, 0.25, 0.25, 0.25]).reshape(1, 2, 2, order="F")
+        [1],
+        [0, 1],
+        np.array([0.25, 0.25, 0.25, 0.25]).reshape(2, 2, order="F")
     ), (
         'cause_repertoire',
         Subsystem((1, 2), standard, cut=Cut((1,), (2,))),
-        [2],
-        [2],
-        np.array([0.5, 0.5]).reshape(1, 1, 2, order="F")
+        [1],
+        [1],
+        np.array([0.5, 0.5]).reshape(1, 2, order="F")
     ), (
         'cause_repertoire',
         Subsystem((0, 2), standard, cut=Cut((0,), (2,))),
-        [2],
+        [1],
         [0],
-        np.array([0.5, 0.5]).reshape(2, 1, 1, order="F")
+        np.array([0.5, 0.5]).reshape(2, 1, order="F")
     ),
         # }}}
     # }}}
@@ -246,21 +246,21 @@ scenarios = [
     (
         'effect_repertoire',
         Subsystem((1, 2), standard, cut=Cut((1,), (2,))),
-        [1],
-        [1, 2],
-        np.array([0.25, 0.25, 0.25, 0.25]).reshape(1, 2, 2, order="F")
+        [0],
+        [0, 1],
+        np.array([0.25, 0.25, 0.25, 0.25]).reshape(2, 2, order="F")
     ), (
         'effect_repertoire',
         Subsystem((1, 2), standard, cut=Cut((1,), (2,))),
         [],
-        [1],
-        np.array([0.5, 0.5]).reshape(1, 2, 1, order="F")
+        [0],
+        np.array([0.5, 0.5]).reshape(2, 1, order="F")
     ), (
         'effect_repertoire',
         Subsystem((1, 2), standard, cut=Cut((1,), (2,))),
+        [0],
         [1],
-        [2],
-        np.array([0.5, 0.5]).reshape(1, 1, 2, order="F")
+        np.array([0.5, 0.5]).reshape(1, 2, order="F")
     ),
         # }}}
     # }}}
