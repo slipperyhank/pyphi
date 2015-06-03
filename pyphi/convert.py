@@ -334,14 +334,11 @@ def state_by_node2state_by_state(tpm):
             sbs_tpm[past_state_index, current_state_index] = 1
     else:
         # TPM is nondeterministic.
+        current_state_list = [np.array(loli_index2state(current_state_index, N)) for current_state_index in range(S)]
         for past_state_index in range(S):
             # Use the LOLI convention to get the row and column indices.
             past_state = loli_index2state(past_state_index, N)
             marginal_tpm = tpm[past_state]
-            for current_state_index in range(S):
-                current_state = np.array(
-                    [i for i in loli_index2state(current_state_index, N)])
-                sbs_tpm[past_state_index, current_state_index] = (
-                    np.prod(marginal_tpm[current_state == 1]) *
-                    np.prod(1 - marginal_tpm[current_state == 0]))
+            sbs_tpm[past_state_index,:] = [np.prod(marginal_tpm[state == 1]) * np.prod(1-marginal_tpm[state == 0])
+                                           for state in current_state_list]
     return sbs_tpm

@@ -9,22 +9,21 @@ Represents a candidate set for |small_phi| calculation.
 import os
 import psutil
 import numpy as np
+from numpy.linalg import matrix_power
 from .constants import DIRECTIONS, PAST, FUTURE
 from . import constants, config, utils, convert, validate
 from .config import PRECISION
 from .models import Cut, Mip, Part, Mice, Concept
 from .node import Node
 import itertools
-
-
 from collections import namedtuple
+
 _CacheInfo = namedtuple("CacheInfo", ["hits", "misses", "size"])
 HITS, MISSES = 0, 1
 
 
 # TODO! go through docs and make sure to say when things can be None
 class Subsystem:
-
     """A set of nodes in a network.
 
     Args:
@@ -65,14 +64,25 @@ class Subsystem:
         self.internal_indices = tuple(sorted(list(set(map(int,
                                                           internal_indices)))))
         self.micro_size = len(self.internal_indices)
+        self.micro_indices = tuple(range(self.micro_size))
         # Set up the subsystem nodes
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+        # Set the time-scale
+        self.time_scale = time_scale
         # Set the elements for blackboxing
         if hidden_indices is not None:
-            self.hidden_indices = tuple(sorted(list(set(map(int,
-                                                            hidden_indices)))))
+            self.micro_hidden_indices = hidden_indices
+            self.hidden_indices = tuple(self.micro_indices[i]
+                                        for i in range(self.micro_size)
+                                        if self.internal_indices[i]
+                                        in hidden_indices)
+            self.output_indices = tuple(self.micro_indices[i]
+                                        for i in range(self.micro_size)
+                                        if self.internal_indices[i]
+                                        not in hidden_indices)
         else:
+            self.micro_hidden_indices = None
             self.hidden_indices = None
         # Set the elements for coarse graining
         if output_grouping is not None:
@@ -114,11 +124,11 @@ class Subsystem:
         # connectivity matrix, but with the cut applied, and with all
         # connections to/from external nodes severed.
         if self.internal_indices:
-            self.connectivity_matrix = utils.apply_cut(
+            self.micro_connectivity_matrix = utils.apply_cut(
                 cut, network.connectivity_matrix)[np.ix_(self.internal_indices,
                                                          self.internal_indices)]
         else:
-            self.connectivity_matrix = np.array([[]])
+            self.micro_connectivity_matrix = np.array([[]])
 
         # Only compute hash once.
         self._hash = hash((self.internal_indices,
@@ -137,25 +147,40 @@ class Subsystem:
 
         # Create the TPM for the defined subsystem nodes
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
         if (internal_indices) and (time_scale > 1):
             sbs_tpm = convert.state_by_node2state_by_state(self.tpm)
-            if utils.sparse(self.tpm):
-                self.tpm = utils.sparse_time(sbs_tpm, time_scale)
-            else:
-                self.tpm = utils.dense_time(sbs_tpm, time_scale)
+            #if utils.sparse(self.tpm):
+            self.tpm = utils.sparse_time(sbs_tpm, time_scale)
+            #else:
+            #    self.tpm = utils.dense_time(sbs_tpm, time_scale)
             self.tpm = convert.state_by_state2state_by_node(self.tpm)
+            self.connectivity_matrix = matrix_power(self.micro_connectivity_matrix, time_scale)
+        elif (internal_indices) and (time_scale == 1):
+            self.connectivity_matrix = self.micro_connectivity_matrix
 
         # The TPM of the defined nodes at the blackboxed time_scale
+        if self.hidden_indices is not None and self.output_grouping is None:
+            self.tpm = utils.condition_tpm(self.tpm,
+                                           self.hidden_indices,
+                                           self.current_state)
+            self.tpm = np.squeeze(self.tpm)
+            self.tpm = self.tpm[..., self.output_indices]
+            self.connectivity_matrix = [[1 if
+                                         np.sum(self.connectivity_matrix[
+                                             np.ix_([self.output_indices[cause_index]],
+                                                    [self.output_indices[effect_index]])])
+                                         > 0 else 0
+                                         for effect_index in
+                                         range(self.size)] for cause_index in
+                                        range(self.size)]
+            self.current_state = tuple(self.current_state[index]
+                                       for index in self.output_indices)
+            self.nodes = tuple(Node(i, self) for i in self.subsystem_indices)
+        elif hidden_indices is None and output_grouping is not None:
+            self.tpm = self.tpm
 
-        #if self.hidden_indices is not None and self.output_grouping is None:
-
-        #elif hidden_indices is not None and output_grouping is None:
-        #    self.tpm
-
-        # Generate the nodes.
-        self.nodes = tuple(Node(i, self) for i in
-                           self.subsystem_indices)
+        # Caching logic
+        # =============
         # A cache for keeping core causes and effects that can be reused later
         # in the event that a cut doesn't effect them.
         if mice_cache is None:
@@ -750,7 +775,7 @@ class Subsystem:
         # first node list to the second.
         submatrix_indices = np.ix_([node.index for node in nodes1],
                                    [node.index for node in nodes2])
-        cm = self.connectivity_matrix[submatrix_indices]
+        cm = self.micro_connectivity_matrix[submatrix_indices]
         # Check that all nodes have at least one connection by summing over
         # rows of connectivity submatrix.
         if len(nodes1) == 1:
@@ -831,10 +856,10 @@ class Subsystem:
         #    purviews = self.network.purview_cache[
         #        (direction, convert.nodes2indices(mechanism))]
         # else:
-        purviews = utils.build_purview_list(self.connectivity_matrix,
-                                            convert.nodes2indices(mechanism),
-                                            direction)
-
+        #purviews = utils.build_purview_list(self.micro_connectivity_matrix,
+        #                                    convert.nodes2indices(mechanism),
+        #                                    direction)
+        purviews = utils.powerset(self.subsystem_indices)
         purviews = [self.indices2nodes(purview) for purview in purviews]
 
         # Filter out trivially reducible purviews if a cut has been applied.

@@ -300,11 +300,13 @@ def _single_node_mip(subsystem):
 def _evaluate_cut(uncut_subsystem, cut, unpartitioned_constellation):
     """Find the ``BigMip`` for a given cut."""
     log.debug("Evaluating cut {}...".format(cut))
-
+    print(cut)
     cut_subsystem = Subsystem(uncut_subsystem.internal_indices,
                               uncut_subsystem.network,
                               cut=cut,
-                              mice_cache=uncut_subsystem._mice_cache)
+                              mice_cache=uncut_subsystem._mice_cache,
+                              hidden_indices=uncut_subsystem.micro_hidden_indices,
+                              time_scale=uncut_subsystem.time_scale)
     if config.ASSUME_CUTS_CANNOT_CREATE_NEW_CONCEPTS:
         mechanism_indices_to_check = set(
             map(nodes2indices,
