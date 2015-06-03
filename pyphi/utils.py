@@ -14,6 +14,8 @@ import numpy as np
 from itertools import chain, combinations
 from scipy.misc import comb
 from scipy.spatial.distance import cdist
+from scipy.sparse import csc_matrix
+from numpy.linalg import matrix_power
 from pyemd import emd
 from .cache import cache
 from . import constants
@@ -550,6 +552,21 @@ def not_block_reducible(cm, nodes1, nodes2):
     else:
         return True
 
+# Methods for converting the time scale of the tpm
+# ================================================
+
+
+def sparse(matrix, threshold=0.1):
+    return np.sum(matrix > 0) / matrix.size > threshold
+
+
+def sparse_time(tpm, time_scale):
+    sparse_tpm = csc_matrix(tpm)
+    return (sparse_tpm**time_scale).toarray()
+
+
+def dense_time(tpm, time_scale):
+    return matrix_power(tpm, time_scale)
 
 # Custom printing methods
 # =============================================================================

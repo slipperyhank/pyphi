@@ -9,8 +9,6 @@ Represents a candidate set for |small_phi| calculation.
 import os
 import psutil
 import numpy as np
-from numpy.linalg import matrix_power
-from scipy.sparse import csc_matrix
 from .constants import DIRECTIONS, PAST, FUTURE
 from . import constants, config, utils, convert, validate
 from .config import PRECISION
@@ -133,18 +131,12 @@ class Subsystem:
             self.tpm = np.squeeze(self.tpm)[..., self.internal_indices]
 
         if internal_indices:
-            # The TPM at the given time scale
             sbs_tpm = convert.state_by_node2state_by_state(self.tpm)
-            # Less than 10% of entries to use sparse matrix.
-            # 10% number is subjective
-            if (np.sum(sbs_tpm > 0) / len(sbs_tpm)**2 < 0.1):
-                sparse_tpm = csc_matrix(sbs_tpm)
-                sbs_tpm = (sparse_tpm**time_scale).toarray()
-                self.tpm = convert.state_by_state2state_by_node(sbs_tpm)
+            if utils.sparse(self.tpm):
+                self.tpm = utils.sparse_time(sbs_tpm, time_scale)
             else:
-                sbs_tpm = matrix_power(sbs_tpm, time_scale)
-            self.tpm = convert.state_by_state2state_by_node(sbs_tpm)
-
+                self.tpm = utils.dense_time(sbs_tpm, time_scale)
+            self.tpm = convert.state_by_state2state_by_node(self.tpm)
             # The TPM with the hidden nodes marginalized out
 
             # The TPM of the coarse grained elements
