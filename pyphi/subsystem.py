@@ -64,6 +64,7 @@ class Subsystem:
         # (for JSON serialization).
         self.internal_indices = tuple(sorted(list(set(map(int,
                                                           internal_indices)))))
+        self.micro_size = len(self.internal_indices)
         # Set up the subsystem nodes
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -88,11 +89,13 @@ class Subsystem:
         self.tpm = utils.condition_tpm(
             self.network.tpm, self.external_indices,
             self.network.current_state)
+        if self.network.size > 1:
+            self.tpm = np.squeeze(self.tpm)[..., self.internal_indices]
         # Get the size of this subsystem.
         if output_grouping is None and hidden_indices is None:
-            self.size = len(self.internal_indices)
+            self.size = self.micro_size
         elif output_grouping is None:
-            self.size = len(self.internal_indices) - len(hidden_indices)
+            self.size = self.micro_size - len(hidden_indices)
         else:
             self.size = len(output_grouping)
         self.subsystem_indices = list(range(self.size))
@@ -127,18 +130,14 @@ class Subsystem:
 
         # If there is a Cut, we must pre-generate the Nodes to create a
         # 'cut' TPM
-        if cut is not None:
-            self.nodes = tuple(Node(i, self) for i in self.internal_indices)
-            new_tpm = np.array(self.tpm)
-            new_tpm[..., self.internal_indices] = np.rollaxis(np.array([
-                self.expand_node_tpm(node.inputs, node.tpm[1])
-                for node in self.nodes]), 0, self.network.size+1)
-            self.tpm = new_tpm
+        self.nodes = tuple(Node(i, self) for i in range(self.micro_size))
+        self.tpm = np.rollaxis(np.array([
+            self.expand_node_tpm(node.inputs, node.tpm[1])
+            for node in self.nodes]), 0, self.micro_size+1)
 
         # Create the TPM for the defined subsystem nodes
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        if self.network.size > 1:
-            self.tpm = np.squeeze(self.tpm)[..., self.internal_indices]
+
         if (internal_indices) and (time_scale > 1):
             sbs_tpm = convert.state_by_node2state_by_state(self.tpm)
             if utils.sparse(self.tpm):
@@ -146,9 +145,13 @@ class Subsystem:
             else:
                 self.tpm = utils.dense_time(sbs_tpm, time_scale)
             self.tpm = convert.state_by_state2state_by_node(self.tpm)
-            # The TPM with the hidden nodes marginalized out
 
-            # The TPM of the coarse grained elements
+        # The TPM of the defined nodes at the blackboxed time_scale
+
+        #if self.hidden_indices is not None and self.output_grouping is None:
+
+        #elif hidden_indices is not None and output_grouping is None:
+        #    self.tpm
 
         # Generate the nodes.
         self.nodes = tuple(Node(i, self) for i in
@@ -534,6 +537,23 @@ class Subsystem:
         over the entire subsystem's state space."""
         return self.expand_repertoire(DIRECTIONS[FUTURE], purview, repertoire,
                                       new_purview)
+
+    def expand_node_tpm(self, inputs, tpm):
+        """Expand a node tpm to be over all subsystem nodes instead of just its
+        inputs."""
+        # Get the unconstrained repertoire over the other nodes in the network.
+        if not inputs:
+            non_input_nodes = tuple(
+                frozenset([node.index for node in self.nodes]))
+        else:
+            non_input_nodes = tuple(
+                frozenset([node.index for node in self.nodes])
+                - frozenset([node.index for node in inputs]))
+        uc = np.ones([2 if index in non_input_nodes else 1 for index in
+                      range(self.micro_size)])
+        # Multiply the given repertoire by an array of ones to broadcast
+        # the distribution to the correct shape.
+        return tpm * uc
 
     def cause_info(self, mechanism, purview):
         """Return the cause information for a mechanism over a purview."""
