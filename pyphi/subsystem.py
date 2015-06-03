@@ -84,6 +84,10 @@ class Subsystem:
         # Get the external nodes
         self.external_indices = tuple(
             set(range(network.size)) - set(self.internal_indices))
+        # The TPM conditioned on the current state of the external nodes.
+        self.tpm = utils.condition_tpm(
+            self.network.tpm, self.external_indices,
+            self.network.current_state)
         # Get the size of this subsystem.
         if output_grouping is None and hidden_indices is None:
             self.size = len(self.internal_indices)
@@ -103,13 +107,6 @@ class Subsystem:
         self.null_cut_matrix = np.zeros((self.size, self.size))
         self.cut_matrix = (self._find_cut_matrix(cut) if cut is not None
                            else self.null_cut_matrix)
-        # Only compute hash once.
-        self._hash = hash((self.internal_indices,
-                           self.hidden_indices,
-                           self.output_grouping,
-                           self.state_grouping,
-                           self.cut,
-                           self.network))
         # Get the subsystem's connectivity matrix. This is the network's
         # connectivity matrix, but with the cut applied, and with all
         # connections to/from external nodes severed.
@@ -120,17 +117,29 @@ class Subsystem:
         else:
             self.connectivity_matrix = np.array([[]])
 
+        # Only compute hash once.
+        self._hash = hash((self.internal_indices,
+                           self.hidden_indices,
+                           self.output_grouping,
+                           self.state_grouping,
+                           self.cut,
+                           self.network))
+
+        # If there is a Cut, we must pre-generate the Nodes to create a
+        # 'cut' TPM
+        if cut is not None:
+            self.nodes = tuple(Node(i, self) for i in self.internal_indices)
+            new_tpm = np.array(self.tpm)
+            new_tpm[..., self.internal_indices] = np.rollaxis(np.array([
+                self.expand_node_tpm(node.inputs, node.tpm[1])
+                for node in self.nodes]), 0, self.network.size+1)
+            self.tpm = new_tpm
+
         # Create the TPM for the defined subsystem nodes
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-        # The TPM conditioned on the current state of the external nodes.
-        self.tpm = utils.condition_tpm(
-            self.network.tpm, self.external_indices,
-            self.network.current_state)
         if self.network.size > 1:
             self.tpm = np.squeeze(self.tpm)[..., self.internal_indices]
-
-        if internal_indices:
+        if (internal_indices) and (time_scale > 1):
             sbs_tpm = convert.state_by_node2state_by_state(self.tpm)
             if utils.sparse(self.tpm):
                 self.tpm = utils.sparse_time(sbs_tpm, time_scale)
