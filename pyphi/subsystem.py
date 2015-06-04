@@ -11,7 +11,7 @@ import psutil
 import numpy as np
 from numpy.linalg import matrix_power
 from .constants import DIRECTIONS, PAST, FUTURE
-from . import constants, config, utils, convert, validate
+from . import constants, config, utils, convert
 from .config import PRECISION
 from .models import Cut, Mip, Part, Mice, Concept
 from .node import Node
@@ -54,44 +54,14 @@ class Subsystem:
                  output_grouping=None, state_grouping=None, time_scale=1):
         # The network this subsystem belongs to.
         self.network = network
-        self.current_state = tuple(self.network.current_state[index]
-                                   for index in internal_indices)
-        # Get the perturbation probabilities for each node in the network
-        self.perturb_vector = list(network.perturb_vector[index]
-                                   for index in internal_indices)
+
+        # Set the external and internal indices of the subsystem.
+        # Condition the network tpm on the external node
         # Remove duplicates, sort, and ensure indices are native Python `int`s
         # (for JSON serialization).
+
         self.internal_indices = tuple(sorted(list(set(map(int,
                                                           internal_indices)))))
-        self.micro_size = len(self.internal_indices)
-        self.micro_indices = tuple(range(self.micro_size))
-        # Set up the subsystem nodes
-        # ~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-        # Set the time-scale
-        self.time_scale = time_scale
-        # Set the elements for blackboxing
-        if hidden_indices is not None:
-            self.micro_hidden_indices = hidden_indices
-            self.hidden_indices = tuple(self.micro_indices[i]
-                                        for i in range(self.micro_size)
-                                        if self.internal_indices[i]
-                                        in hidden_indices)
-            self.output_indices = tuple(self.micro_indices[i]
-                                        for i in range(self.micro_size)
-                                        if self.internal_indices[i]
-                                        not in hidden_indices)
-        else:
-            self.micro_hidden_indices = None
-            self.hidden_indices = None
-        # Set the elements for coarse graining
-        if output_grouping is not None:
-            validate.macro(output_grouping, state_grouping)
-            self.output_grouping = output_grouping
-            self.state_grouping = state_grouping
-        else:
-            self.output_grouping = None
-            self.state_grouping = None
         # Get the external nodes
         self.external_indices = tuple(
             set(range(network.size)) - set(self.internal_indices))
@@ -101,25 +71,21 @@ class Subsystem:
             self.network.current_state)
         if self.network.size > 1:
             self.tpm = np.squeeze(self.tpm)[..., self.internal_indices]
-        # Get the size of this subsystem.
-        if output_grouping is None and hidden_indices is None:
-            self.size = self.micro_size
-        elif output_grouping is None:
-            self.size = self.micro_size - len(hidden_indices)
-        else:
-            self.size = len(output_grouping)
-        self.subsystem_indices = list(range(self.size))
 
+        # Re-index the subsystem nodes with the external nodes removed
+        self.micro_size = len(self.internal_indices)
+        self.micro_indices = tuple(range(self.micro_size))
+        # Values of current_state and perturb_vector for all internal indices
+        self.current_state = tuple(self.network.current_state[index]
+                                   for index in internal_indices)
+        self.perturb_vector = list(network.perturb_vector[index]
+                                   for index in internal_indices)
         # Connectivity matrix and Cut
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # The null cut (that leaves the system intact).
         self.null_cut = Cut((), self.internal_indices)
         # The unidirectional cut applied for phi evaluation within the
         self.cut = cut if cut is not None else self.null_cut
-        # The matrix of connections which are severed due to the cut
-        self.null_cut_matrix = np.zeros((self.size, self.size))
-        self.cut_matrix = (self._find_cut_matrix(cut) if cut is not None
-                           else self.null_cut_matrix)
         # Get the subsystem's connectivity matrix. This is the network's
         # connectivity matrix, but with the cut applied, and with all
         # connections to/from external nodes severed.
@@ -129,7 +95,119 @@ class Subsystem:
                                                          self.internal_indices)]
         else:
             self.micro_connectivity_matrix = np.array([[]])
+        # The matrix of connections which are severed due to the cut
+        self.null_cut_matrix = np.zeros((self.micro_size, self.micro_size))
+        self.cut_matrix = (self._find_cut_matrix(cut) if cut is not None
+                           else self.null_cut_matrix)
 
+        # Calculate the nodes for all internal indices
+        # ============================================
+        self.nodes = tuple(Node(i, self, indices=self.micro_indices)
+                           for i in self.micro_indices)
+        # Re-calcuate the tpm based on the results of the cut
+        self.tpm = np.rollaxis(np.array([
+            self.expand_node_tpm(node.inputs, node.tpm[1])
+            for node in self.nodes]), 0, self.micro_size+1)
+
+        # Create the TPM and CM for the defined time scale
+        # ================================================
+        self.time_scale = time_scale
+        # This is a blackboxed time. Coarse grain time not yet implemented.
+        if (internal_indices) and (time_scale > 1):
+            sbs_tpm = convert.state_by_node2state_by_state(self.tpm)
+            if utils.sparse(self.tpm):
+                self.tpm = utils.sparse_time(sbs_tpm, time_scale)
+            else:
+                self.tpm = utils.dense_time(sbs_tpm, time_scale)
+            self.tpm = convert.state_by_state2state_by_node(self.tpm)
+            self.connectivity_matrix = matrix_power(
+                self.micro_connectivity_matrix, time_scale)
+        elif (internal_indices) and (time_scale == 1):
+            self.connectivity_matrix = self.micro_connectivity_matrix
+
+        # Generate the TPM and CM after blackboxing
+        # =========================================
+        # Set the elements for blackboxing
+        if hidden_indices is not None:
+            self.micro_hidden_indices = hidden_indices
+            self.hidden_indices = tuple(i for i in self.micro_indices
+                                        if self.internal_indices[i]
+                                        in hidden_indices)
+            self.micro_output_indices = tuple(self.internal_indices[i]
+                                              for i in self.micro_indices
+                                              if self.internal_indices[i]
+                                              not in hidden_indices)
+            self.output_indices = tuple(i for i in self.micro_indices
+                                        if self.internal_indices[i]
+                                        not in hidden_indices)
+            self.output_size = len(self.output_indices)
+        else:
+            self.micro_hidden_indices = None
+            self.hidden_indices = None
+            self.output_indices = self.internal_indices
+            self.output_indices = tuple(self.micro_indices[i]
+                                        for i in range(self.micro_size))
+            self.output_size = len(self.output_indices)
+
+        # The TPM conditional on the current value of the hidden nodes
+        if self.hidden_indices is not None:
+            self.tpm = utils.condition_tpm(self.tpm,
+                                           self.hidden_indices,
+                                           self.current_state)
+            self.tpm = np.squeeze(self.tpm)
+            self.tpm = self.tpm[..., self.output_indices]
+            self.connectivity_matrix = [
+                [1 if np.sum(self.connectivity_matrix[
+                    np.ix_([self.output_indices[cause_index]],
+                           [self.output_indices[effect_index]])])
+                    > 0 else 0
+                    for effect_index in
+                    range(len(self.output_indices))] for cause_index in
+                range(len(self.output_indices))]
+            self.current_state = tuple(self.current_state[index]
+                                       for index in self.output_indices)
+
+        # Generate the TPM and CM after coarse graining
+        # =============================================
+        # Set the elements for coarse graining
+        if output_grouping is not None:
+            # validate.macro(output_grouping, state_grouping)
+            self.micro_output_grouping = output_grouping
+            self.output_grouping = tuple(tuple(i for i in self.micro_indices
+                                               if self.internal_indices[i]
+                                               in group)
+                                         for group in output_grouping)
+            self.state_grouping = state_grouping
+            self.mapping = utils.make_mapping(self.output_grouping,
+                                              self.state_grouping)
+            self.macro_size = len(self.output_grouping)
+            self.macro_indices = list(range(self.macro_size))
+        else:
+            self.output_grouping = None
+            self.state_grouping = None
+            self.mapping = None
+
+        # Coarse grain the remaining nodes into the appropriate groups
+        if output_grouping is not None:
+            self.tpm = self.make_macro_tpm()
+            self.connectivity_matrix = [[np.max(self.connectivity_matrix[
+                np.ix_(self.output_grouping[row],
+                       self.output_grouping[col])])
+                for row in range(self.macro_size)]
+                for col in range(self.macro_size)]
+
+        # Get the size of this subsystem, and if necessary remake nodes
+        if output_grouping is None and hidden_indices is None:
+            self.size = self.micro_size
+        elif output_grouping is None:
+            self.size = self.output_size
+        else:
+            self.size = self.macro_size
+        self.subsystem_indices = range(self.size)
+        self.nodes = tuple(Node(i, self, indices=self.subsystem_indices)
+                           for i in self.subsystem_indices)
+
+        # Hash the final subsystem and nodes
         # Only compute hash once.
         self._hash = hash((self.internal_indices,
                            self.hidden_indices,
@@ -137,47 +215,8 @@ class Subsystem:
                            self.state_grouping,
                            self.cut,
                            self.network))
-
-        # If there is a Cut, we must pre-generate the Nodes to create a
-        # 'cut' TPM
-        self.nodes = tuple(Node(i, self) for i in range(self.micro_size))
-        self.tpm = np.rollaxis(np.array([
-            self.expand_node_tpm(node.inputs, node.tpm[1])
-            for node in self.nodes]), 0, self.micro_size+1)
-
-        # Create the TPM for the defined subsystem nodes
-        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        if (internal_indices) and (time_scale > 1):
-            sbs_tpm = convert.state_by_node2state_by_state(self.tpm)
-            #if utils.sparse(self.tpm):
-            self.tpm = utils.sparse_time(sbs_tpm, time_scale)
-            #else:
-            #    self.tpm = utils.dense_time(sbs_tpm, time_scale)
-            self.tpm = convert.state_by_state2state_by_node(self.tpm)
-            self.connectivity_matrix = matrix_power(self.micro_connectivity_matrix, time_scale)
-        elif (internal_indices) and (time_scale == 1):
-            self.connectivity_matrix = self.micro_connectivity_matrix
-
-        # The TPM of the defined nodes at the blackboxed time_scale
-        if self.hidden_indices is not None and self.output_grouping is None:
-            self.tpm = utils.condition_tpm(self.tpm,
-                                           self.hidden_indices,
-                                           self.current_state)
-            self.tpm = np.squeeze(self.tpm)
-            self.tpm = self.tpm[..., self.output_indices]
-            self.connectivity_matrix = [[1 if
-                                         np.sum(self.connectivity_matrix[
-                                             np.ix_([self.output_indices[cause_index]],
-                                                    [self.output_indices[effect_index]])])
-                                         > 0 else 0
-                                         for effect_index in
-                                         range(self.size)] for cause_index in
-                                        range(self.size)]
-            self.current_state = tuple(self.current_state[index]
-                                       for index in self.output_indices)
-            self.nodes = tuple(Node(i, self) for i in self.subsystem_indices)
-        elif hidden_indices is None and output_grouping is not None:
-            self.tpm = self.tpm
+        for node in self.nodes:
+            node._hash = hash((node.index, node.subsystem))
 
         # Caching logic
         # =============
@@ -203,8 +242,8 @@ class Subsystem:
         cut_matrix = np.zeros((self.network.size, self.network.size))
         list_of_cuts = np.array(list(itertools.product(cut[0], cut[1])))
         cut_matrix[list_of_cuts[:, 0], list_of_cuts[:, 1]] = 1
-        return cut_matrix[np.ix_(self.subsystem_indices,
-                                 self.subsystem_indices)]
+        return cut_matrix[np.ix_(self.micro_indices,
+                                 self.micro_indices)]
 
     def __repr__(self):
         return "Subsystem(" + repr(self.nodes) + ")"
@@ -856,7 +895,7 @@ class Subsystem:
         #    purviews = self.network.purview_cache[
         #        (direction, convert.nodes2indices(mechanism))]
         # else:
-        #purviews = utils.build_purview_list(self.micro_connectivity_matrix,
+        # purviews = utils.build_purview_list(self.micro_connectivity_matrix,
         #                                    convert.nodes2indices(mechanism),
         #                                    direction)
         purviews = utils.powerset(self.subsystem_indices)
@@ -963,3 +1002,37 @@ class Subsystem:
         # remain un-expanded so the concept doesn't depend on the subsystem.
         return Concept(mechanism=mechanism, phi=phi, cause=cause,
                        effect=effect, subsystem=self)
+
+    def make_macro_tpm(self):
+        """Create the macro TPM for a given mapping from micro to macro-states.
+
+        Args:
+            micro_tpm (nd.array): The TPM of the micro-system.
+
+            mapping (nd.array): A mapping from micro-states to macro-states.
+
+        Returns:
+            macro_tpm (``nd.array``): The TPM of the macro-system.
+        """
+        micro_tpm = np.array(self.tpm)
+        if ((micro_tpm.ndim > 2)
+                or (not micro_tpm.shape[0] == micro_tpm.shape[1])):
+            micro_tpm = convert.state_by_node2state_by_state(micro_tpm)
+        num_macro_states = max(self.mapping) + 1
+        num_micro_states = len(micro_tpm)
+        macro_tpm = np.zeros((num_macro_states, num_macro_states))
+        # For every possible micro-state transition, get the corresponding past
+        # and current macro-state using the mapping and add that probability to
+        # the state-by-state macro TPM.
+        micro_state_transitions = itertools.product(range(num_micro_states),
+                                                    range(num_micro_states))
+        for past_state_index, current_state_index in micro_state_transitions:
+            macro_tpm[self.mapping[past_state_index],
+                      self.mapping[current_state_index]] += \
+                micro_tpm[past_state_index, current_state_index]
+        # Because we're going from a bigger TPM to a smaller TPM, we have to
+        # re-normalize each row.
+        macro_tpm = np.array([list(row) if sum(row) == 0
+                              else list(row / sum(row))
+                              for row in macro_tpm])
+        return convert.state_by_state2state_by_node(macro_tpm)

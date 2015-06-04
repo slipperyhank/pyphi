@@ -45,11 +45,13 @@ class Node:
 
        """
 
-    def __init__(self, index, subsystem, label=None):
+    def __init__(self, index, subsystem, indices=None, label=None):
         # This node's index in the subsystem's list of nodes.
         self.index = index
         # This node's parent subsystem.
         self.subsystem = subsystem
+        if indices is None:
+            indices = self.subsystem.micro_indices
         # Label for display.
         self.label = label
         # State of this node.
@@ -77,7 +79,7 @@ class Node:
         # Marginalize out non-input nodes that are in the subsystem, since
         # the external nodes have already been dealt with as boundary
         # conditions in the subsystem's TPMs.
-        for i in self.subsystem.subsystem_indices:
+        for i in indices:
             if i not in self._input_indices:
                 tpm_on = tpm_on.sum(i, keepdims=True) / 2
                 tpm_off = tpm_off.sum(i, keepdims=True) / 2
@@ -90,7 +92,7 @@ class Node:
         self.tpm.flags.writeable = False
 
         # Only compute the hash once.
-        self._hash = hash((self.index, self.subsystem))
+        #self._hash = hash((self.index, self.subsystem))
 
         # Deferred properties
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
