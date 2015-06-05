@@ -141,29 +141,31 @@ class Subsystem:
                                         if self.internal_indices[i]
                                         not in hidden_indices)
             self.output_size = len(self.output_indices)
+            self.blackbox_indices = tuple(range(self.output_size))
         else:
             self.micro_hidden_indices = None
-            self.hidden_indices = None
+            self.hidden_indices = ()
             self.output_indices = self.internal_indices
             self.output_indices = tuple(self.micro_indices[i]
                                         for i in range(self.micro_size))
             self.output_size = len(self.output_indices)
+            self.blackbox_indices = tuple(range(self.output_size))
 
         # The TPM conditional on the current value of the hidden nodes
-        if self.hidden_indices is not None:
+        if self.hidden_indices:
             self.tpm = utils.condition_tpm(self.tpm,
                                            self.hidden_indices,
                                            self.current_state)
             self.tpm = np.squeeze(self.tpm)
             self.tpm = self.tpm[..., self.output_indices]
-            self.connectivity_matrix = [
+            self.connectivity_matrix = np.array([
                 [1 if np.sum(self.connectivity_matrix[
                     np.ix_([self.output_indices[cause_index]],
                            [self.output_indices[effect_index]])])
                     > 0 else 0
                     for effect_index in
                     range(len(self.output_indices))] for cause_index in
-                range(len(self.output_indices))]
+                range(len(self.output_indices))])
             self.current_state = tuple(self.current_state[index]
                                        for index in self.output_indices)
 
@@ -173,40 +175,38 @@ class Subsystem:
         if output_grouping is not None:
             # validate.macro(output_grouping, state_grouping)
             self.micro_output_grouping = output_grouping
-            self.output_grouping = tuple(tuple(i for i in self.micro_indices
-                                               if self.internal_indices[i]
+            self.output_grouping = tuple(tuple(i for i in self.blackbox_indices
+                                               if self.internal_indices[self.output_indices[i]]
                                                in group)
                                          for group in output_grouping)
             self.state_grouping = state_grouping
             self.mapping = utils.make_mapping(self.output_grouping,
                                               self.state_grouping)
-            self.macro_size = len(self.output_grouping)
-            self.macro_indices = list(range(self.macro_size))
+            self.size = len(self.output_grouping)
+            self.subsystem_indices = tuple(range(self.size))
         else:
-            self.output_grouping = None
+            self.micro_output_grouping = None
+            self.output_grouping = ()
             self.state_grouping = None
             self.mapping = None
+            self.size = self.output_size
+            self.subsystem_indices = tuple(range(self.size))
 
         # Coarse grain the remaining nodes into the appropriate groups
-        if output_grouping is not None:
+        if output_grouping:
             self.tpm = self.make_macro_tpm()
-            self.connectivity_matrix = [[np.max(self.connectivity_matrix[
+            self.connectivity_matrix = np.array([[np.max(self.connectivity_matrix[
                 np.ix_(self.output_grouping[row],
                        self.output_grouping[col])])
-                for row in range(self.macro_size)]
-                for col in range(self.macro_size)]
+                for row in range(self.size)]
+                for col in range(self.size)])
 
-        # Get the size of this subsystem, and if necessary remake nodes
-        if output_grouping is None and hidden_indices is None:
-            self.size = self.micro_size
-        elif output_grouping is None:
-            self.size = self.output_size
-        else:
-            self.size = self.macro_size
-        self.subsystem_indices = range(self.size)
         self.nodes = tuple(Node(i, self, indices=self.subsystem_indices)
-                           for i in self.subsystem_indices)
+                          for i in self.subsystem_indices)
 
+        # A variable to tell if a system is a pure micro without blackbox or coarse grain
+        self.micro = (self.micro_output_grouping is None
+                      and self.micro_hidden_indices is None)
         # Hash the final subsystem and nodes
         # Only compute hash once.
         self._hash = hash((self.internal_indices,
@@ -891,7 +891,7 @@ class Subsystem:
         # TODO re-implement potential purview caching
         # Needs to work with network/subsystem index differences
         # Get cached purviews if available.
-        # if config.CACHE_POTENTIAL_PURVIEWS:
+        # if config.CACHE_POTENTIAL_PURVIEWS and self.micro:
         #    purviews = self.network.purview_cache[
         #        (direction, convert.nodes2indices(mechanism))]
         # else:
