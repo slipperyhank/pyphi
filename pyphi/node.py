@@ -58,9 +58,9 @@ class Node:
         self.state = self.subsystem.current_state[self.index]
         # Get indices of the inputs.
         self._input_indices = utils.get_inputs_from_cm(
-            self.index, subsystem.micro_connectivity_matrix)
+            self.index, subsystem.connectivity_matrix)
         self._output_indices = utils.get_outputs_from_cm(
-            self.index, subsystem.micro_connectivity_matrix)
+            self.index, subsystem.connectivity_matrix)
         # Generate the node's TPMs.
         # TODO update this description
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

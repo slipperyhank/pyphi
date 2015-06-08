@@ -152,6 +152,11 @@ def test_grouping_indices():
 
 
 def test_subsystem_indices():
+    # answers = [
+    # ]
+    # for subsystem, answer in zip(test_cases, answers):
+    #     assert subsystem.subsystem_indices == answer
+
     assert subsystem1.subsystem_indices == (0, 1, 2, 3, 4, 5)
     assert subsystem2.subsystem_indices == (0, 1, 2, 3)
     assert subsystem3.subsystem_indices == (0, 1, 2, 3)

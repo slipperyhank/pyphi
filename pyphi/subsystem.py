@@ -69,6 +69,8 @@ class Subsystem:
         self.tpm = utils.condition_tpm(
             self.network.tpm, self.external_indices,
             self.network.current_state)
+        # Don't squeeze out the final dimension (which contains the
+        # probability) for networks of size one
         if self.network.size > 1:
             self.tpm = np.squeeze(self.tpm)[..., self.internal_indices]
 
@@ -93,8 +95,10 @@ class Subsystem:
             self.micro_connectivity_matrix = utils.apply_cut(
                 cut, network.connectivity_matrix)[np.ix_(self.internal_indices,
                                                          self.internal_indices)]
-        else:
-            self.micro_connectivity_matrix = np.array([[]])
+            self.connectivity_matrix = self.micro_connectivity_matrix
+        #else:
+        #    self.micro_connectivity_matrix = np.array([[]])
+        #    self.connectivity_matrix = self.micro_connectivity_matrix
         # The matrix of connections which are severed due to the cut
         self.null_cut_matrix = np.zeros((self.micro_size, self.micro_size))
         self.cut_matrix = (self._find_cut_matrix(cut) if cut is not None
@@ -105,53 +109,59 @@ class Subsystem:
         self.nodes = tuple(Node(i, self, indices=self.micro_indices)
                            for i in self.micro_indices)
         # Re-calcuate the tpm based on the results of the cut
-        self.tpm = np.rollaxis(np.array([
-            self.expand_node_tpm(node.inputs, node.tpm[1])
-            for node in self.nodes]), 0, self.micro_size+1)
+        self.tpm = np.rollaxis(
+            np.array([
+                self.expand_node_tpm(node.inputs, node.tpm[1])
+                for node in self.nodes]
+            ), 0, self.micro_size + 1)
 
         # Create the TPM and CM for the defined time scale
         # ================================================
         self.time_scale = time_scale
-        # This is a blackboxed time. Coarse grain time not yet implemented.
-        if (internal_indices) and (time_scale > 1):
-            sbs_tpm = convert.state_by_node2state_by_state(self.tpm)
-            if utils.sparse(self.tpm):
-                self.tpm = utils.sparse_time(sbs_tpm, time_scale)
-            else:
-                self.tpm = utils.dense_time(sbs_tpm, time_scale)
-            self.tpm = convert.state_by_state2state_by_node(self.tpm)
-            self.connectivity_matrix = matrix_power(
-                self.micro_connectivity_matrix, time_scale)
-        elif (internal_indices) and (time_scale == 1):
-            self.connectivity_matrix = self.micro_connectivity_matrix
+        # TODO(billy) This is a blackboxed time. Coarse grain time not yet implemented.
+        if internal_indices:
+            if time_scale > 1:
+                sbs_tpm = convert.state_by_node2state_by_state(self.tpm)
+                if utils.sparse(self.tpm):
+                    self.tpm = utils.sparse_time(sbs_tpm, time_scale)
+                else:
+                    self.tpm = utils.dense_time(sbs_tpm, time_scale)
+                self.tpm = convert.state_by_state2state_by_node(self.tpm)
+                self.connectivity_matrix = matrix_power(
+                    self.micro_connectivity_matrix, time_scale)
+            elif time_scale == 1:
+                self.connectivity_matrix = self.micro_connectivity_matrix
 
         # Generate the TPM and CM after blackboxing
         # =========================================
         # Set the elements for blackboxing
         if hidden_indices is not None:
+            # Within-blackbox elements, using the network-based indexing.
             self.micro_hidden_indices = hidden_indices
-            self.hidden_indices = tuple(i for i in self.micro_indices
-                                        if self.internal_indices[i]
-                                        in hidden_indices)
-            self.micro_output_indices = tuple(self.internal_indices[i]
-                                              for i in self.micro_indices
-                                              if self.internal_indices[i]
-                                              not in hidden_indices)
-            self.output_indices = tuple(i for i in self.micro_indices
-                                        if self.internal_indices[i]
-                                        not in hidden_indices)
+            # Within-blackbox elements, using the indexing of the subsystem's
+            # internal elements.
+            self.hidden_indices = tuple(
+                i for i in self.micro_indices
+                if self.internal_indices[i] in hidden_indices)
+            # Blackbox output indices using the subsystem's internal indexing.
+            self.output_indices = tuple(
+                i for i in self.micro_indices
+                if self.internal_indices[i] not in hidden_indices)
             self.output_size = len(self.output_indices)
+            # Koan of the Black Box:
+            #   "Blackbox indices are the blackbox indices using the blackbox
+            #    indexing."
+            #        - The Blackbox Master
             self.blackbox_indices = tuple(range(self.output_size))
         else:
             self.micro_hidden_indices = None
             self.hidden_indices = ()
-            self.output_indices = self.internal_indices
             self.output_indices = tuple(self.micro_indices[i]
                                         for i in range(self.micro_size))
             self.output_size = len(self.output_indices)
             self.blackbox_indices = tuple(range(self.output_size))
 
-        # The TPM conditional on the current value of the hidden nodes
+        # The TPM conditioned on the current value of the hidden nodes.
         if self.hidden_indices:
             self.tpm = utils.condition_tpm(self.tpm,
                                            self.hidden_indices,
@@ -163,22 +173,21 @@ class Subsystem:
                     np.ix_([self.output_indices[cause_index]],
                            [self.output_indices[effect_index]])])
                     > 0 else 0
-                    for effect_index in
-                    range(len(self.output_indices))] for cause_index in
-                range(len(self.output_indices))])
+                    for effect_index in range(len(self.output_indices))]
+                for cause_index in range(len(self.output_indices))])
             self.current_state = tuple(self.current_state[index]
                                        for index in self.output_indices)
 
-        # Generate the TPM and CM after coarse graining
+        # Generate the TPM and CM after coarse-graining
         # =============================================
-        # Set the elements for coarse graining
+        # Set the elements for coarse-graining
         if output_grouping is not None:
-            # validate.macro(output_grouping, state_grouping)
+            # TODO(billy) validate.macro(output_grouping, state_grouping)
             self.micro_output_grouping = output_grouping
-            self.output_grouping = tuple(tuple(i for i in self.blackbox_indices
-                                               if self.internal_indices[self.output_indices[i]]
-                                               in group)
-                                         for group in output_grouping)
+            self.output_grouping = tuple(
+                tuple(i for i in self.blackbox_indices if
+                      self.internal_indices[self.output_indices[i]] in group)
+                for group in output_grouping)
             self.state_grouping = state_grouping
             self.mapping = utils.make_mapping(self.output_grouping,
                                               self.state_grouping)
@@ -192,19 +201,21 @@ class Subsystem:
             self.size = self.output_size
             self.subsystem_indices = tuple(range(self.size))
 
-        # Coarse grain the remaining nodes into the appropriate groups
+        # Coarse-grain the remaining nodes into the appropriate groups
         if output_grouping:
             self.tpm = self.make_macro_tpm()
-            self.connectivity_matrix = np.array([[np.max(self.connectivity_matrix[
-                np.ix_(self.output_grouping[row],
-                       self.output_grouping[col])])
-                for row in range(self.size)]
+            self.connectivity_matrix = np.array([
+                [np.max(self.connectivity_matrix[
+                    np.ix_(self.output_grouping[row],
+                           self.output_grouping[col])])
+                 for row in range(self.size)]
                 for col in range(self.size)])
 
         self.nodes = tuple(Node(i, self, indices=self.subsystem_indices)
-                          for i in self.subsystem_indices)
+                           for i in self.subsystem_indices)
 
-        # A variable to tell if a system is a pure micro without blackbox or coarse grain
+        # A variable to tell if a system is a pure micro without blackboxing or
+        # coarse-grain.
         self.micro = (self.micro_output_grouping is None
                       and self.micro_hidden_indices is None)
         # Hash the final subsystem and nodes
@@ -814,7 +825,7 @@ class Subsystem:
         # first node list to the second.
         submatrix_indices = np.ix_([node.index for node in nodes1],
                                    [node.index for node in nodes2])
-        cm = self.micro_connectivity_matrix[submatrix_indices]
+        cm = self.connectivity_matrix[submatrix_indices]
         # Check that all nodes have at least one connection by summing over
         # rows of connectivity submatrix.
         if len(nodes1) == 1:
