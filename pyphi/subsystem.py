@@ -204,7 +204,8 @@ class Subsystem:
         # Coarse-grain the remaining nodes into the appropriate groups
         if output_grouping:
             self.tpm = utils.make_macro_tpm(self.tpm, self.mapping)
-            self.independent = validate.conditionally_independent(self.tpm)
+            if cut is None:
+                self.independent = validate.conditionally_independent(self.tpm)
             self.tpm = convert.state_by_state2state_by_node(self.tpm)
             self.connectivity_matrix = np.array([
                 [np.max(self.connectivity_matrix[

@@ -306,6 +306,8 @@ def _evaluate_cut(uncut_subsystem, cut, unpartitioned_constellation):
                               cut=cut,
                               mice_cache=uncut_subsystem._mice_cache,
                               hidden_indices=uncut_subsystem.micro_hidden_indices,
+                              output_grouping=uncut_subsystem.micro_output_grouping,
+                              state_grouping=uncut_subsystem.state_grouping,
                               time_scale=uncut_subsystem.time_scale)
     if config.ASSUME_CUTS_CANNOT_CREATE_NEW_CONCEPTS:
         mechanism_indices_to_check = set(

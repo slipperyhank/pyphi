@@ -9,8 +9,8 @@ Methods for coarse-graining systems to different levels of spatial analysis.
 import numpy as np
 import itertools
 import logging
-from . import constants, validate, compute, convert, utils
-from .network import Network
+from . import constants, compute, utils
+from .subsystem import Subsystem
 
 # Create a logger for this module.
 log = logging.getLogger(__name__)
@@ -44,11 +44,11 @@ class MacroNetwork:
         emergence (float): The difference between the |big_phi| of the macro-
             and the micro-system.
     """
-    def __init__(self, macro_network, macro_phi, micro_network, micro_phi,
+    def __init__(self, network, system, macro_phi, micro_phi,
                  partition, grouping):
-        self.network = macro_network
+        self.network = network
+        self.system = system
         self.phi = macro_phi
-        self.micro_network = micro_network
         self.micro_phi = micro_phi
         self.partition = partition
         self.grouping = grouping
@@ -77,7 +77,7 @@ def _partitions_list(N):
                          nodes or more' % (_NUM_PRECOMPUTED_PARTITION_LISTS))
 
 
-def list_all_partitions(network):
+def list_all_partitions(size):
     """Return a list of all possible coarse grains of a network.
 
     Args:
@@ -88,9 +88,9 @@ def list_all_partitions(network):
             element of the list is a list of micro-elements which correspong to
             macro-elements.
     """
-    partitions = _partitions_list(network.size)
-    if network.size > 0:
-        partitions[-1] = [list(range(network.size))]
+    partitions = _partitions_list(size)
+    if size > 0:
+        partitions[-1] = [list(range(size))]
     return tuple(tuple(tuple(part)
                        for part in partition)
                  for partition in partitions)
@@ -118,32 +118,31 @@ def list_all_groupings(partition):
     groupings = [list(grouping) for grouping in
                  itertools.product(*micro_state_groupings) if
                  np.all(np.array([len(element) < 3 for element in grouping]))]
-    return tuple(tuple(tuple(tuple(state) for state in states) for states in group) for group in groupings)
+    return tuple(tuple(tuple(tuple(state) for state in states)
+                       for states in group)
+                 for group in groupings)
 
 
-
-def make_macro_network(network, mapping):
-    """Create the macro-network for a given mapping from micro to macro-states.
-
-    Returns ``None`` if the macro TPM does not satisfy the conditional
-    independence assumption.
-
-    Args:
-        micro_tpm (nd.array): TPM of the micro-system.
-        mapping (nd.array): Mapping from micro-states to macro-states.
-
-    Returns:
-        macro_network (``Network``): Network of the macro-system, or ``None``.
-    """
-    num_macro_nodes = int(np.log2(max(mapping) + 1))
-    macro_tpm = utils.make_macro_tpm(network.tpm, mapping)
-    macro_current_state = convert.loli_index2state(
-        mapping[convert.state2loli_index(network.current_state)].astype(int),
-        num_macro_nodes)
-    if validate.conditionally_independent(macro_tpm):
-        return Network(macro_tpm, macro_current_state)
-    else:
-        return None
+def coarse_grain(internal_indices, network):
+    index_partitions = list_all_partitions(len(internal_indices))
+    partitions = tuple(tuple(tuple(internal_indices[i] for i in part)
+                             for part in partition)
+                       for partition in index_partitions)
+    max_phi = float('-inf')
+    max_partition = ()
+    max_grouping = ()
+    for partition in partitions:
+        groupings = list_all_groupings(partition)
+        for grouping in groupings:
+            subsystem = Subsystem(internal_indices, network,
+                                  output_grouping=partition,
+                                  state_grouping=grouping)
+            phi = compute.big_phi(subsystem)
+            if (phi - max_phi) > constants.EPSILON:
+                max_phi = phi
+                max_partition = partition
+                max_grouping = grouping
+    return (max_phi, max_partition, max_grouping)
 
 
 def emergence(network):
@@ -160,23 +159,18 @@ def emergence(network):
             micro-system.
     """
     micro_phi = compute.main_complex(network).phi
-    partitions = list_all_partitions(network)
+    systems = utils.powerset(network.node_indices)
     max_phi = float('-inf')
-    for partition in partitions:
-        groupings = list_all_groupings(partition)
-        for grouping in groupings:
-            mapping = utils.make_mapping(partition, grouping)
-            macro_network = make_macro_network(network, mapping)
-            if macro_network:
-                main_complex = compute.main_complex(macro_network)
-                if (main_complex.phi - max_phi) > constants.EPSILON:
-                    max_phi = main_complex.phi
-                    max_partition = partition
-                    max_grouping = grouping
-                    max_network = macro_network
-    return MacroNetwork(macro_network=max_network,
+    for system in systems:
+        (phi, partition, grouping) = coarse_grain(system, network)
+        if (phi - max_phi) > constants.EPSILON:
+            max_phi = phi
+            max_partition = partition
+            max_grouping = grouping
+            max_system = system
+    return MacroNetwork(network=network,
+                        system=max_system,
                         macro_phi=max_phi,
-                        micro_network=network,
                         micro_phi=micro_phi,
                         partition=max_partition,
                         grouping=max_grouping)
