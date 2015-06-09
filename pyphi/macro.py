@@ -120,37 +120,6 @@ def list_all_groupings(partition):
                  np.all(np.array([len(element) < 3 for element in grouping]))]
     return tuple(tuple(tuple(tuple(state) for state in states) for states in group) for group in groupings)
 
-def make_macro_tpm(micro_tpm, mapping):
-    """Create the macro TPM for a given mapping from micro to macro-states.
-
-    Args:
-        micro_tpm (nd.array): The TPM of the micro-system.
-
-        mapping (nd.array): A mapping from micro-states to macro-states.
-
-    Returns:
-        macro_tpm (``nd.array``): The TPM of the macro-system.
-    """
-    # Validate the TPM
-    validate.tpm(micro_tpm)
-    if (micro_tpm.ndim > 2) or (not micro_tpm.shape[0] == micro_tpm.shape[1]):
-        micro_tpm = convert.state_by_node2state_by_state(micro_tpm)
-    num_macro_states = max(mapping) + 1
-    num_micro_states = len(micro_tpm)
-    macro_tpm = np.zeros((num_macro_states, num_macro_states))
-    # For every possible micro-state transition, get the corresponding past and
-    # current macro-state using the mapping and add that probability to the
-    # state-by-state macro TPM.
-    micro_state_transitions = itertools.product(range(num_micro_states),
-                                                range(num_micro_states))
-    for past_state_index, current_state_index in micro_state_transitions:
-        macro_tpm[mapping[past_state_index],
-                  mapping[current_state_index]] += \
-            micro_tpm[past_state_index, current_state_index]
-    # Because we're going from a bigger TPM to a smaller TPM, we have to
-    # re-normalize each row.
-    return np.array([list(row) if sum(row) == 0 else list(row / sum(row))
-                     for row in macro_tpm])
 
 
 def make_macro_network(network, mapping):
@@ -167,7 +136,7 @@ def make_macro_network(network, mapping):
         macro_network (``Network``): Network of the macro-system, or ``None``.
     """
     num_macro_nodes = int(np.log2(max(mapping) + 1))
-    macro_tpm = make_macro_tpm(network.tpm, mapping)
+    macro_tpm = utils.make_macro_tpm(network.tpm, mapping)
     macro_current_state = convert.loli_index2state(
         mapping[convert.state2loli_index(network.current_state)].astype(int),
         num_macro_nodes)

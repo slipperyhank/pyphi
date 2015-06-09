@@ -24,7 +24,7 @@ answer_cm = np.array([
     [1, 0]
 ])
 
-cs = (1, 1, 1, 1)
+cs = (0, 0, 0, 0)
 
 network = pyphi.Network(tpm, cs, connectivity_matrix=cm)
 
