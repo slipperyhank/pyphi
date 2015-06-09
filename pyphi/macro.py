@@ -91,7 +91,9 @@ def list_all_partitions(network):
     partitions = _partitions_list(network.size)
     if network.size > 0:
         partitions[-1] = [list(range(network.size))]
-    return partitions
+    return tuple(tuple(tuple(part)
+                       for part in partition)
+                 for partition in partitions)
 
 
 def list_all_groupings(partition):
@@ -113,10 +115,10 @@ def list_all_groupings(partition):
                          'element.')
     micro_state_groupings = [_partitions_list(len(part) + 1) if len(part) > 1
                              else [[[0], [1]]] for part in partition]
-    return [list(grouping) for grouping in
-            itertools.product(*micro_state_groupings) if
-            np.all(np.array([len(element) < 3 for element in grouping]))]
-
+    groupings = [list(grouping) for grouping in
+                 itertools.product(*micro_state_groupings) if
+                 np.all(np.array([len(element) < 3 for element in grouping]))]
+    return tuple(tuple(tuple(tuple(state) for state in states) for states in group) for group in groupings)
 
 def make_macro_tpm(micro_tpm, mapping):
     """Create the macro TPM for a given mapping from micro to macro-states.
