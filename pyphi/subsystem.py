@@ -11,7 +11,7 @@ import psutil
 import numpy as np
 from numpy.linalg import matrix_power
 from .constants import DIRECTIONS, PAST, FUTURE
-from . import constants, config, utils, convert
+from . import constants, config, utils, convert, validate
 from .config import PRECISION
 from .models import Cut, Mip, Part, Mice, Concept
 from .node import Node
@@ -54,7 +54,7 @@ class Subsystem:
                  output_grouping=None, state_grouping=None, time_scale=1):
         # The network this subsystem belongs to.
         self.network = network
-
+        self.independent = True
         # Set the external and internal indices of the subsystem.
         # Condition the network tpm on the external node
         # Remove duplicates, sort, and ensure indices are native Python `int`s
@@ -203,7 +203,9 @@ class Subsystem:
 
         # Coarse-grain the remaining nodes into the appropriate groups
         if output_grouping:
-            self.tpm = self.make_macro_tpm()
+            self.tpm = utils.make_macro_tpm(self.tpm, self.mapping)
+            self.independent = validate.conditionally_independent(self.tpm)
+            self.tpm = convert.state_by_state2state_by_node(self.tpm)
             self.connectivity_matrix = np.array([
                 [np.max(self.connectivity_matrix[
                     np.ix_(self.output_grouping[row],
@@ -211,8 +213,11 @@ class Subsystem:
                  for row in range(self.size)]
                 for col in range(self.size)])
 
-        self.nodes = tuple(Node(i, self, indices=self.subsystem_indices)
-                           for i in self.subsystem_indices)
+        if self.independent:
+            self.nodes = tuple(Node(i, self, indices=self.subsystem_indices)
+                               for i in self.subsystem_indices)
+        else:
+            self.nodes = ()
 
         # A variable to tell if a system is a pure micro without blackboxing or
         # coarse-grain.
