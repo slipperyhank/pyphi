@@ -902,14 +902,18 @@ class Subsystem:
         # TODO re-implement potential purview caching
         # Needs to work with network/subsystem index differences
         # Get cached purviews if available.
-        # if config.CACHE_POTENTIAL_PURVIEWS and self.micro:
+        # The problem with caching on the network is that the
+        # subsystem and network node indices no longer match up
+        # Need to implement some sort of conversion if going to
+        # work. Perhaps only consider of pure micro systems.
+        #if config.CACHE_POTENTIAL_PURVIEWS and self.micro:
         #    purviews = self.network.purview_cache[
         #        (direction, convert.nodes2indices(mechanism))]
-        # else:
-        # purviews = utils.build_purview_list(self.micro_connectivity_matrix,
-        #                                    convert.nodes2indices(mechanism),
-        #                                    direction)
-        purviews = utils.powerset(self.subsystem_indices)
+        #else:
+        #    purviews = utils.powerset(self.subsystem_indices)
+        purviews = utils.build_purview_list(self.connectivity_matrix,
+                                            convert.nodes2indices(mechanism),
+                                            direction)
         purviews = [self.indices2nodes(purview) for purview in purviews]
 
         # Filter out trivially reducible purviews if a cut has been applied.

@@ -6,18 +6,71 @@ import pyphi
 
 tpm = np.zeros((16, 4)) + 0.3
 
-tpm[12:,0:2] = 1
-tpm[3, 3:5] = 1
-tpm[7, 3:5] = 1
-tpm[11, 3:5] = 1
+tpm[12:, 0:2] = 1
+tpm[3, 2:4] = 1
+tpm[7, 2:4] = 1
+tpm[11, 2:4] = 1
+tpm[15, 2:4] = 1
 
+cm = np.array([
+    [0, 0, 1, 1],
+    [0, 0, 1, 1],
+    [1, 1, 0, 0],
+    [1, 1, 0, 0]
+])
 
-cm = np.array([[0, 0, 1, 1],
-               [0, 0, 1, 1],
-               [1, 1, 0, 0],
-               [1, 1, 0, 0]])
+answer_cm = np.array([
+    [0, 1],
+    [1, 0]
+])
 
 cs = (1, 1, 1, 1)
 
-macro_network = pyphi.Network(tpm, cs, connectivity_matrix=cm)
+network = pyphi.Network(tpm, cs, connectivity_matrix=cm)
 
+output_grouping = ((0, 1), (2, 3))
+state_grouping = (((0, 1), (2,)), ((0, 1), (2,)))
+
+subsystem = pyphi.Subsystem(range(network.size), network,
+                            output_grouping=output_grouping,
+                            state_grouping=state_grouping)
+
+cut = pyphi.models.Cut((0,), (1, 2, 3))
+
+cut_subsystem = pyphi.Subsystem(range(network.size), network,
+                                cut=cut,
+                                output_grouping=output_grouping,
+                                state_grouping=state_grouping)
+
+
+def test_macro_subsystem():
+    subsystem = pyphi.Subsystem(range(network.size), network,
+                                output_grouping=output_grouping,
+                                state_grouping=state_grouping)
+    answer_tpm = np.array([
+        [0.09, 0.09],
+        [0.09, 1.],
+        [1., 0.09],
+        [1., 1.]
+    ])
+
+    assert np.array_equal(subsystem.connectivity_matrix, answer_cm)
+    assert np.all(subsystem.tpm.reshape([4]+[2], order='F') - answer_tpm
+                  < pyphi.constants.EPSILON)
+
+
+def test_macro_cut_subsystem():
+    cut = pyphi.models.Cut((0,), (1, 2, 3))
+    cut_subsystem = pyphi.Subsystem(range(network.size), network,
+                                    cut=cut,
+                                    output_grouping=output_grouping,
+                                    state_grouping=state_grouping)
+    answer_tpm = np.array([
+        [0.09, 0.20083333],
+        [0.09, 0.4225],
+        [1., 0.20083333],
+        [1., 0.4225]
+    ])
+    assert np.array_equal(cut_subsystem.connectivity_matrix, answer_cm)
+    assert np.all(cut_subsystem.tpm.reshape([4]+[2], order='F') - answer_tpm
+                  < pyphi.constants.EPSILON)

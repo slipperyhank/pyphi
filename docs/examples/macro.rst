@@ -117,7 +117,7 @@ For the second macro-element, the grouping means that the element will be
 One we have selected a partition and grouping for analysis, we can create a
 mapping between micro-states and macro-states:
 
-    >>> mapping = pyphi.macro.make_mapping(partition, grouping)
+    >>> mapping = pyphi.utils.make_mapping(partition, grouping)
     >>> mapping
     array([ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  1.,  2.,  2.,  2.,  2.,  2.,
             2.,  2.,  3.])
@@ -175,7 +175,7 @@ Lets consider a different partition instead.
     >>> grouping
     [[[0, 1], [2]], [[0, 1], [2]]]
 
-    >>> mapping = pyphi.macro.make_mapping(partition, grouping)
+    >>> mapping = pyphi.utils.make_mapping(partition, grouping)
     >>> mapping
     array([ 0.,  0.,  0.,  1.,  0.,  0.,  0.,  1.,  0.,  0.,  0.,  1.,  2.,
             2.,  2.,  3.])
