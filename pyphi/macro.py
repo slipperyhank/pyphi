@@ -174,3 +174,25 @@ def emergence(network):
                         micro_phi=micro_phi,
                         partition=max_partition,
                         grouping=max_grouping)
+
+
+def phi_by_grain(network):
+    list_of_phi = list()
+    systems = utils.powerset(network.node_indices)
+    for system in systems:
+        micro_subsystem = Subsystem(system, network)
+        mip = compute.big_mip(micro_subsystem)
+        list_of_phi.append([len(micro_subsystem), mip.phi])
+        index_partitions = list_all_partitions(len(system))
+        partitions = tuple(tuple(tuple(system[i] for i in part)
+                                 for part in partition)
+                           for partition in index_partitions)
+        for partition in partitions:
+            groupings = list_all_groupings(partition)
+            for grouping in groupings:
+                subsystem = Subsystem(system, network,
+                                      output_grouping=partition,
+                                      state_grouping=grouping)
+                phi = compute.big_phi(subsystem)
+                list_of_phi.append([len(subsystem), phi, system, partition, grouping])
+    return list_of_phi
