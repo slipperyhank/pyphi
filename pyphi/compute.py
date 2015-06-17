@@ -300,7 +300,6 @@ def _single_node_mip(subsystem):
 def _evaluate_cut(uncut_subsystem, cut, unpartitioned_constellation):
     """Find the ``BigMip`` for a given cut."""
     log.debug("Evaluating cut {}...".format(cut))
-    print(cut)
     cut_subsystem = Subsystem(uncut_subsystem.internal_indices,
                               uncut_subsystem.network,
                               cut=cut,

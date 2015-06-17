@@ -193,6 +193,9 @@ class Subsystem:
                                               self.state_grouping)
             self.size = len(self.output_grouping)
             self.subsystem_indices = tuple(range(self.size))
+            state = np.array(self.current_state)
+            self.current_state = tuple(0 if sum(state[list(self.output_grouping[0])])
+                                       in state_grouping[i][0] else 1 for i in self.subsystem_indices)
         else:
             self.micro_output_grouping = None
             self.output_grouping = ()
@@ -211,8 +214,8 @@ class Subsystem:
                 [np.max(self.connectivity_matrix[
                     np.ix_(self.output_grouping[row],
                            self.output_grouping[col])])
-                 for row in range(self.size)]
-                for col in range(self.size)])
+                 for col in range(self.size)]
+                for row in range(self.size)])
 
         if self.independent:
             self.nodes = tuple(Node(i, self, indices=self.subsystem_indices)
