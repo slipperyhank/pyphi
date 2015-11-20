@@ -67,7 +67,7 @@ __copyright__ = 'Copyright 2014-2015 Will Mayner'
 
 
 from . import (network, subsystem, compute, constants, config, db, examples,
-               macro)
+               macro, extrinsic)
 
 Network = network.Network
 Subsystem = subsystem.Subsystem
