@@ -21,13 +21,14 @@ def existence(network, state):
     L = [(c.subsystem, c.phi) for c in complexes(network, state)]
     n = len(L)
     subsystems = [t[0] for t in L]
-    phis = [t[1] for t in L]
-    ind = np.zeros(n)
+    phis = np.array([t[1] for t in L])
+    exists = np.zeros(n)
     D = hamming_matrix(subsystems)
     for i in range(n):
-        if (np.min(phis[np.where(D[i] == 1)[0]] - phis[i]) > 0):
-            ind[i] = 1
-    return [subsystems[i] for i in range(n) if ind[i] == 1]
+        ind = np.where(D[i] == 1)[0]
+        if (len(ind) > 0) and (np.min(phis[i] - phis[ind]) > 0):
+                exists[i] = 1
+    return [subsystems[i] for i in range(n) if exists[i] == 1]
 
 
 def hamming_matrix(s):
