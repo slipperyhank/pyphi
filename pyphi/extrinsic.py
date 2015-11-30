@@ -26,8 +26,10 @@ def existence(network, state):
     D = hamming_matrix(subsystems)
     for i in range(n):
         ind = np.where(D[i] == 1)[0]
-        if (len(ind) > 0) and (np.min(phis[i] - phis[ind]) > 0):
-                exists[i] = 1
+        if len(ind) < 1:
+            exists[i] = 1
+        elif np.min(phis[i] - phis[ind]) > 0:
+               exists[i] = 1
     return [subsystems[i] for i in range(n) if exists[i] == 1]
 
 
