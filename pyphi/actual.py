@@ -9,13 +9,13 @@ Methods for computing actual causation of subsystems and mechanisms.
 import logging
 import numpy as np
 
-import .
-from . import Subsystem, config, convert, validate
+from . import config, convert, validate
+from .subsystem import Subsystem
 from .compute import complexes
 from .config import PRECISION
 from .network import list_future_purview, list_past_purview
 from .utils import powerset
-from .constants import DIRECTIONS, FUTURE, PAST
+from .constants import DIRECTIONS, FUTURE, PAST, EPSILON
 
 from .ac_models import AcMip, AcMice
 from .ac_utils import ap_diff_abs_eq
@@ -106,7 +106,7 @@ def find_ac_mip(subsystem, second_state, direction, mechanism, purview, norm=Tru
                        partitioned_ap=partitioned_ap,
                        ap_diff=0.0)
 
-        if (abs(ap_diff_min) - abs(ap_diff)) > constants.EPSILON:
+        if (abs(ap_diff_min) - abs(ap_diff)) > EPSILON:
             ap_diff_min = ap_diff
             if norm:
                 norm_factor = ap

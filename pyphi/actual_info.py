@@ -8,8 +8,8 @@ Methods for computing actual causation of subsystems and mechanisms.
 
 import logging
 import numpy as np
-import .
-from . import Subsystem
+
+from .subsystem import Subsystem
 from .compute import complexes
 from . import convert
 from .network import list_future_purview, list_past_purview
