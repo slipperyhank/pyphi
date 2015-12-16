@@ -69,7 +69,7 @@ def nice_ac_composition(acmices):
 # ============================================================================
 # Single purview
 # ============================================================================
-def find_ac_mip(subsystem, second_state, direction, mechanism, purview, norm=True):
+def find_ac_mip(subsystem, second_state, direction, mechanism, purview, norm=True, allow_neg=False):
     """ Return the cause coef mip minimum information partition for a mechanism 
         over a cause purview. 
         Returns: 
@@ -96,7 +96,10 @@ def find_ac_mip(subsystem, second_state, direction, mechanism, purview, norm=Tru
         partitioned_ap = state_probability(partitioned_repertoire, purview, second_state)
 
         ap_diff = ap - partitioned_ap
-        if ap_diff_abs_eq(ap_diff, 0):
+        
+        # First check for 0
+        # Default: don't count contrary causes and effects
+        if ap_diff_abs_eq(ap_diff, 0) or (ap_diff < 0 and not allow_neg):
             return AcMip(second_state=second_state,
                        direction=direction,
                        mechanism=mechanism,
@@ -105,7 +108,8 @@ def find_ac_mip(subsystem, second_state, direction, mechanism, purview, norm=Tru
                        unpartitioned_ap=ap,
                        partitioned_ap=partitioned_ap,
                        ap_diff=0.0)
-
+        
+        # Then take closest to 0
         if (abs(ap_diff_min) - abs(ap_diff)) > EPSILON:
             ap_diff_min = ap_diff
             if norm:
@@ -126,7 +130,7 @@ def find_ac_mip(subsystem, second_state, direction, mechanism, purview, norm=Tru
 # ============================================================================
 # Average over purviews
 # ============================================================================
-def find_ac_mice(subsystem, second_state, direction, mechanism, purviews=False, norm=True):
+def find_ac_mice(subsystem, second_state, direction, mechanism, purviews=False, norm=True, allow_neg=False):
     """Return the maximally irreducible cause or effect coefficient for a mechanism.
 
     Args:
@@ -174,9 +178,14 @@ def find_ac_mice(subsystem, second_state, direction, mechanism, purviews=False, 
     if not purviews:
         maximal_acmip = _null_acmip(second_state, direction, mechanism, None)
     else:
-        maximal_acmip = max(find_ac_mip(subsystem, second_state, direction, mechanism, purview, norm) for
-                          purview in purviews)
-    
+        #This max should be most positive
+        try:
+            maximal_acmip = max(list(filter(None, [find_ac_mip(subsystem, second_state, direction, mechanism, purview, norm, allow_neg) for
+                          purview in purviews])))
+        except: #Todo: put right error? if max is empty? 
+            # If there are only reducible purviews, take largest 
+            maximal_acmip = _null_acmip(second_state, direction, mechanism, None)
+
     # Identify the relevant connections for the AcMICE.
     if not ap_diff_abs_eq(maximal_acmip.ap_diff, 0):
         relevant_connections = \
@@ -192,11 +201,11 @@ def find_ac_mice(subsystem, second_state, direction, mechanism, purviews=False, 
 # ============================================================================
 # Average over mechanisms
 # ============================================================================        
-def directed_ac_composition(subsystem, second_state, direction, mechanisms=False, purviews=False, norm=True):
+def directed_ac_composition(subsystem, second_state, direction, mechanisms=False, purviews=False, norm=True, allow_neg=False):
     """Set of all AcMice of the specified direction"""
     if mechanisms is False:
         mechanisms = powerset(subsystem.node_indices)
-    acmices = [find_ac_mice(subsystem, second_state, direction, mechanism, purviews=purviews, norm=norm)
+    acmices = [find_ac_mice(subsystem, second_state, direction, mechanism, purviews=purviews, norm=norm, allow_neg=allow_neg)
                 for mechanism in mechanisms]
     # Filter out falsy acmices, i.e. those with effectively zero ac_diff.
     return tuple(filter(None, acmices))

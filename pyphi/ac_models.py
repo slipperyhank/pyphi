@@ -33,7 +33,7 @@ def _ap_diff_eq(self, other):
 def _ap_diff_lt(self, other):
     try:
         if not ap_diff_eq(self.ap_diff, other.ap_diff):
-            return abs(self.ap_diff) < abs(other.ap_diff)
+            return self.ap_diff < other.ap_diff
         return False
     except AttributeError:
         return False
@@ -42,7 +42,7 @@ def _ap_diff_lt(self, other):
 def _ap_diff_gt(self, other):
     try:
         if not ap_diff_eq(self.ap_diff, other.ap_diff):
-            return abs(self.ap_diff) > abs(other.ap_diff)
+            return self.ap_diff > other.ap_diff
         return False
     except AttributeError:
         return False
