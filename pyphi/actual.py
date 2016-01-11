@@ -12,16 +12,20 @@ import numpy as np
 from . import config, convert, validate
 from .subsystem import Subsystem
 from .compute import complexes
-from .config import PRECISION
 from .network import list_future_purview, list_past_purview
-from .utils import powerset
+from .utils import powerset, directed_bipartition, cut_mechanism_indices
 from .constants import DIRECTIONS, FUTURE, PAST, EPSILON
+from .models import Cut
 
-from .ac_models import AcMip, AcMice
-from .ac_utils import ap_diff_abs_eq
+from .ac_models import AcMip, AcMice, AcBigMip
+from .ac_utils import ap_phi_abs_eq, directed_bipartitions_existing_connections
 
 from itertools import chain
 from collections import defaultdict
+from pprint import pprint
+from scipy.sparse import csr_matrix
+from scipy.sparse.csgraph import connected_components
+
 # Create a logger for this module.
 log = logging.getLogger(__name__)
 
@@ -41,6 +45,43 @@ def state_probability(repertoire, fixed_nodes, state):
 
     return repertoire[tuple(conditioning_indices)]
 
+def nice_ac_composition(acmices):
+    if acmices:
+        if acmices[0].direction == DIRECTIONS[PAST]:
+            dir_arrow = '<--'
+        elif acmices[0].direction == DIRECTIONS[FUTURE]:
+            dir_arrow = '-->'
+        else:
+            validate.acmices.direction(direction)
+        acmices_list = [["{0:.4f}".format(round(acmice.ap_phi,4)), acmice.mechanism, dir_arrow, acmice.purview] for acmice in acmices]
+        return acmices_list
+    else:
+        return None
+
+def multiple_states_nice_ac_composition(net, transitions, node_indices, mechanisms=False, purviews=False, norm=True, allow_neg=False):
+    """nice composition for multiple pairs of states
+    Args: as above
+        transitions (list(2 state tuples)):    The first is past the second current.
+                                                For 'past' current belongs to subsystem and past is the second state.
+                                                Vice versa for "future"
+    """
+    for transition in transitions:
+        c_subs = Subsystem(net, transition[1], node_indices)
+        acp_mice = directed_ac_constellation(c_subs, transition[0], 'past', mechanisms, purviews, norm, allow_neg)
+
+        p_subs = Subsystem(net, transition[0], node_indices)
+        aep_mice = directed_ac_constellation(p_subs, transition[1], 'future', mechanisms, purviews, norm, allow_neg)
+        print('#####################################')
+        print(transition)
+        print('- cause coefs ----------------------')
+        pprint(nice_ac_composition(acp_mice))
+        print('- effect coefs ----------------------')
+        pprint(nice_ac_composition(aep_mice))
+        print('---------------------------')    
+
+# ============================================================================
+# Single purview
+# ============================================================================
 def _null_acmip(second_state, direction, mechanism, purview):
     # TODO Use properties here to infer mechanism and purview from
     # partition yet access them with .mechanism and .partition
@@ -51,36 +92,20 @@ def _null_acmip(second_state, direction, mechanism, purview):
                partition=None,
                unpartitioned_ap=None,
                partitioned_ap=None,
-               ap_diff=0.0)
+               ap_phi=0.0)
 
-def nice_ac_composition(acmices):
-    if acmices:
-        if acmices[0].direction == DIRECTIONS[PAST]:
-            dir_arrow = '<--'
-        elif acmices[0].direction == DIRECTIONS[FUTURE]:
-            dir_arrow = '-->'
-        else:
-            validate.acmices.direction(direction)
-        acmices_list = [[acmice.ap_diff, acmice.mechanism, dir_arrow, acmice.purview] for acmice in acmices]
-        return acmices_list
-    else:
-        return None
-
-# ============================================================================
-# Single purview
-# ============================================================================
 def find_ac_mip(subsystem, second_state, direction, mechanism, purview, norm=True, allow_neg=False):
     """ Return the cause coef mip minimum information partition for a mechanism 
         over a cause purview. 
         Returns: 
-            ap_diff_min:    the min. difference of the actual probabilities of 
+            ap_phi_min:    the min. difference of the actual probabilities of 
                             the unpartitioned cause and its MIP
         Todo: also return cut etc. ?
     """
 
     repertoire = Subsystem._get_repertoire(subsystem, direction)
-
-    ap_diff_min = float('inf')
+    
+    ap_phi_min = float('inf')
     # Calculate the unpartitioned acp to compare against the partitioned ones
     unpartitioned_repertoire = repertoire(mechanism, purview)
     ap = state_probability(unpartitioned_repertoire, purview, second_state)
@@ -95,11 +120,11 @@ def find_ac_mip(subsystem, second_state, direction, mechanism, purview, norm=Tru
         partitioned_repertoire = part1rep * part2rep
         partitioned_ap = state_probability(partitioned_repertoire, purview, second_state)
 
-        ap_diff = ap - partitioned_ap
+        ap_phi = ap - partitioned_ap
         
         # First check for 0
         # Default: don't count contrary causes and effects
-        if ap_diff_abs_eq(ap_diff, 0) or (ap_diff < 0 and not allow_neg):
+        if ap_phi_abs_eq(ap_phi, 0) or (ap_phi < 0 and not allow_neg):
             return AcMip(second_state=second_state,
                        direction=direction,
                        mechanism=mechanism,
@@ -107,13 +132,15 @@ def find_ac_mip(subsystem, second_state, direction, mechanism, purview, norm=Tru
                        partition=(part0, part1),
                        unpartitioned_ap=ap,
                        partitioned_ap=partitioned_ap,
-                       ap_diff=0.0)
+                       ap_phi=0.0)
         
         # Then take closest to 0
-        if (abs(ap_diff_min) - abs(ap_diff)) > EPSILON:
-            ap_diff_min = ap_diff
+        if (abs(ap_phi_min) - abs(ap_phi)) > EPSILON:
+            ap_phi_min = ap_phi
             if norm:
-                norm_factor = ap
+                uc_cr = repertoire((), purview)
+                norm_factor = state_probability(uc_cr, purview, second_state)
+                #print(norm_factor)
             else:
                 norm_factor = 1.0
             acmip = AcMip(second_state=second_state,
@@ -123,7 +150,7 @@ def find_ac_mip(subsystem, second_state, direction, mechanism, purview, norm=Tru
                       partition=(part0, part1),
                       unpartitioned_ap=ap,
                       partitioned_ap=partitioned_ap,
-                      ap_diff=round(ap_diff/norm_factor, PRECISION))
+                      ap_phi=ap_phi/norm_factor)
     
     return acmip
 
@@ -180,14 +207,16 @@ def find_ac_mice(subsystem, second_state, direction, mechanism, purviews=False, 
     else:
         #This max should be most positive
         try:
-            maximal_acmip = max(list(filter(None, [find_ac_mip(subsystem, second_state, direction, mechanism, purview, norm, allow_neg) for
-                          purview in purviews])))
+            MIP_list = [find_ac_mip(subsystem, second_state, direction, mechanism, purview, norm, allow_neg) for
+                          purview in purviews]
+            #print([mip.ap_phi for mip in MIP_list])
+            maximal_acmip = max(list(filter(None, MIP_list)))
         except: #Todo: put right error? if max is empty? 
             # If there are only reducible purviews, take largest 
             maximal_acmip = _null_acmip(second_state, direction, mechanism, None)
 
     # Identify the relevant connections for the AcMICE.
-    if not ap_diff_abs_eq(maximal_acmip.ap_diff, 0):
+    if not ap_phi_abs_eq(maximal_acmip.ap_phi, 0):
         relevant_connections = \
             subsystem._connections_relevant_for_mice(maximal_acmip)
     else:
@@ -199,13 +228,169 @@ def find_ac_mice(subsystem, second_state, direction, mechanism, purviews=False, 
     return acmice
 
 # ============================================================================
-# Average over mechanisms
+# Average over mechanisms - constellations
 # ============================================================================        
-def directed_ac_composition(subsystem, second_state, direction, mechanisms=False, purviews=False, norm=True, allow_neg=False):
-    """Set of all AcMice of the specified direction"""
+def directed_ac_constellation(subsystem, second_state, direction, mechanisms=False, purviews=False, norm=True, allow_neg=False):
+    """Set of all AcMice of the specified direction, similar to "sequential_constellation" in compute.py"""
     if mechanisms is False:
         mechanisms = powerset(subsystem.node_indices)
     acmices = [find_ac_mice(subsystem, second_state, direction, mechanism, purviews=purviews, norm=norm, allow_neg=allow_neg)
                 for mechanism in mechanisms]
     # Filter out falsy acmices, i.e. those with effectively zero ac_diff.
     return tuple(filter(None, acmices))
+
+# ============================================================================
+# AcBigMips and System cuts
+# ============================================================================        
+def ac_constellation_distance(C1, C2):
+    """Return the distance between two constellations. Here that is just the difference in sum(ap_phis)
+
+    Args:
+        C1 (tuple(Concept)): The first constellation.
+        C2 (tuple(Concept)): The second constellation.
+
+    Returns:
+        distance (``float``): The distance between the two constellations in
+            concept-space.
+    """
+    return sum([acmice.ap_phi for acmice in C1]) - sum([acmice.ap_phi for acmice in C2])
+
+
+def _null_acbigmip(subsystem, second_state):
+    """Returns an ac |BigMip| with zero |big_ap_phi| and empty constellations."""
+
+    return AcBigMip(subsystem=subsystem, second_state=second_state, cut_subsystem=subsystem, ap_phi=0.0,
+                  unpartitioned_constellation=(), partitioned_constellation=())
+
+#TODO: single node BigMip
+
+def _evaluate_cut(uncut_subsystem, cut, unpartitioned_constellation, second_state, direction):
+    """Find the |AcBigMip| for a given cut. This is unidirectional for a transition."""
+    log.debug("Evaluating cut {}...".format(cut))
+
+    cut_subsystem = Subsystem(uncut_subsystem.network,
+                              uncut_subsystem.state,
+                              uncut_subsystem.node_indices,
+                              cut=cut,
+                              mice_cache=uncut_subsystem._mice_cache)
+    if config.ASSUME_CUTS_CANNOT_CREATE_NEW_CONCEPTS:
+        mechanisms = set([c.mechanism for c in unpartitioned_constellation])
+    else:
+        mechanisms = set([c.mechanism for c in unpartitioned_constellation] +
+                         list(cut_mechanism_indices(uncut_subsystem, cut)))
+
+
+    partitioned_constellation = directed_ac_constellation(cut_subsystem, second_state, direction, mechanisms)
+    log.debug("Finished evaluating cut {}.".format(cut))
+
+    ap_phi = ac_constellation_distance(unpartitioned_constellation,
+                                 partitioned_constellation)
+    return AcBigMip(
+        ap_phi=ap_phi,
+        second_state=second_state,
+        unpartitioned_constellation=unpartitioned_constellation,
+        partitioned_constellation=partitioned_constellation,
+        subsystem=uncut_subsystem,
+        cut_subsystem=cut_subsystem) 
+
+def find_big_ac_mip(subsystem, cuts, unpartitioned_constellation, second_state, direction,
+                         min_ac_mip):
+    """Find the minimal cut for a subsystem by sequential loop over all cuts,
+        holding only two ``BigMip``s in memory at once."""
+    for i, cut in enumerate(cuts):
+        new_ac_mip = _evaluate_cut(subsystem, cut, unpartitioned_constellation, second_state, direction)
+        log.debug("Finished {} of {} cuts.".format(
+            i + 1, len(cuts)))
+        if new_ac_mip < min_ac_mip:
+            min_ac_mip = new_ac_mip
+        # Short-circuit as soon as we find a MIP with effectively 0 phi.
+        if not min_ac_mip:
+            break
+    return min_ac_mip    
+
+def big_ac_mip(subsystem, second_state, direction=False, weak_connectivity=True):
+    """Return the minimal information partition of a subsystem.
+
+    Args:
+        subsystem (Subsystem): The candidate set of nodes.
+        weak_connectivity:  To be able to evaluate transitions in open systems, 
+                            weakly connected sets of causes and effects.
+    Returns:
+        big_mip (|BigMip|): A nested structure containing all the data from the
+            intermediate calculations. The top level contains the basic MIP
+            information for the given subsystem.
+    TODO: no time measured yet.        
+    """
+    # if direction == DIRECTIONS[PAST]:
+    #         purviews = list_past_purview(subsystem.network, mechanism)
+    #     elif direction == DIRECTIONS[FUTURE]:
+    #         purviews = list_future_purview(subsystem.network, mechanism)
+    #     else:
+    #         validate.direction(direction)
+
+    if not direction:
+        direction = 'past'
+
+    log.info("Calculating big-ac-phi data for {}...".format(subsystem))
+
+    # Check for degenerate cases
+    # =========================================================================
+    # Phi is necessarily zero if the subsystem is:
+    #   - not strongly connected;
+    #   - empty; or
+    #   - ToDo: an elementary mechanism (i.e. no nontrivial bipartitions).
+    # So in those cases we immediately return a null MIP.
+    if not subsystem:
+        log.info('Subsystem {} is empty; returning null MIP '
+                 'immediately.'.format(subsystem))
+
+    # Get the connectivity of just the subsystem nodes.
+    submatrix_indices = np.ix_(subsystem.node_indices, subsystem.node_indices)
+    cm = subsystem.network.connectivity_matrix[submatrix_indices]
+    # Get the number of strongly connected components.
+    if weak_connectivity:
+        num_components, _ = connected_components(csr_matrix(cm),
+                                             connection='weak')
+    else:
+        num_components, _ = connected_components(csr_matrix(cm),
+                                             connection='strong')
+
+    if num_components > 1:
+        log.info('{} is not strongly/weakly connected; returning null MIP '
+                 'immediately.'.format(subsystem))
+
+    # =========================================================================
+    # Todo: add approximation as an option for weak_connectivity
+    if config.CUT_ONE_APPROXIMATION:
+        bipartitions = directed_bipartition_of_one(subsystem.node_indices)
+    elif weak_connectivity:
+        bipartitions = directed_bipartitions_existing_connections(subsystem.node_indices, cm)
+    else:
+        # The first and last bipartitions are the null cut (trivial
+        # bipartition), so skip them.
+        bipartitions = directed_bipartition(subsystem.node_indices)[1:-1]
+
+    import pdb; pdb.set_trace()
+    
+    cuts = [Cut(bipartition[0], bipartition[1])
+            for bipartition in bipartitions]
+    
+    import pdb; pdb.set_trace()
+    log.debug("Finding unpartitioned directed_ac_constellation...")   
+    unpartitioned_constellation = directed_ac_constellation(subsystem, second_state, direction)
+
+    log.debug("Found unpartitioned directed_ac_constellation.")
+    if not unpartitioned_constellation:
+        # Short-circuit if there are no concepts in the unpartitioned
+        # directed_ac_constellation.
+        result = _null_acbigmip(subsystem, second_state)
+    else:
+        min_ac_mip = _null_acbigmip(subsystem, second_state)
+        min_ac_mip.ap_phi = float('inf')
+        min_ac_mip = find_big_ac_mip(subsystem, cuts, unpartitioned_constellation, second_state, direction,
+                            min_ac_mip)
+        result = min_ac_mip
+
+    log.info("Finished calculating big-ac-phi data for {}.".format(subsystem))
+    log.debug("RESULT: \n" + str(result))
+    return result
