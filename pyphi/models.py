@@ -10,11 +10,36 @@ from collections import Iterable, namedtuple
 
 import numpy as np
 
-from . import utils
+from . import utils, config
 from .jsonify import jsonify
 
 
 # TODO use properties to avoid data duplication
+
+def make_repr(self, attrs):
+    """Construct a repr string.
+    If `config.READABLE_REPRS` is True, this function calls out
+    to the object's __str__ method. Although this breaks the convention
+    that __repr__ should return a string which can reconstruct the object,
+    readable reprs are invaluable since the Python interpreter calls
+    `repr` to represent all objects in the shell. Since PyPhi is often
+    used in the interpreter we want to have meaningful and useful
+    representations.
+    Args:
+        self (obj): The object in question
+        attrs (iterable(str)): Attributes to include in the repr
+    Returns:
+        (str): the `repr`esentation of the object
+    """
+    # TODO: change this to a closure so we can do
+    # __repr__ = make_repr(attrs) ???
+
+    if config.READABLE_REPRS:
+        return self.__str__()
+
+    return "{}({})".format(
+        self.__class__.__name__,
+        ", ".join(attr + '=' + repr(getattr(self, attr)) for attr in attrs))
 
 
 class Cut(namedtuple('Cut', ['severed', 'intact'])):
@@ -32,7 +57,12 @@ class Cut(namedtuple('Cut', ['severed', 'intact'])):
     # This allows accessing the namedtuple's ``__dict__``; see
     # https://docs.python.org/3.3/reference/datamodel.html#notes-on-using-slots
     __slots__ = ()
-    pass
+
+    def __repr__(self):
+        return make_repr(self, ['severed', 'intact'])
+
+    def __str__(self):
+        return "Cut {self.severed} --//--> {self.intact}".format(self=self)
 
 
 class Part(namedtuple('Part', ['mechanism', 'purview'])):
@@ -241,6 +271,12 @@ class Mip(namedtuple('Mip', _mip_attributes)):
         d['unpartitioned_repertoire'] = self.unpartitioned_repertoire.flatten()
         return d
 
+    def __repr__(self):
+        return make_repr(self, _mip_attributes)
+
+    def __str__(self):
+        return "Mip\n" + indent(fmt_mip(self))
+
     # Order by phi value, then by mechanism size
     __lt__ = _phi_then_mechanism_size_lt
     __gt__ = _phi_then_mechanism_size_gt
@@ -327,11 +363,11 @@ class Mice:
         """
         return self._mip
 
-    def __str__(self):
-        return "Mice(" + str(self._mip) + ")"
-
     def __repr__(self):
-        return "Mice(" + repr(self._mip) + ")"
+        return make_repr(self, ['mip'])
+
+    def __str__(self):
+        return "Mice\n" + indent(fmt_mip(self.mip))
 
     def __eq__(self, other):
         return self.mip == other.mip
@@ -395,11 +431,11 @@ class Concept:
         self.time = None
 
     def __repr__(self):
-        return 'Concept(' + ', '.join(attr + '=' + str(getattr(self, attr)) for
-                                      attr in _concept_attributes) + ')'
+        return make_repr(self, _concept_attributes)
 
     def __str__(self):
-        return self.__repr__()
+        return "Concept\n""-------\n" + fmt_concept(self)
+
 
     @property
     def location(self):
@@ -514,6 +550,22 @@ class Concept:
     __ge__ = _phi_then_mechanism_size_ge
 
 
+class Constellation(tuple):
+    """A constellation of concepts.
+    This is a wrapper around a tuple to provide a nice string
+    representation and place to put constellation methods. Previously,
+    constellations were represented as `tuple(Concept)`; this usage still
+    works in all functions.
+    """
+
+    def __repr__(self):
+        if config.READABLE_REPRS:
+            return self.__str__()
+        return "Constellation({})".format(super(Constellation, self).__repr__())
+
+    def __str__(self):
+        return "\nConstellation\n*************" + fmt_constellation(self)
+        
 # =============================================================================
 
 _bigmip_attributes = ['phi', 'unpartitioned_constellation',
@@ -557,11 +609,10 @@ class BigMip:
         self.small_phi_time = None
 
     def __repr__(self):
-        return 'BigMip(' + ', '.join(attr + '=' + str(getattr(self, attr)) for
-                                     attr in _bigmip_attributes) + ')'
+        return make_repr(self, _bigmip_attributes)
 
     def __str__(self):
-        return self.__repr__()
+        return "\nBigMip\n======\n" + fmt_big_mip(self)
 
     @property
     def cut(self):
@@ -608,3 +659,109 @@ class BigMip:
 
     def __ge__(self, other):
         return (self.__gt__(other) or _phi_eq(self, other))
+
+# Formatting functions for __str__ and __repr__
+# TODO: probably move this to utils.py, or maybe fmt.py??
+
+
+def indent(lines, amount=2, chr=' '):
+    """Indent a string.
+    Prepends whitespace to every line in the passed string. (Lines are
+    separated by ``\n``)
+    Args:
+        lines (str): The string to indent.
+    Keyword Args:
+        amount (int): The number of columns to indent by.
+        chr (char): The character to to use as the indentation.
+    Returns:
+        str: The indented string.
+    """
+    lines = str(lines)
+    padding = amount * chr
+    return padding + ('\n' + padding).join(lines.split('\n'))
+
+
+def fmt_constellation(c):
+    """Format a constellation."""
+    if not c:
+        return "()\n"
+    return "\n\n" + "\n".join(map(lambda x: indent(x), c)) + "\n"
+
+
+def fmt_partition(partition):
+    """Format a partition
+    Args:
+        partition (tuple(Part, Part)): The partition in question.
+    Returns:
+        str: A string representation that looks like
+            0,1   []
+            --- X ---
+             2    0,1
+    """
+    if not partition:
+        return ""
+
+    part0, part1 = partition
+    node_repr = lambda x: ','.join(map(str, x)) if x else '[]'
+    numer0, denom0 = node_repr(part0.mechanism), node_repr(part0.purview)
+    numer1, denom1 = node_repr(part1.mechanism), node_repr(part1.purview)
+
+    width0 = max(len(numer0), len(denom0))
+    width1 = max(len(numer1), len(denom1))
+
+    return ("{numer0:^{width0}}   {numer1:^{width1}}\n"
+                        "{div0} X {div1}\n"
+            "{denom0:^{width0}}   {denom1:^{width1}}").format(
+                numer0=numer0, denom0=denom0, width0=width0, div0='-' * width0,
+                numer1=numer1, denom1=denom1, width1=width1, div1='-' * width1)
+
+
+def fmt_concept(concept):
+    """Format a Concept string"""
+    return (
+        "phi: {concept.phi}\n"
+        "mechanism: {concept.mechanism}\n"
+        "cause: {cause}\n"
+        "effect: {effect}\n".format(
+            concept=concept,
+            cause=("\n" + indent(fmt_mip(concept.cause.mip, verbose=False))
+                   if concept.cause else ""),
+            effect=("\n" + indent(fmt_mip(concept.effect.mip, verbose=False))
+                    if concept.effect else "")))
+
+
+def fmt_mip(mip, verbose=True):
+    """Helper function to format a nice Mip string"""
+
+    if mip is False or mip is None:  # mips can be Falsy
+        return ""
+
+    mechanism = "mechanism: {}\n".format(mip.mechanism) if verbose else ""
+    direction = "direction: {}\n".format(mip.direction) if verbose else ""
+    return (
+        "phi: {mip.phi}\n"
+        "{mechanism}"
+        "purview: {mip.purview}\n"
+        "partition:\n{partition}\n"
+        "{direction}"
+        "unpartitioned_repertoire:\n{unpart_rep}\n"
+        "partitioned_repertoire:\n{part_rep}").format(
+            mechanism=mechanism,
+            direction=direction,
+            mip=mip,
+            partition=indent(fmt_partition(mip.partition)),
+            unpart_rep=indent(mip.unpartitioned_repertoire.flatten(order = 'F')),
+            part_rep=indent(mip.partitioned_repertoire.flatten(order = 'F')))
+
+
+def fmt_big_mip(big_mip):
+    """Format a BigMip"""
+    return (
+        "phi: {big_mip.phi}\n"
+        "subsystem: {big_mip.subsystem}\n"
+        "cut: {big_mip.cut}\n"
+        "unpartitioned_constellation: {unpart_const}"
+        "partitioned_constellation: {part_const}".format(
+            big_mip=big_mip,
+            unpart_const=fmt_constellation(big_mip.unpartitioned_constellation),
+            part_const=fmt_constellation(big_mip.partitioned_constellation)))

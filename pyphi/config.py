@@ -305,6 +305,8 @@ DEFAULTS = {
     # In some applications of this library, the user may prefer to define
     # single-node subsystems as having 0.5 Phi.
     'SINGLE_NODES_WITH_SELFLOOPS_HAVE_PHI': False,
+    # Use prettier __str__-like formatting in repr calls
+    'READABLE_REPRS': True,
 }
 
 # The current configuration.

@@ -12,7 +12,7 @@ import numpy as np
 
 from . import utils
 from .jsonify import jsonify
-from .models import _numpy_aware_eq
+from .models import _numpy_aware_eq, make_repr, indent, fmt_constellation, fmt_partition
 from .ac_utils import ap_phi_eq
 
 # TODO use properties to avoid data duplication
@@ -185,6 +185,12 @@ class AcMip(namedtuple('AcMip', _acmip_attributes)):
         d = self.__dict__
         return d
 
+    def __repr__(self):
+        return make_repr(self, _acmip_attributes)
+
+    def __str__(self):
+        return "Mip\n" + indent(fmt_ac_mip(self))
+
     # Order by ap_phi value, then by mechanism size
     __lt__ = _ap_phi_then_mechanism_size_lt
     __gt__ = _ap_phi_then_mechanism_size_gt
@@ -277,11 +283,11 @@ class AcMice:
         """
         return self._acmip
 
-    def __str__(self):
-        return "AcMice(" + str(self._acmip) + ")"
-
     def __repr__(self):
-        return "AcMice(" + repr(self._acmip) + ")"
+        return make_repr(self, ['acmip'])
+
+    def __str__(self):
+        return "AcMice\n" + indent(fmt_ac_mip(self.acmip))
 
     def __eq__(self, other):
         return self.acmip == other.acmip
@@ -344,11 +350,10 @@ class AcBigMip:
         self.cut_subsystem = cut_subsystem
         
     def __repr__(self):
-        return 'BigMip(' + ', '.join(attr + '=' + str(getattr(self, attr)) for
-                                     attr in _acbigmip_attributes) + ')'
+        return make_repr(self, _acbigmip_attributes)
 
     def __str__(self):
-        return self.__repr__()
+        return "\nAcBigMip\n======\n" + fmt_ac_big_mip(self)
 
     @property
     def cut(self):
@@ -395,3 +400,42 @@ class AcBigMip:
 
     def __ge__(self, other):
         return (self.__gt__(other) or _ap_phi_eq(self, other))
+
+# Formatting functions for __str__ and __repr__
+# TODO: probably move this to utils.py, or maybe fmt.py??
+
+def fmt_ac_mip(acmip, verbose=True):
+    """Helper function to format a nice Mip string"""
+
+    if acmip is False or acmip is None:  # mips can be Falsy
+        return ""
+
+    mechanism = "mechanism: {}\t".format(acmip.mechanism) if verbose else ""
+    direction = "direction: {}\n".format(acmip.direction) if verbose else ""
+    return (
+        "ap_phi: {acmip.ap_phi}\t"
+        "{mechanism}"
+        "purview: {acmip.purview}\t"
+        "{direction}"
+        "partition:\n{partition}\n"
+        "unpartitioned_ap:\t{unpart_rep}\t"
+        "partitioned_ap:\t{part_rep}\n").format(
+            mechanism=mechanism,
+            direction=direction,
+            acmip=acmip,
+            partition=indent(fmt_partition(acmip.partition)),
+            unpart_rep=indent(acmip.unpartitioned_ap),
+            part_rep=indent(acmip.partitioned_ap))
+
+def fmt_ac_big_mip(ac_big_mip):
+    """Format a AcBigMip"""
+    return (
+        "ap_phi: {ac_big_mip.ap_phi}\n"
+        "second_state: {ac_big_mip.second_state}\n"
+        "subsystem: {ac_big_mip.subsystem}\n"
+        "cut: {ac_big_mip.cut}\n"
+        "unpartitioned_constellation: {unpart_const}"
+        "partitioned_constellation: {part_const}".format(
+            ac_big_mip=ac_big_mip,
+            unpart_const=fmt_constellation(ac_big_mip.unpartitioned_constellation),
+            part_const=fmt_constellation(ac_big_mip.partitioned_constellation)))
