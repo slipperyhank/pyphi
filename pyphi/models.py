@@ -96,7 +96,7 @@ class Cut(namedtuple('Cut', ['severed', 'intact'])):
         subsystem--not necessarily the size of the entire network.
         """
         cut_indices = tuple(set(self[0] + self[1]))
-        if not cut_indices:  # empty cut
+        if not (self[0] and self[1]):  # empty cut
             return np.array([])
 
         # Construct a cut matrix large enough for all indices
