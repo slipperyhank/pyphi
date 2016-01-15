@@ -115,7 +115,7 @@ def _general_eq(a, b, attributes):
 # =============================================================================
 # Todo: Why do we even need this?
 # Todo: add second state
-_acmip_attributes = ['ap_phi','second_state','direction', 'mechanism', 'purview', 'partition',
+_acmip_attributes = ['ap_phi','actual_state','direction', 'mechanism', 'purview', 'partition',
                    'unpartitioned_ap', 'partitioned_ap']
 _acmip_attributes_for_eq = ['ap_phi', 'direction', 'mechanism',
                           'unpartitioned_ap']
@@ -134,7 +134,7 @@ class AcMip(namedtuple('AcMip', _acmip_attributes)):
         ap_phi (float):
             This is the difference between the mechanism's unpartitioned and
             partitioned actual probability.
-        second_state (tuple(int)): 
+        actual_state (tuple(int)): 
             actual state of system in specified direction (past, future)
         direction (str):
             The temporal direction specifiying whether this AcMIP should be
@@ -178,7 +178,7 @@ class AcMip(namedtuple('AcMip', _acmip_attributes)):
         return not ap_phi_eq(self.ap_phi, 0)
 
     # def __hash__(self):
-    #     return hash((self.ap_phi, self.second_state, self.direction, self.mechanism, self.purview,
+    #     return hash((self.ap_phi, self.actual_state, self.direction, self.mechanism, self.purview,
     #                  utils.np_hash(self.unpartitioned_ap)))
 
     def to_json(self):
@@ -239,11 +239,11 @@ class AcMice:
         return self._acmip.ap_phi
 
     @property
-    def second_state(self):
+    def actual_state(self):
         """
         ``tuple`` -- The actual state of system in specified direction (past, future).
         """
-        return self._acmip.second_state    
+        return self._acmip.actual_state    
 
     @property
     def direction(self):
@@ -312,7 +312,7 @@ class AcMice:
 
 # =============================================================================
 
-_acbigmip_attributes = ['ap_phi', 'second_state', 'unpartitioned_constellation',
+_acbigmip_attributes = ['ap_phi', 'actual_state', 'direction', 'unpartitioned_constellation',
                       'partitioned_constellation', 'subsystem',
                       'cut_subsystem']
 
@@ -339,11 +339,12 @@ class AcBigMip:
         cut_subsystem (Subsystem): The subsystem with the minimal cut applied.
     """
 
-    def __init__(self, ap_phi=None, second_state=None, unpartitioned_constellation=None,
+    def __init__(self, ap_phi=None, actual_state=None, direction=None, unpartitioned_constellation=None,
                  partitioned_constellation=None, subsystem=None,
                  cut_subsystem=None):
         self.ap_phi = ap_phi
-        self.second_state = second_state
+        self.actual_state = actual_state
+        self.direction = direction
         self.unpartitioned_constellation = unpartitioned_constellation
         self.partitioned_constellation = partitioned_constellation
         self.subsystem = subsystem
@@ -370,7 +371,7 @@ class AcBigMip:
         return not ap_phi_eq(self.ap_phi, 0)
 
     def __hash__(self):
-        return hash((self.ap_phi, self.second_state, self.unpartitioned_constellation,
+        return hash((self.ap_phi, self.actual_state, self.unpartitioned_constellation,
                      self.partitioned_constellation, self.subsystem,
                      self.cut_subsystem))
 
@@ -413,13 +414,14 @@ def fmt_ac_mip(acmip, verbose=True):
     mechanism = "mechanism: {}\t".format(acmip.mechanism) if verbose else ""
     direction = "direction: {}\n".format(acmip.direction) if verbose else ""
     return (
-        "ap_phi: {acmip.ap_phi}\t"
+        "{ap_phi}\t"
         "{mechanism}"
         "purview: {acmip.purview}\t"
         "{direction}"
         "partition:\n{partition}\n"
         "unpartitioned_ap:\t{unpart_rep}\t"
         "partitioned_ap:\t{part_rep}\n").format(
+            ap_phi="{0:.4f}".format(round(acmip.ap_phi,4)),
             mechanism=mechanism,
             direction=direction,
             acmip=acmip,
@@ -430,12 +432,14 @@ def fmt_ac_mip(acmip, verbose=True):
 def fmt_ac_big_mip(ac_big_mip):
     """Format a AcBigMip"""
     return (
-        "ap_phi: {ac_big_mip.ap_phi}\n"
-        "second_state: {ac_big_mip.second_state}\n"
+        "{ap_phi}\n"
+        "actual_state: {ac_big_mip.actual_state}\n"
+        "direction: {ac_big_mip.direction}\n"
         "subsystem: {ac_big_mip.subsystem}\n"
         "cut: {ac_big_mip.cut}\n"
         "unpartitioned_constellation: {unpart_const}"
         "partitioned_constellation: {part_const}".format(
+            ap_phi="{0:.4f}".format(round(ac_big_mip.ap_phi,4)),
             ac_big_mip=ac_big_mip,
             unpart_const=fmt_constellation(ac_big_mip.unpartitioned_constellation),
             part_const=fmt_constellation(ac_big_mip.partitioned_constellation)))
