@@ -9,7 +9,7 @@ import itertools
 
 import numpy as np
 
-from . import cache, convert, utils, validate
+from . import cache, utils, validate
 from .config import PRECISION
 from .constants import DIRECTIONS, FUTURE, PAST
 from .jsonify import jsonify
@@ -86,6 +86,9 @@ class Subsystem:
         self.cut = cut if cut is not None else self.null_cut
 
         # The matrix of connections which are severed due to the cut
+        # Note: this matrix is N x N, where N is the number of elements in
+        # the subsystem, *not* the number of elements in the network.
+        # TODO: save/memoize on the cut so we just say self.cut.matrix()?
         self.cut_matrix = self.cut.cut_matrix()
 
         # The network's connectivity matrix with cut applied
@@ -578,8 +581,7 @@ class Subsystem:
         return self.find_mip(DIRECTIONS[FUTURE], mechanism, purview)
 
     def phi_mip_past(self, mechanism, purview):
-        """Return the |small_phi| value of the past minimum information
-        partition.
+        """Return the |small_phi| of the past minimum information partition.
 
         This is the distance between the unpartitioned cause repertoire and the
         MIP cause repertoire.
@@ -588,8 +590,7 @@ class Subsystem:
         return mip.phi if mip else 0
 
     def phi_mip_future(self, mechanism, purview):
-        """Return the |small_phi| value of the future minimum information
-        partition.
+        """Return the |small_phi| of the future minimum information partition.
 
         This is the distance between the unpartitioned effect repertoire and
         the MIP cause repertoire.
@@ -598,7 +599,7 @@ class Subsystem:
         return mip.phi if mip else 0
 
     def phi(self, mechanism, purview):
-        """Return the |small_phi| value of a mechanism over a purview."""
+        """Return the |small_phi| of a mechanism over a purview."""
         return min(self.phi_mip_past(mechanism, purview),
                    self.phi_mip_future(mechanism, purview))
 

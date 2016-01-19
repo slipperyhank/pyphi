@@ -28,6 +28,7 @@ class _HashedSeq(list):
     per element.  This is important because the lru_cache() will hash
     the key multiple times on a cache miss.
     """
+
     __slots__ = 'hashvalue'
 
     def __init__(self, tup, hash=hash):
@@ -130,11 +131,11 @@ def cache(cache={}, maxmem=config.MAXIMUM_CACHE_MEMORY_PERCENTAGE,
                 return result
 
         def cache_info():
-            """Report cache statistics"""
+            """Report cache statistics."""
             return _CacheInfo(hits, misses, len(cache))
 
         def cache_clear():
-            """Clear the cache and cache statistics"""
+            """Clear the cache and cache statistics."""
             nonlocal hits, misses, full
             cache.clear()
             hits = misses = 0
@@ -242,8 +243,11 @@ class MiceCache(DictCache):
           - The subsystem is uncut (caches are only inherited from
             uncut subsystems so there is no reason to cache on cut
             subsystems.)
-          - |phi| > 0. Why?? presumably because the computation is
-            already quick(er)?
+          - |phi| > 0. Ideally we would cache all mice, but the size
+            of the cache grows way too large, making parallel computations
+            incredibly inefficient because the caches have to be passed
+            between process. This will be changed once global caches are
+            implemented.
           - Memory is not too full.
         """
         if (not self.subsystem.is_cut() and mice.phi > 0

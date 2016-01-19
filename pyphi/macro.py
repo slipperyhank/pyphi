@@ -31,7 +31,8 @@ _partition_lists = [
 class MacroNetwork:
     """A coarse-grained network of nodes.
 
-    See the 'macro' example in the documentation for more information.
+    See the :ref:`macro-micro` example in the documentation for more
+    information.
 
     Attributes:
         network (Network): The network object of the macro-system.
@@ -47,6 +48,7 @@ class MacroNetwork:
         emergence (float): The difference between the |big_phi| of the macro-
             and the micro-system.
     """
+
     def __init__(self, macro_network, macro_phi, micro_network, micro_phi,
                  partition, grouping):
         self.network = macro_network
@@ -98,8 +100,8 @@ def list_all_partitions(network):
 
 
 def list_all_groupings(partition):
-    """Return a list of all possible groupings of states, for a particular
-    coarse graining (partition) of a network.
+    """Return all possible groupings of states for a particular coarse graining
+    (partition) of a network.
 
     Args:
         network (Network): The physical system on the micro level.
@@ -254,8 +256,7 @@ def emergence(network, state):
 # TODO? give example of doing it for a bunch of coarse-grains in docstring
 # (make all groupings and partitions, make_network for each of them, etc.)
 def effective_info(network):
-    """
-    Return the effective information of the given network.
+    """Return the effective information of the given network.
 
     This is equivalent to the average of the
     :func:`~pyphi.subsystem.Subsystem.effect_info` (with the entire network as
