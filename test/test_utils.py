@@ -2,15 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
-import pyphi
 from pyphi import utils, constants, models
-
-
-sub = pyphi.examples.basic_subsystem()
-mip = pyphi.compute.big_mip(sub)
-cut = pyphi.models.Cut((0,), (1, 2))
-s_cut = pyphi.subsystem.Subsystem(sub.network, sub.state, sub.node_indices,
-                                  cut=cut, mice_cache=sub._mice_cache)
 
 
 def test_apply_cut():
@@ -250,23 +242,26 @@ def test_relevant_connections():
 
 
 def test_strongly_connected():
-    cm = np.array([
-        [0, 1, 0],
-        [0, 0, 1],
-        [1, 0, 0],
-    ])
+    # Strongly connected
+    cm = np.array([[0, 1, 0],
+                   [0, 0, 1],
+                   [1, 0, 0]])
     assert utils.strongly_connected(cm)
 
-    cm = np.array([
-        [0, 1, 0],
-        [0, 0, 1],
-        [0, 0, 0],
-    ])
+    # Disconnected
+    cm = np.array([[0, 0, 1],
+                   [0, 1, 0],
+                   [1, 0, 0]])
     assert not utils.strongly_connected(cm)
 
-    cm = np.array([
-        [0, 1, 0],
-        [1, 0, 0],
-        [0, 0, 0],
-    ])
+    # Weakly connected
+    cm = np.array([[0, 1, 0],
+                   [0, 0, 1],
+                   [0, 1, 0]])
+    assert not utils.strongly_connected(cm)
+
+    # Nodes (0, 1) are strongly connected
+    cm = np.array([[0, 1, 0],
+                   [1, 0, 0],
+                   [0, 0, 0]])
     assert utils.strongly_connected(cm, (0, 1))

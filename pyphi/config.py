@@ -38,12 +38,26 @@ machine, so **please check these settings before running anything**. Otherwise,
 there is a risk that simulations might crash (potentially after running for a
 long time!), resulting in data loss.
 
+- ``pyphi.config.PARALLEL_CONCEPT_EVALUATION``: Control whether concepts are
+  evaluated in parallel when computing constellations.
+
+    >>> defaults['PARALLEL_CONCEPT_EVALUATION']
+    False
+
 - ``pyphi.config.PARALLEL_CUT_EVALUATION``: Control whether system cuts are
   evaluated in parallel, which requires more memory. If cuts are evaluated
   sequentially, only two |BigMip| instances need to be in memory at once.
 
     >>> defaults['PARALLEL_CUT_EVALUATION']
     True
+
+  .. warning::
+
+    ``PARALLEL_CONCEPT_EVALUATION`` and ``PARALLEL_CUT_EVALUATION`` should not
+    both be set to ``True``. Enabling both parallelization modes will slow down
+    computations. If you are doing |big_phi|-computations (with ``big_mip``,
+    ``main_complex``, etc.) ``PARALLEL_CUT_EVALUATION`` will be fastest. Use
+    ``PARALLEL_CONCEPT_EVALUATION`` if you are only computing constellations.
 
 - ``pyphi.config.NUMBER_OF_CORES``: Control the number of CPU cores used to
   evaluate unidirectional cuts. Negative numbers count backwards from the total
@@ -75,12 +89,6 @@ relying on the cache. For this reason it is disabled by default.
   and automatically retreived.
 
     >>> defaults['CACHE_BIGMIPS']
-    False
-
-- ``pyphi.config.CACHE_CONCEPTS``: Control whether |Concept| objects are cached
-  and automatically retrieved.
-
-    >>> defaults['CACHE_CONCEPTS']
     False
 
 .. note::
@@ -132,6 +140,18 @@ relying on the cache. For this reason it is disabled by default.
     >>> defaults['MONGODB_CONFIG']['collection_name']
     'cache'
 
+- ``pyphi.config.REDIS_CACHE``: Specifies whether to use Redis to cache Mice.
+
+    >>> defaults['REDIS_CACHE']
+    False
+
+- ``pyphi.config.REDIS_CONFIG``: Configure the Redis database backend. These
+    are the defaults in the provided ``redis.conf`` file.
+
+    >>> defaults['REDIS_CONFIG']['host']
+    'localhost'
+    >>> defaults['REDIS_CONFIG']['port']
+    6379
 
 Logging
 ~~~~~~~
@@ -236,6 +256,7 @@ import contextlib
 import os
 import pprint
 import sys
+import multiprocessing
 
 import yaml
 
@@ -249,6 +270,8 @@ DEFAULTS = {
     # Only check single nodes cuts for the MIP. 2**n cuts instead of n.
     'CUT_ONE_APPROXIMATION': False,
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # Controls whether concepts are evaluated in parallel.
+    'PARALLEL_CONCEPT_EVALUATION': False,
     # Controls whether cuts are evaluated in parallel, which requires more
     # memory. If cuts are evaluated sequentially, only two BigMips need to be
     # in memory at a time.
@@ -260,8 +283,6 @@ DEFAULTS = {
     'MAXIMUM_CACHE_MEMORY_PERCENTAGE': 50,
     # Controls whether BigMips are cached and retreived.
     'CACHE_BIGMIPS': False,
-    # Controls whether the concept caching system is used.
-    'CACHE_CONCEPTS': False,
     # Controls whether the potential purviews of the mechanisms of a network
     # are cached. Speeds up calculations, but takes up additional memory.
     'CACHE_POTENTIAL_PURVIEWS': True,
@@ -283,6 +304,13 @@ DEFAULTS = {
         'port': 27017,
         'database_name': 'pyphi',
         'collection_name': 'cache'
+    },
+    # Use Redis to cache Mice
+    'REDIS_CACHE': False,
+    # Redis configuration
+    'REDIS_CONFIG': {
+        'host': 'localhost',
+        'port': 6379,
     },
     # These are the settings for PyPhi logging.
     'LOGGING_CONFIG': {
@@ -334,7 +362,6 @@ def print_config():
     print('Current PyPhi configuration:\n', get_config_string())
 
 
-
 class override(contextlib.ContextDecorator):
     """Decorator and context manager to override config values.
 
@@ -362,11 +389,11 @@ class override(contextlib.ContextDecorator):
         """Save original config values; override with new ones."""
         self.initial_conf = {opt_name: this_module.__dict__[opt_name]
                              for opt_name in self.new_conf}
-        this_module.__dict__.update(self.new_conf)
+        load_config(self.new_conf)
 
     def __exit__(self, *exc):
         """Reset config to initial values; reraise any exceptions."""
-        this_module.__dict__.update(self.initial_conf)
+        load_config(self.initial_conf)
         return False
 
 

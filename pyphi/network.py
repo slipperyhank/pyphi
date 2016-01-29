@@ -165,7 +165,7 @@ class Network:
 
     # TODO: this should really be a Subsystem method, but we're
     # interested in caching at the Network-level...
-    @cache.method_cache('purview_cache')
+    @cache.method('purview_cache')
     def _potential_purviews(self, direction, mechanism):
         """All purviews which are not clearly reducible for mechanism.
 
@@ -204,11 +204,10 @@ class Network:
         Two networks are equal if they have the same TPM, connectivity matrix,
         and perturbation vector.
         """
-        return ((np.array_equal(self.tpm, other.tpm) and
-                np.array_equal(self.connectivity_matrix,
-                               other.connectivity_matrix) and
-                np.array_equal(self.perturb_vector,
-                               other.perturb_vector))
+        return (np.array_equal(self.tpm, other.tpm)
+                and np.array_equal(self.connectivity_matrix,
+                                   other.connectivity_matrix)
+                and np.array_equal(self.perturb_vector, other.perturb_vector)
                 if isinstance(other, type(self)) else False)
 
     def __ne__(self, other):

@@ -4,7 +4,6 @@
 
 """Represents a candidate system for |small_phi| and |big_phi| evaluation."""
 
-import functools
 import itertools
 
 import numpy as np
@@ -13,16 +12,8 @@ from . import cache, utils, validate
 from .config import PRECISION
 from .constants import DIRECTIONS, FUTURE, PAST
 from .jsonify import jsonify
-from .models import Concept, Cut, Mice, Mip, Part
+from .models import Concept, Cut, Mice, Mip, _null_mip, Part
 from .node import Node
-
-# Cache decorator for Subsystem repertoire methods
-# TODO: if repertoire caches are never reused, there's no reason to
-# have an accesible object-level cache. Just use a simple memoizer
-cache_repertoire = functools.partial(cache.method_cache, '_repertoire_cache')
-
-# Cache decorator for `Subsytem.find_mice`
-cache_mice = cache.method_cache('_mice_cache')
 
 
 class Subsystem:
@@ -44,8 +35,11 @@ class Subsystem:
         node_indices (tuple(int)): The indices of the nodes in the subsystem.
         size (int): The number of nodes in the subsystem.
         network (Network): The network the subsystem belongs to.
-        state (tuple): The current state of the subsystem. ``state[i]`` gives
-            the state of node |i|.
+        state (tuple(int)): The state of the subsystem's network. ``state[i]``
+            gives the state of node |i|.
+        proper_state (tuple(int)): The state of the subsystem.
+            ``proper_state[i]`` gives the |ith| node in the subsystem. Note
+            that this is **not** the state of node |i|.
         cut (Cut): The cut that has been applied to this subsystem.
         connectivity_matrix (np.array): The connectivity matrix after applying
             the cut.
@@ -63,12 +57,16 @@ class Subsystem:
         # The network this subsystem belongs to.
         self.network = network
 
-        # The state the network is in.
-        self._state = tuple(state)
-
         # Remove duplicates, sort, and ensure native Python `int`s
         # (for JSON serialization).
         self.node_indices = tuple(sorted(set(map(int, node_indices))))
+
+        validate.state_length(state, self.network.size)
+
+        # The state of the network.
+        self._state = tuple(state)
+        # The state of the subsystem.
+        self._proper_state = utils.state_of(self.node_indices, self.state)
 
         # Get the external node indices.
         # TODO: don't expose this as an attribute?
@@ -98,15 +96,17 @@ class Subsystem:
         # The perturbation probabilities for each node in the network
         self.perturb_vector = network.perturb_vector
 
+        # Only compute hash once.
+        self._hash = hash((self.network, self.node_indices, self.state,
+                           self.cut))
+
         # Reusable cache for core causes & effects
         self._mice_cache = cache.MiceCache(self, mice_cache)
 
         # Cause & effect repertoire cache
+        # TODO: if repertoire caches are never reused, there's no reason to
+        # have an accesible object-level cache. Just use a simple memoizer
         self._repertoire_cache = repertoire_cache or cache.DictCache()
-
-        # Only compute hash once.
-        self._hash = hash((self.network, self.node_indices, self.state,
-                           self.cut))
 
         validate.subsystem(self)
 
@@ -122,8 +122,23 @@ class Subsystem:
     def state(self, state):
         # Cast state to a tuple so it can be hashed and properly used as
         # np.array indices.
-        state = tuple(state)
-        self._state = state
+        self._state = tuple(state)
+        # Validate.
+        validate.subsystem(self)
+
+    @property
+    def proper_state(self):
+        """The state the Network this Subsystem belongs to."""
+        return self._state
+
+    @proper_state.setter
+    def proper_state(self, proper_state):
+        # Cast state to a tuple so it can be hashed and properly used as
+        # np.array indices.
+        self._proper_state = tuple(proper_state)
+        # Update the network's state.
+        self.state = tuple(proper_state[n] if n in self.node_indices else
+                           self.state[n] for n in self.network.node_indices)
         # Validate.
         validate.subsystem(self)
 
@@ -203,9 +218,11 @@ class Subsystem:
 
         Args:
             indices (iterable(int)):
+
         Returns:
             nodes (tuple(Node)): The |Node| objects corresponding to
                 these indices.
+
         Raises:
             ValueError: If requested indices are not in the subsystem.
         """
@@ -218,7 +235,7 @@ class Subsystem:
 
         return tuple(n for n in self.nodes if n.index in indices)
 
-    @cache_repertoire(DIRECTIONS[PAST])
+    @cache.method('_repertoire_cache', DIRECTIONS[PAST])
     def cause_repertoire(self, mechanism, purview):
         """Return the cause repertoire of a mechanism over a purview.
 
@@ -296,7 +313,7 @@ class Subsystem:
 
         return cjd
 
-    @cache_repertoire(DIRECTIONS[FUTURE])
+    @cache.method('_repertoire_cache', DIRECTIONS[FUTURE])
     def effect_repertoire(self, mechanism, purview):
         """Return the effect repertoire of a mechanism over a purview.
 
@@ -518,7 +535,7 @@ class Subsystem:
         repertoire = self._get_repertoire(direction)
 
         # We default to the null MIP (the MIP of a reducible mechanism)
-        mip = Mip._null_mip(direction, mechanism, purview)
+        mip = _null_mip(direction, mechanism, purview)
 
         if not purview:
             return mip
@@ -614,32 +631,30 @@ class Subsystem:
         Args:
             direction ('str'): Either |past| or |future|.
             mechanism (tuple(int)): The mechanism of interest.
+
         Kwargs:
             purviews (tuple(int)): Optional subset of purviews of interest.
         """
         if purviews is False:
             purviews = self.network._potential_purviews(direction, mechanism)
             # Filter out purviews that aren't in the subsystem
-            purviews = [purview for purview in purviews if
-                        set(purview).issubset(self.node_indices)]
+            purviews = [purview for purview in purviews
+                        if set(purview).issubset(self.node_indices)]
 
-        # Filter out trivially reducible purviews
-        # (This is already done in network._potential_purviews to the
-        # full connectivity matrix. However, since the cm is cut/
-        # smaller we check again here.
-        # TODO: how efficient is `block_reducible?` Can we use it again?
-        # TODO: combine `fully_connected` and `block_reducible`
-        # TODO: benchmark and verify reducibility tests increase speed.
-        def not_trivially_reducible(purview):
+        def reducible(purview):
+            # Returns True if purview is trivially reducible.
+            # (Purviews are already filtered in network._potential_purviews
+            # over the full network connectivity matrix. However, since the cm
+            # is cut/smaller we check again here.)
             if direction == DIRECTIONS[PAST]:
                 _from, to = purview, mechanism
             elif direction == DIRECTIONS[FUTURE]:
                 _from, to = mechanism, purview
-            return utils.fully_connected(self.connectivity_matrix, _from, to)
+            return utils.block_reducible(self.connectivity_matrix, _from, to)
 
-        return tuple(filter(not_trivially_reducible, purviews))
+        return [purview for purview in purviews if not reducible(purview)]
 
-    @cache_mice
+    @cache.method('_mice_cache')
     def find_mice(self, direction, mechanism, purviews=False):
         """Return the maximally irreducible cause or effect for a mechanism.
 
@@ -648,11 +663,13 @@ class Subsystem:
                 specifying cause or effect.
             mechanism (tuple(int)): The mechanism to be tested for
                 irreducibility.
+
         Keyword Args:
             purviews (tuple(int)): Optionally restrict the possible purviews
                 to a subset of the subsystem. This may be useful for _e.g._
                 finding only concepts that are "about" a certain subset of
                 nodes.
+
         Returns:
             mice (|Mice|): The maximally-irreducible cause or effect.
 
@@ -668,7 +685,7 @@ class Subsystem:
         purviews = self._potential_purviews(direction, mechanism, purviews)
 
         if not purviews:
-            max_mip = Mip._null_mip(direction, mechanism, None)
+            max_mip = _null_mip(direction, mechanism, ())
         else:
             max_mip = max(self.find_mip(direction, mechanism, purview)
                           for purview in purviews)
@@ -761,6 +778,7 @@ def mip_bipartitions(mechanism, purview):
     Args:
         mechanism (tuple(int)): The mechanism to partition
         purview (tuple(int)): The purview to partition
+
     Returns:
         bipartitions (list(tuple((Part, Part)))): Where each partition is
 

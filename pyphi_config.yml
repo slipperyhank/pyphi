@@ -22,6 +22,8 @@ CUT_ONE_APPROXIMATION: false
 # memory. If cuts are evaluated sequentially, only two BigMips need to be
 # in memory at a time.
 PARALLEL_CUT_EVALUATION: true
+# Controls whether concepts are evaluated in parallel.
+PARALLEL_CONCEPT_EVALUATION: false
 # The number of CPU cores to use in parallel cut evaluation. -1 means all
 # available cores, -2 means all but one available cores, etc.
 NUMBER_OF_CORES: -1
@@ -33,10 +35,6 @@ MAXIMUM_CACHE_MEMORY_PERCENTAGE: 50
 # ~~~~~~~
 # Controls whether BigMips are cached and retreived.
 CACHE_BIGMIPS: false
-# Controls whether concepts are cached. Note that concept caching is only
-# available if the caching backend is a database; otherwise, this setting has
-# no effect, and concepts will not be cached.
-CACHE_CONCEPTS: false
 # Controls whether the potential purviews of the mechanisms of a network are
 # cached. Speeds up calculations when the same network is used repeatedly, but
 # takes up additional memory, and makes network initialization slow.
@@ -62,6 +60,13 @@ MONGODB_CONFIG:
     port: 27017
     database_name: "pyphi"
     collection_name: "test"
+
+# Use a Redis server as a Mice cache
+REDIS_CACHE: false
+# Redis connection configuration
+REDIS_CONFIG:
+    host: "localhost"
+    port: 6379
 
 # Logging
 # ~~~~~~~
