@@ -11,6 +11,7 @@ from collections import Iterable, namedtuple
 import numpy as np
 
 from . import utils
+from .constants import DIRECTIONS, FUTURE, PAST
 from .jsonify import jsonify
 from .models import _numpy_aware_eq, make_repr, indent, fmt_constellation, fmt_partition
 from .ac_utils import ap_phi_eq
@@ -312,9 +313,9 @@ class AcMice:
 
 # =============================================================================
 
-_acbigmip_attributes = ['ap_phi', 'actual_state', 'direction', 'unpartitioned_constellation',
-                      'partitioned_constellation', 'subsystem',
-                      'cut_subsystem']
+_acbigmip_attributes = ['ap_phi', 'direction', 'unpartitioned_constellation',
+                      'partitioned_constellation', 'subsystem_past', 'subsystem_future'
+                      'cut']
 
 
 class AcBigMip:
@@ -336,19 +337,24 @@ class AcBigMip:
         partitioned_constellation (tuple(Concept)): The constellation when the
             subsystem is cut.
         subsystem (Subsystem): The subsystem this MIP was calculated for.
-        cut_subsystem (Subsystem): The subsystem with the minimal cut applied.
+        cut: The minimal cut.
     """
 
-    def __init__(self, ap_phi=None, actual_state=None, direction=None, unpartitioned_constellation=None,
-                 partitioned_constellation=None, subsystem=None,
-                 cut_subsystem=None):
+    def __init__(self, ap_phi=None, direction=None, unpartitioned_constellation=None,
+                 partitioned_constellation=None, subsystem_past=None, subsystem_future=None,
+                 cut=None):
         self.ap_phi = ap_phi
-        self.actual_state = actual_state
         self.direction = direction
         self.unpartitioned_constellation = unpartitioned_constellation
         self.partitioned_constellation = partitioned_constellation
-        self.subsystem = subsystem
-        self.cut_subsystem = cut_subsystem
+        self.subsystem_past = subsystem_past
+        self.subsystem_future = subsystem_future
+        self.cut = cut
+        if direction == DIRECTIONS[PAST]:
+            self._subsystem = subsystem_past
+        else:
+            # If direction is bidirectional, subsystem_past/future have same length and cuts.
+            self._subsystem = subsystem_future
         
     def __repr__(self):
         return make_repr(self, _acbigmip_attributes)
@@ -357,10 +363,20 @@ class AcBigMip:
         return "\nAcBigMip\n======\n" + fmt_ac_big_mip(self)
 
     @property
-    def cut(self):
-        """The unidirectional cut that makes the least difference to the
-        subsystem."""
-        return self.cut_subsystem.cut
+    def current_state(self):
+        "Return actual current state, if direction = future, then it is the entry for subsystem_past, otherwise subsystem_past.state."
+        if self.direction == DIRECTIONS[FUTURE]:
+            return self.subsystem_past
+        else:
+            return self.subsystem_past.state
+
+    @property
+    def past_state(self):
+        "Return actual past state, if direction = past, then it is the entry for subsystem_future, otherwise subsystem_future.state."
+        if self.direction == DIRECTIONS[PAST]:
+            return self.subsystem_future
+        else:
+            return self.subsystem_future.state
 
     def __eq__(self, other):
         return _general_eq(self, other, _acbigmip_attributes)
@@ -371,28 +387,28 @@ class AcBigMip:
         return not ap_phi_eq(self.ap_phi, 0)
 
     def __hash__(self):
-        return hash((self.ap_phi, self.actual_state, self.unpartitioned_constellation,
-                     self.partitioned_constellation, self.subsystem,
-                     self.cut_subsystem))
+        return hash((self.ap_phi, self.unpartitioned_constellation,
+                     self.partitioned_constellation, self.subsystem_past, self.subsystem_future,
+                     self.cut))
 
-    # First compare ap_phi (same comparison as ap_phi), then subsystem size
+    # First compare ap_phi (same comparison as ap_phi), then subsystem_past size (same as subsystem_future)
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def __lt__(self, other):
         if _ap_phi_eq(self, other):
-            if len(self.subsystem) == len(other.subsystem):
+            if len(self._subsystem) == len(other._subsystem):
                 return False
             else:
-                return len(self.subsystem) < len(other.subsystem)
+                return len(self._subsystem) < len(other._subsystem)
         else:
             return _ap_phi_lt(self, other)
 
     def __gt__(self, other):
         if _ap_phi_eq(self, other):
-            if len(self.subsystem) == len(other.subsystem):
+            if len(self._subsystem) == len(other._subsystem):
                 return False
             else:
-                return len(self.subsystem) > len(other.subsystem)
+                return len(self._subsystem) > len(other._subsystem)
         else:
             return _ap_phi_gt(self, other)
 
@@ -433,9 +449,10 @@ def fmt_ac_big_mip(ac_big_mip):
     """Format a AcBigMip"""
     return (
         "{ap_phi}\n"
-        "actual_state: {ac_big_mip.actual_state}\n"
         "direction: {ac_big_mip.direction}\n"
-        "subsystem: {ac_big_mip.subsystem}\n"
+        "subsystem: {ac_big_mip._subsystem}\n"
+        "past_state: {ac_big_mip.past_state}\n"
+        "current_state: {ac_big_mip.current_state}\n"
         "cut: {ac_big_mip.cut}\n"
         "unpartitioned_constellation: {unpart_const}"
         "partitioned_constellation: {part_const}".format(
