@@ -46,14 +46,14 @@ log = logging.getLogger(__name__)
 
 # Utils
 # ============================================================================
-def make_ac_subsystem(network, past_state, current_state, direction=False, subset=False):
+def make_ac_subsystem(network, past_state, current_state, direction=False, subset=False, cut=None):
     """ To have the right background, the init state for the subsystem should always be the past_state.
         In past direction after subsystem is created the actual state and the system state need to be swapped. """
     
     if not subset:
         subset = range(network.size)
     
-    subsystem = Subsystem(network, past_state, subset)
+    subsystem = Subsystem(network, past_state, subset, cut)
 
     if direction == DIRECTIONS[PAST]:
         actual_state = past_state
@@ -302,13 +302,22 @@ def _null_acbigmip(subsystem, subsystem2_or_actual_state, direction):
 
 def _evaluate_unidirectional_cut(uncut_subsystem, actual_state, cut, unpartitioned_constellation, direction):
     """ Returns partitioned constellation for one direction past/future of the transition. For direction = bidirectional, 
-        the uncut subsystem is subsystem_past and uncut_subsystem2_or_actual_state is subsystem_future. """
-    # Todo: not sure if mice_cache should be in here.
-    cut_subsystem = Subsystem(uncut_subsystem.network,
-                              uncut_subsystem.state,
-                              uncut_subsystem.node_indices,
-                              cut=cut,
-                              mice_cache=uncut_subsystem._mice_cache)
+        the uncut subsystem is subsystem_past and uncut_subsystem2_or_actual_state is subsystem_future. 
+        To make cut subsystem:
+        To have the right background, the init state for the subsystem should always be the past_state.
+        In past direction after subsystem is created the actual state and the system state need to be swapped."""
+    
+    # Important to use make_ac_subsystem because otherwise the past cut_subsystem has the wrong conditioning.
+    if direction == DIRECTIONS[PAST]:
+        past_state = actual_state
+        current_state = uncut_subsystem.state
+    elif direction == DIRECTIONS[FUTURE]:
+        past_state = uncut_subsystem.state
+        current_state = actual_state 
+    
+    cut_subsystem, _ = make_ac_subsystem(uncut_subsystem.network, past_state, current_state,
+                              direction, uncut_subsystem.node_indices, cut)
+    
     if config.ASSUME_CUTS_CANNOT_CREATE_NEW_CONCEPTS:
         mechanisms = set([c.mechanism for c in unpartitioned_constellation])
     else:
@@ -448,7 +457,7 @@ def unidirectional_big_ac_mip(subsystem, actual_state, direction, weak_connectiv
     log.debug("Finding unpartitioned directed_ac_constellation...")   
     unpartitioned_constellation = directed_ac_constellation(subsystem, actual_state, direction)
     log.debug("Found unpartitioned directed_ac_constellation.")
-    if not unpartitioned_constellation:
+    if not unpartitioned_constellation or not cuts:
         # Short-circuit if there are no concepts in the unpartitioned
         # directed_ac_constellation.
         result = _null_acbigmip(subsystem, actual_state, direction)
@@ -499,14 +508,13 @@ def big_ac_mip(subsystem_past, subsystem_future, direction=False, weak_connectiv
     unpartitioned_constellation = past_constellation + future_constellation
     
     log.debug("Found unpartitioned directed_ac_constellation.")
-    if not unpartitioned_constellation:
+    if not unpartitioned_constellation or not cuts:
         # Short-circuit if there are no concepts in the unpartitioned
         # directed_ac_constellation.
         result = _null_acbigmip(subsystem_past, subsystem_future, direction)
     else:
         min_ac_mip = _null_acbigmip(subsystem_past, subsystem_future, direction)
         min_ac_mip.ap_phi = float('inf')
-
         min_ac_mip = find_big_ac_mip(subsystem_past, subsystem_future, cuts, unpartitioned_constellation, direction,
                             min_ac_mip)
         result = min_ac_mip
@@ -528,6 +536,8 @@ def subsystems(network, past_state, current_state, direction):
     subsystem_list = [];
     if direction == 'bidirectional':
         for subset in powerset(network.node_indices):
+            # Todo: distinguish empty set from no input to subset in make_ac_subsystem. 
+            # Currently it outputs the full system if subset is empty.
             past_subs, _ = make_ac_subsystem(network, past_state, current_state, DIRECTIONS[PAST], subset)
             future_subs, _ = make_ac_subsystem(network, past_state, current_state, DIRECTIONS[FUTURE], subset)
             subsystem_list.append((past_subs, future_subs))
@@ -538,7 +548,7 @@ def subsystems(network, past_state, current_state, direction):
     # First is empty set
     return subsystem_list[1:]
 
-def ac_complexes(network, past_state, current_state, direction, weak_connectivity):
+def ac_complexes(network, past_state, current_state, direction='bidirectional', weak_connectivity=True):
     """Return a generator for all irreducible ac_complexes of the network. 
        Direction options are past, future, bidirectional. """
     if not isinstance(network, Network):
