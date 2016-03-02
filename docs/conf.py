@@ -55,7 +55,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = 'PyPhi v' + __version__
+project = 'PyPhi'
 copyright = '2014 ' + __author__
 
 # The version info for the project you're documenting, acts as replacement for
@@ -157,6 +157,11 @@ rst_prolog = """
 .. |EPSILON| replace:: :const:`constants.EPSILON`
 .. |CM[i][j] = 1| replace:: :math:`CM_{i,j} = 1`
 .. |compute| replace:: :mod:`~pyphi.compute`
+.. |compute.concept| replace:: :mod:`~pyphi.compute.big_phi`
+.. |compute.big_phi| replace:: :mod:`~pyphi.compute.concept`
+.. |models.big_phi| replace:: :mod:`~pyphi.models.big_phi`
+.. |models.concept| replace:: :mod:`~pyphi.models.concept`
+.. |models.cuts| replace:: :mod:`~pyphi.models.cuts`
 .. |network| replace:: :mod:`~pyphi.network`
 .. |subsystem| replace:: :mod:`~pyphi.subsystem`
 .. |macro| replace:: :mod:`~pyphi.macro`
@@ -171,11 +176,12 @@ rst_prolog = """
 .. |config| replace:: :mod:`~pyphi.config`
 .. |Subsystem| replace:: :class:`~pyphi.subsystem.Subsystem`
 .. |Network| replace:: :class:`~pyphi.network.Network`
-.. |BigMip| replace:: :class:`~pyphi.models.BigMip`
-.. |Concept| replace:: :class:`~pyphi.models.Concept`
-.. |Cut| replace:: :class:`~pyphi.models.Cut`
-.. |Mip| replace:: :class:`~pyphi.models.Mip`
-.. |Mice| replace:: :class:`~pyphi.models.Mice`
+.. |BigMip| replace:: :class:`~pyphi.models.big_phi.BigMip`
+.. |Concept| replace:: :class:`~pyphi.models.concept.Concept`
+.. |Constellation| replace:: :class:`~pyphi.models.concept.Constellation`
+.. |Cut| replace:: :class:`~pyphi.models.cuts.Cut`
+.. |Mip| replace:: :class:`~pyphi.models.concept.Mip`
+.. |Mice| replace:: :class:`~pyphi.models.concept.Mice`
 .. |Node| replace:: :class:`~pyphi.node.Node`
 .. |find_mip| replace:: :meth:`~pyphi.subsystem.Subsystem.find_mip`
 .. |find_mice| replace:: :meth:`~pyphi.subsystem.Subsystem.find_mice`

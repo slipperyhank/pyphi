@@ -1,8 +1,29 @@
 Changelog
 =========
 
+
 Next Release
--------
+------------------
+
+### API Additions
+- Added config.L1_DISTANCE_APPROXIMATION which uses the L1-distance to
+  approximate the Earth-Movers Distance in MIP computations. If the mechanism
+  is found to be irreducible over the purview, φ is recalculated using the
+  proper EMD. 
+
+
+0.8.1
+------------------
+_2016-02-11_
+
+### Fixes
+- Fixed a bug in `setup.py` that prevented installation.
+
+
+0.8.0
+------------------
+_2016-02-06_
+
 ### API changes
 - Mechanisms and purviews are now passed to all functions and methods in node
   index form (e.g. `(0, 1, 3)`). Previously, many functions took these
@@ -45,6 +66,7 @@ Next Release
 ### Fixes
 - `Concept.eq_repertoires` no longer fails when the concept has no cause or
   effect.
+- Fixed the `Subsystem.proper_state` attribute.
 
 ### Refactor
 - Subsystem Mice and cause/effect repertoire caches; Network purview caches.

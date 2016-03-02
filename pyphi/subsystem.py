@@ -8,7 +8,7 @@ import itertools
 
 import numpy as np
 
-from . import cache, utils, validate
+from . import cache, config, utils, validate
 from .config import PRECISION
 from .constants import DIRECTIONS, FUTURE, PAST
 from .jsonify import jsonify
@@ -65,8 +65,6 @@ class Subsystem:
 
         # The state of the network.
         self._state = tuple(state)
-        # The state of the subsystem.
-        self._proper_state = utils.state_of(self.node_indices, self.state)
 
         # Get the external node indices.
         # TODO: don't expose this as an attribute?
@@ -115,7 +113,7 @@ class Subsystem:
 
     @property
     def state(self):
-        """The state the Network this Subsystem belongs to."""
+        """The state of the Network this Subsystem belongs to."""
         return self._state
 
     @state.setter
@@ -128,17 +126,15 @@ class Subsystem:
 
     @property
     def proper_state(self):
-        """The state the Network this Subsystem belongs to."""
-        return self._state
+        """The state of the nodes in this Subsystem."""
+        return utils.state_of(self.node_indices, self.state)
 
     @proper_state.setter
     def proper_state(self, proper_state):
-        # Cast state to a tuple so it can be hashed and properly used as
-        # np.array indices.
-        self._proper_state = tuple(proper_state)
         # Update the network's state.
-        self.state = tuple(proper_state[n] if n in self.node_indices else
-                           self.state[n] for n in self.network.node_indices)
+        self.state = tuple(proper_state[self.node_indices.index(n)]
+                           if n in self.node_indices else self.state[n]
+                           for n in self.network.node_indices)
         # Validate.
         validate.subsystem(self)
 
@@ -306,12 +302,7 @@ class Subsystem:
         if not np.all(self.perturb_vector == 0.5):
             cjd *= max_entropy_dist
 
-        # Normalize conditional joint distribution.
-        cjd_sum = np.sum(cjd)
-        if cjd_sum != 0:  # Don't divide by zero
-            cjd /= cjd_sum
-
-        return cjd
+        return utils.normalize(cjd)
 
     @cache.method('_repertoire_cache', DIRECTIONS[FUTURE])
     def effect_repertoire(self, mechanism, purview):
@@ -474,11 +465,7 @@ class Subsystem:
         # distribution over all the nodes in the network.
         expanded_repertoire = repertoire * uc
 
-        # Renormalize
-        if expanded_repertoire.sum() > 0:
-            return expanded_repertoire / expanded_repertoire.sum()
-        else:
-            return expanded_repertoire
+        return utils.normalize(expanded_repertoire)
 
     def expand_cause_repertoire(self, purview, repertoire, new_purview=None):
         """Expand a partial cause repertoire over a purview to a distribution
@@ -554,8 +541,12 @@ class Subsystem:
             part2rep = repertoire(part1.mechanism, part1.purview)
             partitioned_repertoire = part1rep * part2rep
 
-            phi = utils.hamming_emd(unpartitioned_repertoire,
-                                    partitioned_repertoire)
+            if config.L1_DISTANCE_APPROXIMATION:
+                phi = utils.l1(unpartitioned_repertoire,
+                               partitioned_repertoire)
+            else:
+                phi = utils.hamming_emd(unpartitioned_repertoire,
+                                        partitioned_repertoire)
             phi = round(phi, PRECISION)
 
             # Return immediately if mechanism is reducible.
@@ -580,6 +571,19 @@ class Subsystem:
                           unpartitioned_repertoire=unpartitioned_repertoire,
                           partitioned_repertoire=partitioned_repertoire,
                           phi=phi)
+
+        # Recompute distance for minimal MIP using the EMD
+        if config.L1_DISTANCE_APPROXIMATION:
+            phi = utils.hamming_emd(mip.unpartitioned_repertoire,
+                                    mip.partitioned_repertoire)
+            mip = Mip(phi=round(phi, PRECISION),
+                      direction=mip.direction,
+                      mechanism=mip.mechanism,
+                      purview=mip.purview,
+                      partition=mip.partition,
+                      unpartitioned_repertoire=mip.unpartitioned_repertoire,
+                      partitioned_repertoire=mip.partitioned_repertoire)
+
         return mip
 
     # TODO Don't use these internally to avoid function call overhead

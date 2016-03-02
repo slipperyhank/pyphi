@@ -13,7 +13,6 @@ import numpy as np
 
 from . import cache, convert, utils, validate
 from .constants import DIRECTIONS, FUTURE, PAST
-from .jsonify import jsonify
 
 
 # TODO!!! raise error if user tries to change TPM or CM, double-check and
@@ -31,7 +30,7 @@ def from_json(filename):
     with open(filename) as f:
         network_dictionary = json.load(f)
     tpm = network_dictionary['tpm']
-    cm = network_dictionary['connectivityMatrix']
+    cm = network_dictionary['cm']
     network = Network(tpm, connectivity_matrix=cm)
     return network
 
@@ -219,7 +218,7 @@ class Network:
 
     def to_json(self):
         return {
-            'tpm': jsonify(self.tpm),
-            'connectivity_matrix': jsonify(self.connectivity_matrix),
-            'size': jsonify(self.size)
+            'tpm': self.tpm,
+            'cm': self.connectivity_matrix,
+            'size': self.size
         }

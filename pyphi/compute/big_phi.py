@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# big_phi.py
+# compute/big_phi.py
 
 """
 Methods for computing concepts, constellations, and integrated information of
@@ -25,8 +25,19 @@ from ..subsystem import Subsystem
 log = logging.getLogger(__name__)
 
 
-def _evaluate_cut(uncut_subsystem, cut, unpartitioned_constellation):
-    """Find the |BigMip| for a given cut."""
+# Expose `compute.evaluate_cut` to public API
+def evaluate_cut(uncut_subsystem, cut, unpartitioned_constellation):
+    """Find the |BigMip| for a given cut.
+
+    Args:
+        uncut_subsystem (Subsystem): The subsystem without the cut applied.
+        cut (Cut): The cut to evaluate.
+        unpartitioned_constellation (Constellation): The constellation of the
+            uncut subsystem.
+
+    Returns:
+        |BigMip|: The |BigMip| for that cut.
+    """
     log.debug("Evaluating cut {}...".format(cut))
 
     cut_subsystem = Subsystem(uncut_subsystem.network,
@@ -34,12 +45,9 @@ def _evaluate_cut(uncut_subsystem, cut, unpartitioned_constellation):
                               uncut_subsystem.node_indices,
                               cut=cut,
                               mice_cache=uncut_subsystem._mice_cache)
-    if config.ASSUME_CUTS_CANNOT_CREATE_NEW_CONCEPTS:
-        mechanisms = set([c.mechanism for c in unpartitioned_constellation])
-    else:
-        mechanisms = set(
-            [c.mechanism for c in unpartitioned_constellation] +
-            list(cut.all_cut_mechanisms(uncut_subsystem.node_indices)))
+    mechanisms = {c.mechanism for c in unpartitioned_constellation}
+    if not config.ASSUME_CUTS_CANNOT_CREATE_NEW_CONCEPTS:
+        mechanisms |= set(cut.all_cut_mechanisms(uncut_subsystem.node_indices))
     partitioned_constellation = constellation(cut_subsystem, mechanisms)
 
     log.debug("Finished evaluating cut {}.".format(cut))
@@ -55,13 +63,13 @@ def _evaluate_cut(uncut_subsystem, cut, unpartitioned_constellation):
         cut_subsystem=cut_subsystem)
 
 
-# Wrapper for _evaluate_cut for parallel processing.
+# Wrapper for `evaluate_cut` for parallel processing.
 def _eval_wrapper(in_queue, out_queue, subsystem, unpartitioned_constellation):
     while True:
         cut = in_queue.get()
         if cut is None:
             break
-        new_mip = _evaluate_cut(subsystem, cut, unpartitioned_constellation)
+        new_mip = evaluate_cut(subsystem, cut, unpartitioned_constellation)
         out_queue.put(new_mip)
     out_queue.put(None)
 
@@ -115,7 +123,7 @@ def _find_mip_sequential(subsystem, cuts, unpartitioned_constellation,
     Holds only two |BigMip|s in memory at once.
     """
     for i, cut in enumerate(cuts):
-        new_mip = _evaluate_cut(subsystem, cut, unpartitioned_constellation)
+        new_mip = evaluate_cut(subsystem, cut, unpartitioned_constellation)
         log.debug("Finished {} of {} cuts.".format(i + 1, len(cuts)))
         if new_mip < min_mip:
             min_mip = new_mip
@@ -133,7 +141,7 @@ def big_mip_bipartitions(nodes):
     Args:
         nodes tuple(int): The node indices to partition.
     Returns:
-        list(Cut): All unidirectional partitions.
+        list(|Cut|): All unidirectional partitions.
     """
     if config.CUT_ONE_APPROXIMATION:
         bipartitions = utils.directed_bipartition_of_one(nodes)
@@ -154,9 +162,9 @@ def _big_mip(cache_key, subsystem):
         subsystem (Subsystem): The candidate set of nodes.
 
     Returns:
-        big_mip (|BigMip|): A nested structure containing all the data from the
-            intermediate calculations. The top level contains the basic MIP
-            information for the given subsystem.
+        |BigMip|: A nested structure containing all the data from the
+        intermediate calculations. The top level contains the basic MIP
+        information for the given subsystem.
     """
     log.info("Calculating big-phi data for {}...".format(subsystem))
     start = time()

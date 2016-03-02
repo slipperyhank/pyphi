@@ -134,6 +134,21 @@ def phi_eq(x, y):
     return abs(x - y) <= constants.EPSILON
 
 
+def normalize(x):
+    """Normalize an array.
+
+    Args:
+        x (np.ndarray): The array to normalize.
+
+    Returns:
+        np.ndarray: ``x`` normalized so that the sum of its entries is 1.
+    """
+    sum_x = x.sum()
+    if sum_x == 0:
+        return x
+    return x / sum_x
+
+
 # see http://stackoverflow.com/questions/16003217
 def combs(a, r):
     """NumPy implementation of itertools.combinations.
@@ -141,8 +156,8 @@ def combs(a, r):
     Return successive |r|-length combinations of elements in the array ``a``.
 
     Args:
-      a (np.ndarray): The array from which to get combinations.
-      r (int): The length of the combinations.
+        a (np.ndarray): The array from which to get combinations.
+        r (int): The length of the combinations.
 
     Returns:
         combinations (``np.ndarray``): An array of combinations.
@@ -308,6 +323,19 @@ def hamming_emd(d1, d2):
     # Compute the EMD with Hamming distance between states as the
     # transportation cost function.
     return emd(d1.ravel(), d2.ravel(), _hamming_matrix(d1.ndim))
+
+
+def l1(d1, d2):
+    """Return the L1 distance between two distributions.
+
+    Args:
+        d1 (np.ndarray): The first distribution.
+        d2 (np.ndarray): The second distribution.
+
+    Returns:
+        float: The sum of absolute differences of ``d1`` and ``d2``.
+    """
+    return np.absolute(d1 - d2).sum()
 
 
 def bipartition(a):

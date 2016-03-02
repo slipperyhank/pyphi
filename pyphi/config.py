@@ -12,6 +12,15 @@ The various options are listed here with their defaults
     >>> import pyphi
     >>> defaults = pyphi.config.DEFAULTS
 
+It is also possible to manually load a YAML configuration file within your
+script:
+
+    >>> pyphi.config.load_config_file('pyphi_config.yml')
+
+Or load a dictionary of configuration values:
+
+    >>> pyphi.config.load_config_dict({'SOME_CONFIG': 'value'})
+
 
 Theoretical approximations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -28,6 +37,13 @@ theoretical accuracy.
     >>> defaults['ASSUME_CUTS_CANNOT_CREATE_NEW_CONCEPTS']
     False
 
+- ``pyphi.config.L1_DISTANCE_APPROXIMATION``: If enabled, the ``L1`` distance
+  will be used instead of the EMD when computing MIPs. If a mechanism and
+  purview are found to be irreducible, the |small_phi| value of the MIP is
+  recalculated using the EMD.
+
+    >>> defaults['L1_DISTANCE_APPROXIMATION']
+    False
 
 System resources
 ~~~~~~~~~~~~~~~~
@@ -190,7 +206,7 @@ file, both, or none. See the `documentation on Python's logger
   of standard output logging. Same possible values as file logging.
 
     >>> defaults['LOGGING_CONFIG']['stdout']['level']
-    'INFO'
+    'WARNING'
 
 - ``pyphi.config.LOG_CONFIG_ON_IMPORT``: Controls whether the current
   configuration is printed when PyPhi is imported.
@@ -256,7 +272,6 @@ import contextlib
 import os
 import pprint
 import sys
-import multiprocessing
 
 import yaml
 
@@ -269,6 +284,8 @@ DEFAULTS = {
     'ASSUME_CUTS_CANNOT_CREATE_NEW_CONCEPTS': False,
     # Only check single nodes cuts for the MIP. 2**n cuts instead of n.
     'CUT_ONE_APPROXIMATION': False,
+    # Use L1 distance to approximate the EMD when computing MIPs.
+    'L1_DISTANCE_APPROXIMATION': False,
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # Controls whether concepts are evaluated in parallel.
     'PARALLEL_CONCEPT_EVALUATION': False,
@@ -323,7 +340,7 @@ DEFAULTS = {
         },
         'stdout': {
             'enabled': True,
-            'level': 'INFO'
+            'level': 'WARNING'
         }
     },
     # Controls whether the current configuration is logged upon import.
@@ -340,20 +357,34 @@ DEFAULTS = {
     'READABLE_REPRS': True,
 }
 
-# The current configuration.
-config = dict(**DEFAULTS)
-
-# Get a reference to this module's dictionary..
+# Get a reference to this module's dictionary so we can set the configuration
+# directly in the `pyphi.config` namespace
 this_module = sys.modules[__name__]
 
 
-def load_config(config):
-    """Load a configuration."""
+def load_config_dict(config):
+    """Load configuration values.
+
+    Args:
+        config (dict): The dict of config to load.
+    """
     this_module.__dict__.update(config)
+
+
+def load_config_file(filename):
+    """Load config from a YAML file."""
+    with open(filename) as f:
+        load_config_dict(yaml.load(f))
+
+
+def load_config_default():
+    """Load default config values."""
+    load_config_dict(DEFAULTS)
 
 
 def get_config_string():
     """Return a string representation of the currently loaded configuration."""
+    config = {key: this_module.__dict__[key] for key in DEFAULTS.keys()}
     return pprint.pformat(config, indent=2)
 
 
@@ -389,11 +420,11 @@ class override(contextlib.ContextDecorator):
         """Save original config values; override with new ones."""
         self.initial_conf = {opt_name: this_module.__dict__[opt_name]
                              for opt_name in self.new_conf}
-        load_config(self.new_conf)
+        load_config_dict(self.new_conf)
 
     def __exit__(self, *exc):
         """Reset config to initial values; reraise any exceptions."""
-        load_config(self.initial_conf)
+        load_config_dict(self.initial_conf)
         return False
 
 
@@ -401,10 +432,8 @@ class override(contextlib.ContextDecorator):
 PYPHI_CONFIG_FILENAME = 'pyphi_config.yml'
 
 # Try to load the config file, falling back to the default configuration.
+load_config_default()
 file_loaded = False
 if os.path.exists(PYPHI_CONFIG_FILENAME):
-    with open(PYPHI_CONFIG_FILENAME) as f:
-        config.update(yaml.load(f))
-        file_loaded = True
-# Load the configuration.
-load_config(config)
+    load_config_file(PYPHI_CONFIG_FILENAME)
+    file_loaded = True

@@ -2,6 +2,11 @@ language: python
 
 sudo: false
 
+branches:
+  only:
+      - master
+      - develop
+
 # Setup databases
 services:
   - mongodb  # port 27017 (default)
@@ -40,5 +45,5 @@ notifications:
   slack:
     rooms:
          secure: "C6PSvK/FEmyD+S71VVzS29NZpD9CFI/f3UMjc6i08xYHjFNMZUplfHyUqNLNqgVVBsKR1En4B8ryuriEnM8wwZzCVdxjh7HDsx8aNE2z1XG5tkqoRP4ppNfqNaYRoMcSZFW89DfVNbIVDM11wKXL7/YnRCmlJy0p1NtKzlncXCM="
-    on_sucess: never
+    on_success: never
     on_failure: always
