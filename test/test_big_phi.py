@@ -6,7 +6,7 @@ import pickle
 import pytest
 from unittest.mock import patch
 
-from pyphi import constants, config, compute, models, utils, Network
+from pyphi import constants, config, compute, models, utils, Network, Subsystem
 from pyphi.constants import DIRECTIONS, PAST, FUTURE
 from pyphi.models import Cut, _null_bigmip
 from pyphi.compute import constellation
@@ -241,10 +241,8 @@ def test_concept_nonexistent(s, flushcache, restore_fs_cache):
     assert not compute.concept(s, (0, 2))
 
 
-# TODO: fix this!
-@pytest.mark.xfail(reason="Mock import paths are messed up by `concept`")
-@patch('pyphi.compute.concept._constellation_distance_simple')
-@patch('pyphi.compute.concept._constellation_distance_emd')
+@patch('pyphi.compute.distance._constellation_distance_simple')
+@patch('pyphi.compute.distance._constellation_distance_emd')
 def test_constellation_distance_uses_simple_vs_emd(mock_emd_distance,
                                                    mock_simple_distance, s):
     """Quick check that we use the correct constellation distance function.
@@ -374,6 +372,16 @@ def test_find_mip_parallel_noised_example(s_noised, flushcache,
     min_mip.phi = float('inf')
     mip = _find_mip_parallel(s_noised, cuts, unpartitioned_constellation, min_mip)
     check_mip(mip, noised_answer)
+
+
+def test_possible_complexes(s):
+    assert list(compute.possible_complexes(s.network, s.state)) == [
+        Subsystem(s.network, s.state, (1,)),
+        Subsystem(s.network, s.state, (0, 1)),
+        Subsystem(s.network, s.state, (0, 2)),
+        Subsystem(s.network, s.state, (1, 2)),
+        Subsystem(s.network, s.state, (0, 1, 2)),
+    ]
 
 
 def test_complexes_standard(s, flushcache, restore_fs_cache):

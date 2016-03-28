@@ -159,6 +159,7 @@ rst_prolog = """
 .. |compute| replace:: :mod:`~pyphi.compute`
 .. |compute.concept| replace:: :mod:`~pyphi.compute.big_phi`
 .. |compute.big_phi| replace:: :mod:`~pyphi.compute.concept`
+.. |compute.distance| replace:: :mod:`~pyphi.compute.distance`
 .. |models.big_phi| replace:: :mod:`~pyphi.models.big_phi`
 .. |models.concept| replace:: :mod:`~pyphi.models.concept`
 .. |models.cuts| replace:: :mod:`~pyphi.models.cuts`
@@ -175,6 +176,7 @@ rst_prolog = """
 .. |validate| replace:: :mod:`~pyphi.validate`
 .. |config| replace:: :mod:`~pyphi.config`
 .. |Subsystem| replace:: :class:`~pyphi.subsystem.Subsystem`
+.. |MacroSubsystem| replace:: :class:`~pyphi.macro.MacroSubsystem`
 .. |Network| replace:: :class:`~pyphi.network.Network`
 .. |BigMip| replace:: :class:`~pyphi.models.big_phi.BigMip`
 .. |Concept| replace:: :class:`~pyphi.models.concept.Concept`
@@ -183,6 +185,8 @@ rst_prolog = """
 .. |Mip| replace:: :class:`~pyphi.models.concept.Mip`
 .. |Mice| replace:: :class:`~pyphi.models.concept.Mice`
 .. |Node| replace:: :class:`~pyphi.node.Node`
+.. |CoarseGrain| replace:: :class:`~pyphi.macro.CoarseGrain`
+.. |Blackbox| replace:: :class:`~pyphi.macro.Blackbox`
 .. |find_mip| replace:: :meth:`~pyphi.subsystem.Subsystem.find_mip`
 .. |find_mice| replace:: :meth:`~pyphi.subsystem.Subsystem.find_mice`
 .. |loli_index2state| replace:: :class:`~pyphi.convert.loli_index2state`

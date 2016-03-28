@@ -8,10 +8,10 @@ See |compute.concept| and |compute.big_phi| for documentation.
 
 Attributes:
     concept: Alias for :func:`concept.concept`.
-    concept_distance: Alias for :func:`concept.concept_distance`.
     conceptual_information: Alias for :func:`concept.conceptual_information`.
     constellation: Alias for :func:`concept.constellation`.
-    constellation_distance: Alias for :func:`concept.constellation_distance`.
+    concept_distance: Alias for :func:`distance.concept_distance`.
+    constellation_distance: Alias for :func:`distance.constellation_distance`.
     all_complexes: Alias for :func:`big_phi.all_complexes`.
     big_mip: Alias for :func:`big_phi.big_mip`.
     big_phi: Alias for :func:`big_phi.big_phi`.
@@ -23,8 +23,8 @@ Attributes:
     subsystems: Alias for :func:`big_phi.subsystems`.
 """
 
-from .concept import (concept, concept_distance, conceptual_information,
-                      constellation, constellation_distance)
 from .big_phi import (all_complexes, big_mip, big_phi, complexes, condensed,
                       evaluate_cut, main_complex, possible_complexes,
                       subsystems)
+from .concept import concept, conceptual_information, constellation
+from .distance import concept_distance, constellation_distance

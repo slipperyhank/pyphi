@@ -36,9 +36,47 @@ def test_network_creates_fully_connected_cm_by_default():
 def test_potential_purviews(s):
     mechanism = (0,)
     assert (s.network._potential_purviews('past', mechanism) ==
-        [(1,), (2,), (1, 2)])
+            [(1,), (2,), (1, 2)])
     assert (s.network._potential_purviews('future', mechanism) ==
-        [(2,)])
+            [(2,)])
+
+
+def test_node_labels(standard):
+    labels = ('A', 'B', 'C')
+    network = Network(standard.tpm, node_labels=labels)
+    assert network.node_labels == labels
+
+    labels = ('A', 'B')  # Too few labels
+    with pytest.raises(ValueError):
+        Network(standard.tpm, node_labels=labels)
+
+    # Auto-generated labels
+    network = Network(standard.tpm, node_labels=None)
+    assert network.node_labels == ('n0', 'n1', 'n2')
+
+
+def test_labels2indices(standard):
+    network = Network(standard.tpm, node_labels=('A', 'B', 'C'))
+    assert network.labels2indices(('A', 'B')) == (0, 1)
+    assert network.labels2indices(('A', 'C')) == (0, 2)
+
+
+def test_indices2labels(standard):
+    network = Network(standard.tpm, node_labels=('A', 'B', 'C'))
+    assert network.indices2labels((0, 1)) == ('A', 'B')
+    assert network.indices2labels((0, 2)) == ('A', 'C')
+    # Auto-generated labels
+    assert standard.indices2labels((0, 1)) == ('n0', 'n1')
+
+
+def test_parse_node_indices(standard):
+    network = Network(standard.tpm, node_labels=('A', 'B', 'C'))
+    assert network.parse_node_indices(('B', 'A')) == (0, 1)
+    assert network.parse_node_indices((0, 2, 1)) == (0, 1, 2)
+    assert standard.parse_node_indices(()) == ()  # No labels - regression
+
+    with pytest.raises(ValueError):
+        network.parse_node_indices((0, 'A'))
 
 
 def test_repr(standard):

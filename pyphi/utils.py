@@ -7,17 +7,23 @@ Functions used by more than one PyPhi module or class, or that might be of
 external use.
 """
 
+import os
+import itertools
 import re
 import logging
 import hashlib
 import numpy as np
 from itertools import chain, combinations
+
+from pyemd import emd
 from scipy.misc import comb
 from scipy.spatial.distance import cdist
+from scipy.sparse import csc_matrix
 from scipy.sparse.csgraph import connected_components
-from pyemd import emd
+
+from . import constants, convert
 from .cache import cache
-from . import constants
+
 
 # Create a logger for this module.
 log = logging.getLogger(__name__)
@@ -28,8 +34,79 @@ def state_of(nodes, network_state):
     return tuple(network_state[n] for n in nodes) if nodes else ()
 
 
+def all_states(n):
+    """Return all binary states for a system.
+
+    Args:
+        n (int): The number of elements in the system.
+
+    Yields:
+        tuple(int): The next state of an ``n``-element system, in LOLI order.
+    """
+    if n == 0:
+        return
+
+    for state in itertools.product((0, 1), repeat=n):
+        yield state[::-1]  # Convert to LOLI-ordering
+
+
+# Methods for converting the time scale of the tpm
+# ================================================
+
+def sparse(matrix, threshold=0.1):
+    return np.sum(matrix > 0) / matrix.size > threshold
+
+
+def sparse_time(tpm, time_scale):
+    sparse_tpm = csc_matrix(tpm)
+    return (sparse_tpm ** time_scale).toarray()
+
+
+def dense_time(tpm, time_scale):
+    return np.linalg.matrix_power(tpm, time_scale)
+
+
+def run_tpm(tpm, time_scale):
+    """Iterate a tpm by the specified number of time steps.
+
+    Args:
+        tpm (np.ndarray): A state-by-node tpm.
+        time_scale (int): The number of steps to run the tpm.
+
+    Returns:
+        tpm (np.ndarray)
+    """
+    sbs_tpm = convert.state_by_node2state_by_state(tpm)
+    if sparse(tpm):
+        tpm = sparse_time(sbs_tpm, time_scale)
+    else:
+        tpm = dense_time(sbs_tpm, time_scale)
+    return convert.state_by_state2state_by_node(tpm)
+
+
+def run_cm(cm, time_scale):
+    """Iterate a connectivity matrix the specified number of steps.
+
+    Args:
+        cm (np.ndarray): A |N x N| connectivity matrix
+        time_scale (int): The number of steps to run.
+
+    Returns:
+        tpm (np.ndarray)
+    """
+    cm = np.linalg.matrix_power(cm, time_scale)
+    # Round non-unitary values back to 1
+    cm[cm > 1] = 1
+    return cm
+
+
 # TPM and Connectivity Matrix utils
 # ============================================================================
+
+def state_by_state(tpm):
+    """Return True if the tpm is in state-by-state form, otherwise False."""
+    return tpm.ndim == 2 and tpm.shape[0] == tpm.shape[1]
+
 
 def condition_tpm(tpm, fixed_nodes, state):
     """Return a TPM conditioned on the given fixed node indices, whose states
@@ -49,6 +126,13 @@ def condition_tpm(tpm, fixed_nodes, state):
     # Obtain the actual conditioned TPM by indexing with the conditioning
     # indices.
     return tpm[conditioning_indices]
+
+
+def expand_tpm(tpm):
+    """Broadcast a state-by-node TPM so that singleton dimensions are expanded
+    over the full network."""
+    uc = np.ones([2] * (tpm.ndim - 1) + [tpm.shape[-1]])
+    return tpm * uc
 
 
 def apply_cut(cut, connectivity_matrix):
@@ -118,6 +202,15 @@ def get_outputs_from_cm(index, connectivity_matrix):
                  connectivity_matrix[index][i])
 
 
+def causally_significant_nodes(cm):
+    """Returns a tuple of all nodes indices in the connectivity matrix which
+    are causally significant (have inputs and outputs)."""
+    inputs = cm.sum(0)
+    outputs = cm.sum(1)
+    nodes_with_inputs_and_outputs = np.logical_and(inputs > 0, outputs > 0)
+    return tuple(np.where(nodes_with_inputs_and_outputs)[0])
+
+
 def np_hash(a):
     """Return a hash of a NumPy array."""
     if a is None:
@@ -134,19 +227,19 @@ def phi_eq(x, y):
     return abs(x - y) <= constants.EPSILON
 
 
-def normalize(x):
-    """Normalize an array.
+def normalize(a):
+    """Normalize a distribution.
 
     Args:
-        x (np.ndarray): The array to normalize.
+        a (np.ndarray): The array to normalize.
 
     Returns:
-        np.ndarray: ``x`` normalized so that the sum of its entries is 1.
+        np.ndarray: ``a`` normalized so that the sum of its entries is 1.
     """
-    sum_x = x.sum()
-    if sum_x == 0:
-        return x
-    return x / sum_x
+    sum_a = a.sum()
+    if sum_a == 0:
+        return a
+    return a / sum_a
 
 
 # see http://stackoverflow.com/questions/16003217
@@ -320,9 +413,16 @@ def hamming_emd(d1, d2):
     Singleton dimensions are sqeezed out.
     """
     d1, d2 = d1.squeeze(), d2.squeeze()
-    # Compute the EMD with Hamming distance between states as the
+    N = d1.ndim
+    d1, d2 = d1.ravel(), d2.ravel()
+
+    # Sanity check that distributions are the same size.
+    # TODO: should this be bubbled up into PyEmd?
+    assert len(d1) == len(d2)
+
+    # Compute EMD using the Hamming distance between states as the
     # transportation cost function.
-    return emd(d1.ravel(), d2.ravel(), _hamming_matrix(d1.ndim))
+    return emd(d1, d2, _hamming_matrix(N))
 
 
 def l1(d1, d2):
@@ -454,14 +554,29 @@ def bipartition_indices(N):
 # Internal helper methods
 # =============================================================================
 
+def load_data(dir, num):
+    """Load numpy data from the data directory.
+
+    The files should stored in ``data/{dir}`` and named
+    ``0.npy, 1.npy, ... {num - 1}.npy``.
+
+    Returns
+        list: A list of loaded data, such that ``list[i]`` contains the
+        the contents of ``i.npy``.
+    """
+
+    root = os.path.abspath(os.path.dirname(__file__))
+
+    def get_path(i):
+        return os.path.join(root, 'data', dir, str(i) + '.npy')
+
+    return [np.load(get_path(i)) for i in range(num)]
+
+
 # Load precomputed hamming matrices.
-import os
-_ROOT = os.path.abspath(os.path.dirname(__file__))
 _NUM_PRECOMPUTED_HAMMING_MATRICES = 10
-_hamming_matrices = [
-    np.load(os.path.join(_ROOT, 'data', 'hamming_matrices', str(i) + '.npy'))
-    for i in range(_NUM_PRECOMPUTED_HAMMING_MATRICES)
-]
+_hamming_matrices = load_data('hamming_matrices',
+                              _NUM_PRECOMPUTED_HAMMING_MATRICES)
 
 
 # TODO extend to nonbinary nodes
@@ -484,7 +599,7 @@ def _hamming_matrix(N):
                [ 1.,  2.,  0.,  1.],
                [ 2.,  1.,  1.,  0.]])
     """
-    if N < 10:
+    if N < _NUM_PRECOMPUTED_HAMMING_MATRICES:
         return _hamming_matrices[N]
     else:
         log.warn(

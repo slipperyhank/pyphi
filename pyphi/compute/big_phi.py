@@ -15,7 +15,8 @@ from time import time
 import numpy as np
 
 from . import parallel
-from .concept import constellation, constellation_distance
+from .concept import constellation
+from .distance import constellation_distance
 from .. import config, memory, utils, validate
 from ..models import BigMip, Cut, _null_bigmip, _single_node_bigmip
 from ..network import Network
@@ -40,14 +41,19 @@ def evaluate_cut(uncut_subsystem, cut, unpartitioned_constellation):
     """
     log.debug("Evaluating cut {}...".format(cut))
 
-    cut_subsystem = Subsystem(uncut_subsystem.network,
-                              uncut_subsystem.state,
-                              uncut_subsystem.node_indices,
-                              cut=cut,
-                              mice_cache=uncut_subsystem._mice_cache)
-    mechanisms = {c.mechanism for c in unpartitioned_constellation}
-    if not config.ASSUME_CUTS_CANNOT_CREATE_NEW_CONCEPTS:
-        mechanisms |= set(cut.all_cut_mechanisms(uncut_subsystem.node_indices))
+    cut_subsystem = uncut_subsystem.apply_cut(cut)
+
+    from .. import macro
+
+    if config.ASSUME_CUTS_CANNOT_CREATE_NEW_CONCEPTS:
+        mechanisms = {c.mechanism for c in unpartitioned_constellation}
+    elif isinstance(uncut_subsystem, macro.MacroSubsystem):
+        # TODO: figure out when cut blackboxed systems produce new concepts
+        mechanisms = False
+    else:
+        mechanisms = set(
+            [c.mechanism for c in unpartitioned_constellation] +
+            list(cut.all_cut_mechanisms()))
     partitioned_constellation = constellation(cut_subsystem, mechanisms)
 
     log.debug("Finished evaluating cut {}.".format(cut))
@@ -217,7 +223,7 @@ def _big_mip(cache_key, subsystem):
         # constellation.
         result = time_annotated(_null_bigmip(subsystem))
     else:
-        cuts = big_mip_bipartitions(subsystem.node_indices)
+        cuts = big_mip_bipartitions(subsystem.cut_indices)
         min_mip = _null_bigmip(subsystem)
         min_mip.phi = float('inf')
         min_mip = _find_mip(subsystem, cuts, unpartitioned_constellation,
@@ -276,17 +282,27 @@ def possible_complexes(network, state):
     subsystem in the past or future, respectively).
 
     Does not include subsystems in an impossible state.
+
+    Args:
+        network (Network): The network for which to return possible complexes.
+        state (tuple(int)): The state of the network.
+
+    Yields:
+        (Subsystem): The next subsystem which could be a complex.
     """
-    inputs = np.sum(network.connectivity_matrix, 0)
-    outputs = np.sum(network.connectivity_matrix, 1)
-    nodes_have_inputs_and_outputs = np.logical_and(inputs > 0, outputs > 0)
-    causally_significant_nodes = np.where(nodes_have_inputs_and_outputs)[0]
+    causally_significant_nodes = utils.causally_significant_nodes(
+        network.connectivity_matrix)
+
     for subset in utils.powerset(causally_significant_nodes):
+        # Don't return empty system
+        if len(subset) == 0:
+            continue
+
         # Don't return subsystems that are in an impossible state.
         try:
             yield Subsystem(network, state, subset)
         except validate.StateUnreachableError:
-            pass
+            continue
 
 
 def complexes(network, state):

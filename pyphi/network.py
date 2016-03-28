@@ -17,24 +17,6 @@ from .constants import DIRECTIONS, FUTURE, PAST
 
 # TODO!!! raise error if user tries to change TPM or CM, double-check and
 # document that states can be changed
-
-def from_json(filename):
-    """Convert a JSON representation of a network to a PyPhi network.
-
-    Args:
-        filename (str): A path to a JSON file representing a network.
-
-    Returns:
-       network (``Network``): The corresponding PyPhi network object.
-    """
-    with open(filename) as f:
-        network_dictionary = json.load(f)
-    tpm = network_dictionary['tpm']
-    cm = network_dictionary['cm']
-    network = Network(tpm, connectivity_matrix=cm)
-    return network
-
-
 class Network:
     """A network of nodes.
 
@@ -54,6 +36,8 @@ class Network:
             ``connectivity_matrix[i][j] == 1`` means that node |i| is connected
             to node |j|. If no connectivity matrix is given, every node is
             connected to every node **(including itself)**.
+        node_labels (tuple(str)): Human readable labels for each node in the
+            network.
 
     Attributes:
         tpm (np.ndarray):
@@ -80,30 +64,36 @@ class Network:
     """
 
     # TODO make tpm also optional when implementing logical network definition
-    def __init__(self, tpm, connectivity_matrix=None,
+    def __init__(self, tpm, connectivity_matrix=None, node_labels=None,
                  perturb_vector=None, purview_cache=None):
         self.tpm = tpm
-        self._size = self.tpm.shape[-1]
-        # TODO extend to nonbinary nodes
-        self._num_states = 2 ** self.size
         self._node_indices = tuple(range(self.size))
+        self._node_labels = node_labels
         self.connectivity_matrix = connectivity_matrix
         self.perturb_vector = perturb_vector
         self.purview_cache = purview_cache or cache.PurviewCache()
-        # Validate the entire network.
+
         validate.network(self)
 
     @property
     def size(self):
-        return self._size
+        return self.tpm.shape[-1]
 
+    # TODO extend to nonbinary nodes
     @property
     def num_states(self):
-        return self._num_states
+        return 2 ** self.size
 
     @property
     def node_indices(self):
         return self._node_indices
+
+    @property
+    def node_labels(self):
+        if self._node_labels is None:
+            self._node_labels = tuple("n{}".format(i)
+                                      for i in self.node_indices)
+        return self._node_labels
 
     @property
     def tpm(self):
@@ -119,7 +109,7 @@ class Network:
         validate.tpm(tpm)
         # Convert to N-D state-by-node if we were given a square state-by-state
         # TPM. Otherwise, force conversion to N-D format.
-        if tpm.ndim == 2 and tpm.shape[0] == tpm.shape[1]:
+        if utils.state_by_state(tpm):
             self._tpm = convert.state_by_state2state_by_node(tpm)
         else:
             self._tpm = convert.to_n_dimensional(tpm)
@@ -162,6 +152,27 @@ class Network:
         # Update hash.
         self._pv_hash = utils.np_hash(self.perturb_vector)
 
+    def labels2indices(self, labels):
+        """Convert a tuple of node labels to node indices."""
+        _map = dict(zip(self.node_labels, self.node_indices))
+        return tuple(_map[label] for label in labels)
+
+    def indices2labels(self, indices):
+        """Convert a tuple of node indices to node labels."""
+        _map = dict(zip(self.node_indices, self.node_labels))
+        return tuple(_map[index] for index in indices)
+
+    def parse_node_indices(self, nodes):
+        """Returns the nodes indices for nodes, where ``nodes`` is either
+        already integer indices or node labels."""
+        if not nodes:
+            indices = ()
+        elif all(isinstance(node, str) for node in nodes):
+            indices = self.labels2indices(nodes)
+        else:
+            indices = map(int, nodes)
+        return tuple(sorted(set(indices)))
+
     # TODO: this should really be a Subsystem method, but we're
     # interested in caching at the Network-level...
     @cache.method('purview_cache')
@@ -170,22 +181,16 @@ class Network:
 
         Args:
             direction (str): |past| or |future|
-            mechanism (tuple(int)): The mechanism which all purviews
-                are checked for reducibility over.
+            mechanism (tuple(int)): The mechanism which all purviews are
+                checked for reducibility over.
+
         Returns:
-            purviews (list(tuple(int))): All purviews which are
-                irreducible over `mechanism`.
+            list(tuple(int)): All purviews which are irreducible over
+                ``mechanism``.
         """
         all_purviews = utils.powerset(self._node_indices)
-
-        if direction == DIRECTIONS[PAST]:
-            return [purview for purview in all_purviews
-                    if not utils.block_reducible(self.connectivity_matrix,
-                                                 purview, mechanism)]
-        elif direction == DIRECTIONS[FUTURE]:
-            return [purview for purview in all_purviews
-                    if not utils.block_reducible(self.connectivity_matrix,
-                                                 mechanism, purview)]
+        return irreducible_purviews(self.connectivity_matrix,
+                                    direction, mechanism, all_purviews)
 
     def __repr__(self):
         return ('Network({}, connectivity_matrix={}, '
@@ -222,3 +227,44 @@ class Network:
             'cm': self.connectivity_matrix,
             'size': self.size
         }
+
+
+def irreducible_purviews(cm, direction, mechanism, purviews):
+    """Returns all purview which are irreducible for the mechanism.
+
+    Args:
+        cm (np.ndarray): A |N x N| connectivity matrix.
+        direction (str): |past| or |future|.
+        purviews (list(tuple(int))): The purviews to check.
+        mechanism (tuple(int)): The mechanism in question.
+
+    Returns:
+        list(tuple(int)): All purviews in ``purviews`` which are not reducible
+            over ``mechanism``.
+    """
+    def reducible(purview):
+        # Returns True if purview is trivially reducible.
+        if direction == DIRECTIONS[PAST]:
+            _from, to = purview, mechanism
+        elif direction == DIRECTIONS[FUTURE]:
+            _from, to = mechanism, purview
+        return utils.block_reducible(cm, _from, to)
+
+    return [purview for purview in purviews if not reducible(purview)]
+
+
+def from_json(filename):
+    """Convert a JSON representation of a network to a PyPhi network.
+
+    Args:
+        filename (str): A path to a JSON file representing a network.
+
+    Returns:
+       network (``Network``): The corresponding PyPhi network object.
+    """
+    with open(filename) as f:
+        network_dictionary = json.load(f)
+    tpm = network_dictionary['tpm']
+    cm = network_dictionary['cm']
+    network = Network(tpm, connectivity_matrix=cm)
+    return network
