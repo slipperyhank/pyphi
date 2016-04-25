@@ -12,13 +12,12 @@ from .. import config
 def make_repr(self, attrs):
     """Construct a repr string.
 
-    If `config.READABLE_REPRS` is True, this function calls out
-    to the object's __str__ method. Although this breaks the convention
-    that __repr__ should return a string which can reconstruct the object,
-    readable reprs are invaluable since the Python interpreter calls
-    `repr` to represent all objects in the shell. Since PyPhi is often
-    used in the interpreter we want to have meaningful and useful
-    representations.
+    If `config.READABLE_REPRS` is True, this function calls out to the object's
+    __str__ method. Although this breaks the convention that __repr__ should
+    return a string which can reconstruct the object, readable reprs are
+    invaluable since the Python interpreter calls `repr` to represent all
+    objects in the shell. Since PyPhi is often used in the interpreter we want
+    to have meaningful and useful representations.
 
     Args:
         self (obj): The object in question
@@ -85,7 +84,10 @@ def fmt_partition(partition):
         return ""
 
     part0, part1 = partition
-    node_repr = lambda x: ','.join(map(str, x)) if x else '[]'
+
+    def node_repr(x):
+        return ','.join(map(str, x)) if x else '[]'
+
     numer0, denom0 = node_repr(part0.mechanism), node_repr(part0.purview)
     numer1, denom1 = node_repr(part1.mechanism), node_repr(part1.purview)
 
