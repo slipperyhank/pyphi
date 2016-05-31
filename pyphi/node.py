@@ -39,15 +39,19 @@ class Node:
         self.index = index
         # This node's parent network.
         self.network = subsystem.network
+
         # Label for display.
+        if label is None:
+            label = 'n' + str(index)
         self.label = label
+
         # State of this node.
         self.state = self.subsystem.state[self.index]
         # Get indices of the inputs.
         self._input_indices = utils.get_inputs_from_cm(
-            self.index, subsystem.connectivity_matrix)
+            self.index, subsystem.cm)
         self._output_indices = utils.get_outputs_from_cm(
-            self.index, subsystem.connectivity_matrix)
+            self.index, subsystem.cm)
 
         # Generate the node's TPM.
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -120,8 +124,7 @@ class Node:
         return self._outputs
 
     def __repr__(self):
-        return (self.label if self.label is not None
-                else 'n' + str(self.index))
+        return self.label
 
     def __str__(self):
         return self.__repr__()
@@ -153,12 +156,24 @@ class Node:
         return self.index
 
 
+# TODO: rework MacroSubsystem to not need the indices arg
 def generate_nodes(subsystem, indices=None, labels=False):
     """Generate the |Node| objects for these indices.
 
-    The ``labels`` arguments allows us to not extract labels from the network
-    when constructing macro systems. ``indices`` is also required by macro-
-    systems.
+    Args:
+        subsystem (Subsystem): The subsystem for which nodes are being
+            generated.
+
+    Keyword Args:
+        indices (tuple(int)): Used by |MacroSubsystem| to force generation to
+            use certain indices.
+        labels (boolean): If True, nodes will be labeled with the labels of the
+            network. (This is also used by macro systems to keep labels from
+            being mixed up when many micro elements are combined into one macro
+            element.)
+
+    Returns:
+        tuple(Node): The nodes of the |Subsystem|.
     """
     if indices is None:
         indices = subsystem.node_indices

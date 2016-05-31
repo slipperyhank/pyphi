@@ -54,9 +54,11 @@ class Network:
             state-by-node TPM must be ``(S, N)``, and the shape of the N-D form
             of the TPM must be ``[2] * N + [N]``, where ``S`` is the number of
             states and ``N`` is the number of nodes in the network.
-        connectivity_matrix (np.ndarray):
+        cm (np.ndarray):
             A square binary adjacency matrix indicating the connections between
             nodes in the network.
+        connectivity_matrix (np.ndarray):
+            Alias for `Network.cm`.
         size (int):
             The number of nodes in the network.
         num_states (int):
@@ -69,7 +71,7 @@ class Network:
         self.tpm = tpm
         self._node_indices = tuple(range(self.size))
         self._node_labels = node_labels
-        self.connectivity_matrix = connectivity_matrix
+        self.cm = connectivity_matrix
         self.perturb_vector = perturb_vector
         self.purview_cache = purview_cache or cache.PurviewCache()
 
@@ -119,21 +121,30 @@ class Network:
         self._tpm_hash = utils.np_hash(self.tpm)
 
     @property
+    def cm(self):
+        """The network's connectivity matrix."""
+        return self._cm
+
+    @cm.setter
+    def cm(self, cm):
+        if cm is not None:
+            self._cm = np.array(cm)
+        else:
+            # If none was provided, assume all are connected.
+            self._cm = np.ones((self.size, self.size))
+        # Make the underlying attribute immutable.
+        self._cm.flags.writeable = False
+        # Update hash.
+        self._cm_hash = utils.np_hash(self.cm)
+
+    @property
     def connectivity_matrix(self):
-        return self._connectivity_matrix
+        """Alias for `connectivity_matrix`."""
+        return self.cm
 
     @connectivity_matrix.setter
     def connectivity_matrix(self, cm):
-        # Get the connectivity matrix.
-        if cm is not None:
-            self._connectivity_matrix = np.array(cm)
-        else:
-            # If none was provided, assume all are connected.
-            self._connectivity_matrix = np.ones((self.size, self.size))
-        # Make the underlying attribute immutable.
-        self._connectivity_matrix.flags.writeable = False
-        # Update hash.
-        self._cm_hash = utils.np_hash(self.connectivity_matrix)
+        self.cm = cm
 
     @property
     def perturb_vector(self):
@@ -189,18 +200,17 @@ class Network:
                 ``mechanism``.
         """
         all_purviews = utils.powerset(self._node_indices)
-        return irreducible_purviews(self.connectivity_matrix,
-                                    direction, mechanism, all_purviews)
+        return irreducible_purviews(self.cm, direction, mechanism,
+                                    all_purviews)
 
     def __repr__(self):
         return ('Network({}, connectivity_matrix={}, '
                 'perturb_vector={})'.format(repr(self.tpm),
-                                            repr(self.connectivity_matrix),
+                                            repr(self.cm),
                                             repr(self.perturb_vector)))
 
     def __str__(self):
-        return 'Network({}, connectivity_matrix={})'.format(
-            self.tpm, self.connectivity_matrix)
+        return 'Network({}, connectivity_matrix={})'.format(self.tpm, self.cm)
 
     def __eq__(self, other):
         """Return whether this network equals the other object.
@@ -209,8 +219,7 @@ class Network:
         and perturbation vector.
         """
         return (np.array_equal(self.tpm, other.tpm)
-                and np.array_equal(self.connectivity_matrix,
-                                   other.connectivity_matrix)
+                and np.array_equal(self.cm, other.cm)
                 and np.array_equal(self.perturb_vector, other.perturb_vector)
                 if isinstance(other, type(self)) else False)
 
@@ -224,7 +233,7 @@ class Network:
     def to_json(self):
         return {
             'tpm': self.tpm,
-            'cm': self.connectivity_matrix,
+            'cm': self.cm,
             'size': self.size
         }
 

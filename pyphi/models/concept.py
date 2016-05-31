@@ -2,19 +2,18 @@
 # -*- coding: utf-8 -*-
 # models/concept.py
 
-from collections import namedtuple
-
 import numpy as np
 
 from . import cmp, fmt
-from .. import config, jsonify, utils
+from .. import config, utils
+from ..jsonify import jsonify
 from ..constants import DIRECTIONS, PAST, FUTURE
 
 _mip_attributes = ['phi', 'direction', 'mechanism', 'purview', 'partition',
                    'unpartitioned_repertoire', 'partitioned_repertoire']
 
 
-class Mip(cmp._Orderable, namedtuple('Mip', _mip_attributes)):
+class Mip(cmp._Orderable):
     """A minimum information partition for |small_phi| calculation.
 
     MIPs may be compared with the built-in Python comparison operators (``<``,
@@ -45,7 +44,51 @@ class Mip(cmp._Orderable, namedtuple('Mip', _mip_attributes)):
             the repertoires of each part of the partition.
     """
 
-    __slots__ = ()
+    def __init__(self, phi, direction, mechanism, purview, partition,
+                 unpartitioned_repertoire, partitioned_repertoire,
+                 subsystem=None):
+        self._phi = phi
+        self._direction = direction
+        self._mechanism = mechanism
+        self._purview = purview
+        self._partition = partition
+        self._unpartitioned_repertoire = unpartitioned_repertoire
+        self._partitioned_repertoire = partitioned_repertoire
+
+        # Optional subsystem - only used to generate nice labeled reprs
+        self._subsystem = subsystem
+
+    @property
+    def phi(self):
+        return self._phi
+
+    @property
+    def direction(self):
+        return self._direction
+
+    @property
+    def mechanism(self):
+        return self._mechanism
+
+    @property
+    def purview(self):
+        return self._purview
+
+    @property
+    def partition(self):
+        return self._partition
+
+    @property
+    def unpartitioned_repertoire(self):
+        return self._unpartitioned_repertoire
+
+    @property
+    def partitioned_repertoire(self):
+        return self._partitioned_repertoire
+
+    @property
+    def subsystem(self):
+        return self._subsystem
 
     _unorderable_unless_eq = ['direction']
 
@@ -73,13 +116,6 @@ class Mip(cmp._Orderable, namedtuple('Mip', _mip_attributes)):
                      self.purview,
                      utils.np_hash(self.unpartitioned_repertoire)))
 
-    def to_json(self):
-        d = self.__dict__
-        # Flatten the repertoires.
-        d['partitioned_repertoire'] = self.partitioned_repertoire.flatten()
-        d['unpartitioned_repertoire'] = self.unpartitioned_repertoire.flatten()
-        return d
-
     def __repr__(self):
         return fmt.make_repr(self, _mip_attributes)
 
@@ -87,7 +123,7 @@ class Mip(cmp._Orderable, namedtuple('Mip', _mip_attributes)):
         return "Mip\n" + fmt.indent(fmt.fmt_mip(self))
 
 
-def _null_mip(direction, mechanism, purview):
+def _null_mip(direction, mechanism, purview, unpartitioned_repertoire=None):
     """The null mip (of a reducible mechanism)."""
     # TODO Use properties here to infer mechanism and purview from
     # partition yet access them with .mechanism and .partition
@@ -95,7 +131,7 @@ def _null_mip(direction, mechanism, purview):
                mechanism=mechanism,
                purview=purview,
                partition=None,
-               unpartitioned_repertoire=None,
+               unpartitioned_repertoire=unpartitioned_repertoire,
                partitioned_repertoire=None,
                phi=0.0)
 
@@ -171,7 +207,14 @@ class Mice(cmp._Orderable):
         return hash(('Mice', self._mip))
 
     def to_json(self):
-        return {'mip': self._mip}
+        return {
+            'phi': self.phi,
+            'purview': self.purview,
+            'partition': self.mip.partition,
+            'partitioned_repertoire': self.mip.partitioned_repertoire.flatten(),
+            'repertoire': self.mip.unpartitioned_repertoire.flatten()
+        }
+
 
     # TODO: benchmark and memoize?
     # TODO: pass in subsystem indices only?
@@ -210,8 +253,7 @@ class Mice(cmp._Orderable):
 
         cm = utils.relevant_connections(subsystem.network.size, _from, to)
         # Submatrix for this subsystem's nodes
-        idxs = subsystem.node_indices
-        return utils.submatrix(cm, idxs, idxs)
+        return cm[np.ix_(subsystem.node_indices, subsystem.node_indices)]
 
     # TODO: pass in `cut` instead? We can infer
     # subsystem indices from the cut itself, validate, and check.
@@ -293,17 +335,29 @@ class Concept(cmp._Orderable):
     def _order_by(self):
         return [self.phi, len(self.mechanism)]
 
+    @property
+    def cause_purview(self):
+        return getattr(self.cause, 'purview', None)
+
+    @property
+    def effect_purview(self):
+        return getattr(self.effect, 'purview', None)
+
+    @property
+    def cause_repertoire(self):
+        return getattr(self.cause, 'repertoire', None)
+
+    @property
+    def effect_repertoire(self):
+        return getattr(self.effect, 'repertoire', None)
+
     def __eq__(self, other):
-        self_cause_purview = getattr(self.cause, 'purview', None)
-        other_cause_purview = getattr(other.cause, 'purview', None)
-        self_effect_purview = getattr(self.effect, 'purview', None)
-        other_effect_purview = getattr(other.effect, 'purview', None)
         return (self.phi == other.phi
                 and self.mechanism == other.mechanism
                 and (utils.state_of(self.mechanism, self.subsystem.state) ==
                      utils.state_of(self.mechanism, other.subsystem.state))
-                and self_cause_purview == other_cause_purview
-                and self_effect_purview == other_effect_purview
+                and self.cause_purview == other.cause_purview
+                and self.effect_purview == other.effect_purview
                 and self.eq_repertoires(other)
                 and self.subsystem.network == other.subsystem.network)
 
@@ -311,10 +365,10 @@ class Concept(cmp._Orderable):
         return hash((self.phi,
                      self.mechanism,
                      utils.state_of(self.mechanism, self.subsystem.state),
-                     self.cause.purview,
-                     self.effect.purview,
-                     utils.np_hash(self.cause.repertoire),
-                     utils.np_hash(self.effect.repertoire),
+                     self.cause_purview,
+                     self.effect_purview,
+                     utils.np_hash(self.cause_repertoire),
+                     utils.np_hash(self.effect_repertoire),
                      self.subsystem.network))
 
     def __bool__(self):
@@ -333,12 +387,9 @@ class Concept(cmp._Orderable):
             arrays; mechanisms, purviews, or even the nodes that node indices
             refer to, might be different.
         """
-        this_cr = getattr(self.cause, 'repertoire', None)
-        this_er = getattr(self.effect, 'repertoire', None)
-        other_cr = getattr(other.cause, 'repertoire', None)
-        other_er = getattr(other.effect, 'repertoire', None)
-        return (np.array_equal(this_cr, other_cr) and
-                np.array_equal(this_er, other_er))
+        return (
+            np.array_equal(self.cause_repertoire, other.cause_repertoire) and
+            np.array_equal(self.effect_repertoire, other.effect_repertoire))
 
     def emd_eq(self, other):
         """Return whether this concept is equal to another in the context of an
@@ -382,14 +433,17 @@ class Concept(cmp._Orderable):
             self.effect.mip.partitioned_repertoire)
 
     def to_json(self):
-        d = jsonify.jsonify(self.__dict__)
-        # Attach the expanded repertoires to the jsonified MICEs.
-        d['cause']['repertoire'] = self.expand_cause_repertoire().flatten()
-        d['effect']['repertoire'] = self.expand_effect_repertoire().flatten()
+        d = jsonify(self.__dict__)
+        del d['normalized']
+        # Expand repertoires.
+        d['cause']['repertoire'] = \
+            self.expand_cause_repertoire().flatten(order='f')
+        d['effect']['repertoire'] = \
+            self.expand_effect_repertoire().flatten(order='f')
         d['cause']['partitioned_repertoire'] = \
-            self.expand_partitioned_cause_repertoire().flatten()
+            self.expand_partitioned_cause_repertoire().flatten(order='f')
         d['effect']['partitioned_repertoire'] = \
-            self.expand_partitioned_effect_repertoire().flatten()
+            self.expand_partitioned_effect_repertoire().flatten(order='f')
         return d
 
 
@@ -407,7 +461,7 @@ class Constellation(tuple):
         if config.READABLE_REPRS:
             return self.__str__()
         return "Constellation({})".format(
-            super(Constellation, self).__repr__())
+            super().__repr__())
 
     def __str__(self):
         return "\nConstellation\n*************" + fmt.fmt_constellation(self)

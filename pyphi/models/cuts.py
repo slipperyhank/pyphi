@@ -84,13 +84,16 @@ class Cut(namedtuple('Cut', ['severed', 'intact'])):
         # in the cut, then extract the relevant submatrix
         n = max(cut_indices) + 1
         matrix = utils.relevant_connections(n, self[0], self[1])
-        return utils.submatrix(matrix, cut_indices, cut_indices)
+        return matrix[np.ix_(cut_indices, cut_indices)]
 
     def __repr__(self):
         return fmt.make_repr(self, ['severed', 'intact'])
 
     def __str__(self):
-        return "Cut {self.severed} --//--> {self.intact}".format(self=self)
+        return fmt.fmt_cut(self)
+
+    def to_json(self):
+        return [self.severed, self.intact]
 
 
 class Actual_Cut(namedtuple('Cut', ['cause_part1', 'cause_part2',
@@ -142,4 +145,30 @@ class Part(namedtuple('Part', ['mechanism', 'purview'])):
     """
 
     __slots__ = ()
-    pass
+
+    def to_json(self):
+        return {'mechanism': self.mechanism, 'purview': self.purview}
+
+
+class Bipartition(namedtuple('Bipartition', ['part0', 'part1'])):
+    """A bipartition of a mechanism and purview.
+
+    Attributes:
+        part0 (Part): The first part of the partition.
+        part1 (Part): The second part of the partition.
+        mechanism (tuple(int)): The nodes of the mechanism in the partition.
+        purview (tuple(int)): The nodes of the purview in the partition.
+    """
+
+    @property
+    def mechanism(self):
+        return tuple(sorted(self[0].mechanism + self[1].mechanism))
+
+    @property
+    def purview(self):
+        return tuple(sorted(self[0].purview + self[1].purview))
+
+    __slots__ = ()
+
+    def to_json(self):
+        return {'part0': self.part0, 'part1': self.part1}

@@ -9,13 +9,12 @@ Methods for coarse-graining systems to different levels of spatial analysis.
 from collections import namedtuple
 import itertools
 import logging
-import os
 
 import numpy as np
 
 from . import compute, config, constants, convert, utils, validate
 from .network import irreducible_purviews
-from .node import Node, expand_node_tpm, generate_nodes
+from .node import expand_node_tpm, generate_nodes
 from .subsystem import Subsystem
 
 # Create a logger for this module.
@@ -274,9 +273,8 @@ class MacroSubsystem(Subsystem):
         """Returns all micro indices which compose the elements specified by
         `macro_indices`."""
         def from_partition(partition, macro_indices):
-            micro_indices = []
-            for i in macro_indices:
-                micro_indices += partition[i]
+            micro_indices = itertools.chain.from_iterable(
+                partition[i] for i in macro_indices)
             return tuple(sorted(micro_indices))
 
         if self._blackbox and self._coarse_grain:
@@ -832,7 +830,7 @@ def effective_info(network):
 
     This is equivalent to the average of the
     :func:`~pyphi.subsystem.Subsystem.effect_info` (with the entire network as
-    the mechanism and purview) over all posisble states of the network. It can
+    the mechanism and purview) over all possible states of the network. It can
     be interpreted as the “noise in the network's TPM,” weighted by the size of
     its state space.
 

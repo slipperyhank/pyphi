@@ -125,10 +125,10 @@ def network(n):
     Checks the TPM, connectivity matrix, and perturbation vector.
     """
     tpm(n.tpm)
-    connectivity_matrix(n.connectivity_matrix)
+    connectivity_matrix(n.cm)
     perturb_vector(n.perturb_vector, n.size)
     node_labels(n.node_labels, n.node_indices)
-    if n.connectivity_matrix.shape[0] != n.size:
+    if n.cm.shape[0] != n.size:
         raise ValueError("Connectivity matrix must be NxN, where N is the "
                          "number of nodes in the network.")
     return True
@@ -151,13 +151,7 @@ def state_length(state, size):
 
 
 def state_reachable(subsystem):
-    """Return whether a state can be reached according to the network's TPM.
-
-    If ``constrained_nodes`` is provided, then nodes not in
-    ``constrained_nodes`` will be left free (their state will not considered
-    restricted by the TPM). Otherwise, any nodes without inputs will be left
-    free.
-    """
+    """Return whether a state can be reached according to the network's TPM."""
     # If there is a row `r` in the TPM such that all entries of `r - state` are
     # between -1 and 1, then the given state has a nonzero probability of being
     # reached from some state.

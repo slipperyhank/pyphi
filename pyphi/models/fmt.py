@@ -6,6 +6,8 @@
 Helper functions for formatting pretty representations of PyPhi models.
 """
 
+from itertools import chain
+
 from .. import config
 
 
@@ -65,8 +67,46 @@ def fmt_constellation(c):
     return "\n\n" + "\n".join(map(lambda x: indent(x), c)) + "\n"
 
 
-def fmt_partition(partition):
-    """Format a partition.
+def labels(indices, subsystem=None):
+    """Get the labels for a tuple of mechanism indices."""
+    if subsystem is None:
+        return tuple(map(str, indices))
+    return subsystem.indices2labels(indices)
+
+
+def fmt_mechanism(indices, subsystem=None):
+    """Format a mechanism or purview."""
+    end = ',' if len(indices) in [0, 1] else ''
+    return '(' + ', '.join(labels(indices, subsystem)) + end + ')'
+
+
+def fmt_part(part, subsystem=None):
+    """Format a |Part|.
+
+    The returned string looks like::
+
+        0,1
+        ---
+        []
+    """
+    def nodes(x):
+        return ','.join(labels(x, subsystem)) if x else '[]'
+
+    numer = nodes(part.mechanism)
+    denom = nodes(part.purview)
+
+    width = max(len(numer), len(denom))
+    divider = '-' * width
+
+    return (
+        "{numer:^{width}}\n"
+        "{divider}\n"
+        "{denom:^{width}}"
+    ).format(numer=numer, divider=divider, denom=denom, width=width)
+
+
+def fmt_bipartition(partition, subsystem=None):
+    """Format a |Bipartition|.
 
     The returned string looks like::
 
@@ -84,31 +124,27 @@ def fmt_partition(partition):
         return ""
 
     part0, part1 = partition
+    part0 = fmt_part(part0, subsystem).split("\n")
+    part1 = fmt_part(part1, subsystem).split("\n")
 
-    def node_repr(x):
-        return ','.join(map(str, x)) if x else '[]'
+    times = ("   ",
+             " X ",
+             "   ")
 
-    numer0, denom0 = node_repr(part0.mechanism), node_repr(part0.purview)
-    numer1, denom1 = node_repr(part1.mechanism), node_repr(part1.purview)
+    breaks = ("\n", "\n", "")  # No newline at the end of string
 
-    width0 = max(len(numer0), len(denom0))
-    width1 = max(len(numer1), len(denom1))
-
-    return ("{numer0:^{width0}}   {numer1:^{width1}}\n"
-                        "{div0} X {div1}\n"
-            "{denom0:^{width0}}   {denom1:^{width1}}").format(
-                numer0=numer0, denom0=denom0, width0=width0, div0='-' * width0,
-                numer1=numer1, denom1=denom1, width1=width1, div1='-' * width1)
+    return "".join(chain.from_iterable(zip(part0, times, part1, breaks)))
 
 
 def fmt_concept(concept):
     """Format a |Concept|."""
     return (
-        "phi: {concept.phi}\n"
-        "mechanism: {concept.mechanism}\n"
+        "phi: {phi}\n"
+        "mechanism: {mechanism}\n"
         "cause: {cause}\n"
         "effect: {effect}\n".format(
-            concept=concept,
+            phi=concept.phi,
+            mechanism=fmt_mechanism(concept.mechanism, concept.subsystem),
             cause=("\n" + indent(fmt_mip(concept.cause.mip, verbose=False))
                    if concept.cause else ""),
             effect=("\n" + indent(fmt_mip(concept.effect.mip, verbose=False))
@@ -120,33 +156,57 @@ def fmt_mip(mip, verbose=True):
     if mip is False or mip is None:  # mips can be Falsy
         return ""
 
-    mechanism = "mechanism: {}\n".format(mip.mechanism) if verbose else ""
-    direction = "direction: {}\n".format(mip.direction) if verbose else ""
+    if verbose:
+        mechanism = "mechanism: {}\n".format(
+            fmt_mechanism(mip.mechanism, mip.subsystem))
+        direction = "direction: {}\n".format(mip.direction)
+    else:
+        mechanism = ""
+        direction = ""
+
     return (
-        "phi: {mip.phi}\n"
+        "phi: {phi}\n"
         "{mechanism}"
-        "purview: {mip.purview}\n"
+        "purview: {purview}\n"
         "partition:\n{partition}\n"
         "{direction}"
         "unpartitioned_repertoire:\n{unpart_rep}\n"
         "partitioned_repertoire:\n{part_rep}").format(
             mechanism=mechanism,
+            purview=fmt_mechanism(mip.purview, mip.subsystem),
             direction=direction,
-            mip=mip,
-            partition=indent(fmt_partition(mip.partition)),
+            phi=mip.phi,
+            partition=indent(fmt_bipartition(mip.partition, mip.subsystem)),
             unpart_rep=indent(mip.unpartitioned_repertoire),
             part_rep=indent(mip.partitioned_repertoire))
+
+
+def fmt_cut(cut, subsystem=None):
+    """Format a |Cut|."""
+    try:
+        severed = fmt_mechanism(cut.severed, subsystem)
+        intact = fmt_mechanism(cut.intact, subsystem)
+    # Macro systems are cut at the micro level - hence conversion to Nodes will
+    # fail. Catch this error and use the raw micro node indices instead.
+    except ValueError:
+        severed = str(cut.severed)
+        intact = str(cut.intact)
+
+    return "Cut {severed} --//--> {intact}".format(severed=severed,
+                                                   intact=intact)
 
 
 def fmt_big_mip(big_mip):
     """Format a |BigMip|."""
     return (
-        "phi: {big_mip.phi}\n"
-        "subsystem: {big_mip.subsystem}\n"
-        "cut: {big_mip.cut}\n"
+        "phi: {phi}\n"
+        "subsystem: {subsystem}\n"
+        "cut: {cut}\n"
         "unpartitioned_constellation: {unpart_const}"
         "partitioned_constellation: {part_const}".format(
-            big_mip=big_mip,
+            phi=big_mip.phi,
+            subsystem=big_mip.subsystem,
+            cut=fmt_cut(big_mip.cut, big_mip.subsystem),
             unpart_const=fmt_constellation(big_mip.unpartitioned_constellation),
             part_const=fmt_constellation(big_mip.partitioned_constellation)))
 

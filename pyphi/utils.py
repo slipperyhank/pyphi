@@ -135,16 +135,18 @@ def expand_tpm(tpm):
     return tpm * uc
 
 
-def apply_cut(cut, connectivity_matrix):
+def apply_cut(cut, cm):
     """Return a modified connectivity matrix where the connections from one set
     of nodes to the other are destroyed.
     """
     if cut is None:
-        return connectivity_matrix
-    cm = connectivity_matrix.copy()
+        return cm
+
+    cm = cm.copy()
     for i in cut.severed:
         for j in cut.intact:
             cm[i][j] = 0
+
     return cm
 
 
@@ -164,11 +166,11 @@ def apply_actual_cut(cut, connectivity_matrix):
     return cm
 
 
-def fully_connected(connectivity_matrix, nodes1, nodes2):
+def fully_connected(cm, nodes1, nodes2):
     """Test connectivity of one set of nodes to another.
 
     Args:
-        connectivity_matrix (``np.ndarrray``): The connectivity matrix
+        cm (``np.ndarrray``): The connectivity matrix
         nodes1 (tuple(int)): The nodes whose outputs to ``nodes2`` will be
             tested.
         nodes2 (tuple(int)): The nodes whose inputs from ``nodes1`` will
@@ -183,17 +185,17 @@ def fully_connected(connectivity_matrix, nodes1, nodes2):
     if not nodes1 or not nodes2:
         return True
 
-    cm = submatrix(connectivity_matrix, nodes1, nodes2)
+    cm = cm[np.ix_(nodes1, nodes2)]
 
     # Do all nodes have at least one connection?
     return cm.sum(0).all() and cm.sum(1).all()
 
 
-def apply_boundary_conditions_to_cm(external_indices, connectivity_matrix):
+def apply_boundary_conditions_to_cm(external_indices, cm):
     """Return a connectivity matrix with all connections to or from external
     nodes removed.
     """
-    cm = connectivity_matrix.copy()
+    cm = cm.copy()
     for i in external_indices:
         # Zero-out row
         cm[i] = 0
@@ -202,20 +204,18 @@ def apply_boundary_conditions_to_cm(external_indices, connectivity_matrix):
     return cm
 
 
-def get_inputs_from_cm(index, connectivity_matrix):
+def get_inputs_from_cm(index, cm):
     """Return a tuple of node indices that have connections to the node with
     the given index.
     """
-    return tuple(i for i in range(connectivity_matrix.shape[0]) if
-                 connectivity_matrix[i][index])
+    return tuple(i for i in range(cm.shape[0]) if cm[i][index])
 
 
-def get_outputs_from_cm(index, connectivity_matrix):
+def get_outputs_from_cm(index, cm):
     """Return a tuple of node indices that the node with the given index has
     connections to.
     """
-    return tuple(i for i in range(connectivity_matrix.shape[0]) if
-                 connectivity_matrix[index][i])
+    return tuple(i for i in range(cm.shape[0]) if cm[index][i])
 
 
 def causally_significant_nodes(cm):
@@ -629,21 +629,8 @@ def _hamming_matrix(N):
             "by typing ``import pyphi; pyphi;`` into a Python interperter)."
             .format(_NUM_PRECOMPUTED_HAMMING_MATRICES - 1)
         )
-        possible_states = np.array([list(bin(state)[2:].zfill(N)) for state in
-                                    range(2 ** N)])
+        possible_states = np.array(list(all_states((N))))
         return cdist(possible_states, possible_states, 'hamming') * N
-
-
-def submatrix(cm, nodes1, nodes2):
-    """Return the submatrix of connections from ``nodes1`` to ``nodes2``.
-
-    Args:
-        cm (np.ndarray): The matrix
-        nodes1 (tuple(int)): Source nodes
-        nodes2 (tuple(int)): Sink nodes
-    """
-    submatrix_indices = np.ix_(nodes1, nodes2)
-    return cm[submatrix_indices]
 
 
 # TODO: better name?
@@ -752,7 +739,7 @@ def block_reducible(cm, nodes1, nodes2):
     if not nodes1 or not nodes2:
         return True  # trivially
 
-    cm = submatrix(cm, nodes1, nodes2)
+    cm = cm[np.ix_(nodes1, nodes2)]
 
     # Validate the connectivity matrix.
     if not cm.sum(0).all() or not cm.sum(1).all():
@@ -773,7 +760,7 @@ def strongly_connected(cm, nodes=None):
             connectivity over.
     """
     if nodes is not None:
-        cm = submatrix(cm, nodes, nodes)
+        cm = cm[np.ix_(nodes, nodes)]
 
     num_components, _ = connected_components(cm, connection='strong')
     return num_components < 2

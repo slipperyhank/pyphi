@@ -12,7 +12,7 @@ from . import cache, config, convert, utils, validate
 from .config import PRECISION
 from .constants import DIRECTIONS, FUTURE, PAST
 from .jsonify import jsonify
-from .models import Concept, Cut, Mice, Mip, _null_mip, Part
+from .models import Concept, Cut, Mice, Mip, _null_mip, Part, Bipartition
 from .network import irreducible_purviews
 from .node import generate_nodes
 
@@ -42,8 +42,8 @@ class Subsystem:
             ``proper_state[i]`` gives the |ith| node in the subsystem. Note
             that this is **not** the state of node |i|.
         cut (Cut): The cut that has been applied to this subsystem.
-        connectivity_matrix (np.array): The connectivity matrix after applying
-            the cut.
+        cm (np.array): The connectivity matrix after applying the cut.
+        connectivity_matrix(np.array): Alias for `cm`.
         cut_matrix (np.array): A matrix of connections which have been severed
             by the cut.
         perturb_vector (np.array): The vector of perturbation probabilities for
@@ -91,8 +91,7 @@ class Subsystem:
         self.cut_matrix = self.cut.cut_matrix()
 
         # The network's connectivity matrix with cut applied
-        self.connectivity_matrix = utils.apply_cut(
-            cut, network.connectivity_matrix)
+        self.cm = utils.apply_cut(cut, network.cm)
 
         # The perturbation probabilities for each node in the network
         self.perturb_vector = network.perturb_vector
@@ -145,13 +144,13 @@ class Subsystem:
         validate.subsystem(self)
 
     @property
-    def cm(self):
-        """Alias for ``connectivity_matrix`` attribute."""
-        return self.connectivity_matrix
+    def connectivity_matrix(self):
+        """Alias for ``cm`` attribute."""
+        return self.cm
 
-    @cm.setter
-    def cm(self, cm):
-        self.connectivity_matrix = cm
+    @connectivity_matrix.setter
+    def connectivity_matrix(self, cm):
+        self.cm = cm
 
     @property
     def size(self):
@@ -267,6 +266,10 @@ class Subsystem:
                 "`indices` must be a subset of the Subsystem's indices.")
 
         return tuple(n for n in self.nodes if n.index in indices)
+
+    def indices2labels(self, indices):
+        """Returns the node labels for these indices."""
+        return tuple(n.label for n in self.indices2nodes(indices))
 
     @cache.method('_repertoire_cache', DIRECTIONS[PAST])
     def cause_repertoire(self, mechanism, purview):
@@ -434,25 +437,28 @@ class Subsystem:
 
         return accumulated_cjd
 
-    def _get_repertoire(self, direction):
-        """Return the cause or effect repertoire function based on a direction.
+    def _repertoire(self, direction, mechanism, purview):
+        """Return the cause or effect repertoire based on a direction.
 
         Args:
-            direction (str): The temporal direction (|past| or |future|)
-                specifiying the cause or effect repertoire.
+            direction (str): One of 'past' or 'future'.
+            mechanism (tuple(int)): The mechanism for which to calculate the
+                repertoire.
+            purview (tuple(int)): The purview over which to calculate the
+                repertoire.
 
         Returns:
-            repertoire_function (``function``): The cause or effect repertoire
-                function.
+            np.ndarray: The cause or effect repertoire of the mechanism over
+                the purview.
         """
         if direction == DIRECTIONS[PAST]:
-            return self.cause_repertoire
+            return self.cause_repertoire(mechanism, purview)
         elif direction == DIRECTIONS[FUTURE]:
-            return self.effect_repertoire
+            return self.effect_repertoire(mechanism, purview)
 
     def _unconstrained_repertoire(self, direction, purview):
         """Return the unconstrained cause/effect repertoire over a purview."""
-        return self._get_repertoire(direction)((), purview)
+        return self._repertoire(direction, (), purview)
 
     def unconstrained_cause_repertoire(self, purview):
         """Return the unconstrained cause repertoire for a purview.
@@ -467,6 +473,15 @@ class Subsystem:
         This is just the effect repertoire in the absence of any mechanism.
         """
         return self._unconstrained_repertoire(DIRECTIONS[FUTURE], purview)
+
+    def partitioned_repertoire(self, direction, partition):
+        """Compute the repertoire of a partitioned mechanism and purview."""
+        part1rep = self._repertoire(direction, partition[0].mechanism,
+                                    partition[0].purview)
+        part2rep = self._repertoire(direction, partition[1].mechanism,
+                                    partition[1].purview)
+
+        return part1rep * part2rep
 
     # TODO: can the purview be extrapolated from the repertoire?
     def expand_repertoire(self, direction, purview, repertoire,
@@ -558,8 +573,6 @@ class Subsystem:
             mip (|Mip|): The mininum-information partition in one temporal
                 direction.
         """
-        repertoire = self._get_repertoire(direction)
-
         # We default to the null MIP (the MIP of a reducible mechanism)
         mip = _null_mip(direction, mechanism, purview)
 
@@ -569,27 +582,31 @@ class Subsystem:
         phi_min = float('inf')
         # Calculate the unpartitioned repertoire to compare against the
         # partitioned ones
-        unpartitioned_repertoire = repertoire(mechanism, purview)
+        unpartitioned_repertoire = self._repertoire(direction, mechanism,
+                                                    purview)
+
+        def _mip(phi, partition, partitioned_repertoire):
+            # Prototype of MIP with already known data
+            # TODO: Use properties here to infer mechanism and purview from
+            # partition yet access them with `.mechanism` and `.purview`.
+            return Mip(phi=phi,
+                       direction=direction,
+                       mechanism=mechanism,
+                       purview=purview,
+                       partition=partition,
+                       unpartitioned_repertoire=unpartitioned_repertoire,
+                       partitioned_repertoire=partitioned_repertoire,
+                       subsystem=self)
 
         # State is unreachable - return 0 instead of giving nonsense results
         if (direction == DIRECTIONS[PAST] and
                 np.all(unpartitioned_repertoire == 0)):
-            return Mip(phi=0,
-                       direction=direction,
-                       mechanism=mechanism,
-                       purview=purview,
-                       partition=None,
-                       unpartitioned_repertoire=unpartitioned_repertoire,
-                       partitioned_repertoire=None)
+            return _mip(0, None, None)
 
         # Loop over possible MIP bipartitions
-        for part0, part1 in mip_bipartitions(mechanism, purview):
-            # Find the distance between the unpartitioned repertoire and
-            # the product of the repertoires of the two parts, e.g.
-            #   D( p(ABC/ABC) || p(AC/C) * p(B/AB) )
-            part1rep = repertoire(part0.mechanism, part0.purview)
-            part2rep = repertoire(part1.mechanism, part1.purview)
-            partitioned_repertoire = part1rep * part2rep
+        for partition in mip_bipartitions(mechanism, purview):
+            partitioned_repertoire = self.partitioned_repertoire(direction,
+                                                                 partition)
 
             if config.L1_DISTANCE_APPROXIMATION:
                 phi = utils.l1(unpartitioned_repertoire,
@@ -601,42 +618,22 @@ class Subsystem:
 
             # Return immediately if mechanism is reducible.
             if phi == 0:
-                return Mip(direction=direction,
-                           mechanism=mechanism,
-                           purview=purview,
-                           partition=(part0, part1),
-                           unpartitioned_repertoire=unpartitioned_repertoire,
-                           partitioned_repertoire=partitioned_repertoire,
-                           phi=0.0)
+                return _mip(0.0, partition, partitioned_repertoire)
 
             # Update MIP if it's more minimal.
             if phi < phi_min:
                 phi_min = phi
-                # TODO: Use properties here to infer mechanism and purview from
-                # partition yet access them with `.mechanism` and `.purview`.
-                mip = Mip(direction=direction,
-                          mechanism=mechanism,
-                          purview=purview,
-                          partition=(part0, part1),
-                          unpartitioned_repertoire=unpartitioned_repertoire,
-                          partitioned_repertoire=partitioned_repertoire,
-                          phi=phi)
+                mip = _mip(phi, partition, partitioned_repertoire)
 
         # Recompute distance for minimal MIP using the EMD
         if config.L1_DISTANCE_APPROXIMATION:
             phi = utils.hamming_emd(mip.unpartitioned_repertoire,
                                     mip.partitioned_repertoire)
-            mip = Mip(phi=round(phi, PRECISION),
-                      direction=mip.direction,
-                      mechanism=mip.mechanism,
-                      purview=mip.purview,
-                      partition=mip.partition,
-                      unpartitioned_repertoire=mip.unpartitioned_repertoire,
-                      partitioned_repertoire=mip.partitioned_repertoire)
+            phi = round(phi, PRECISION)
+            mip = _mip(phi, mip.partition, mip.partitioned_repertoire)
 
         return mip
 
-    # TODO Don't use these internally to avoid function call overhead
     def mip_past(self, mechanism, purview):
         """Return the past minimum information partition.
 
@@ -698,8 +695,7 @@ class Subsystem:
         # Purviews are already filtered in network._potential_purviews
         # over the full network connectivity matrix. However, since the cm
         # is cut/smaller we check again here.
-        return irreducible_purviews(self.connectivity_matrix,
-                                    direction, mechanism, purviews)
+        return irreducible_purviews(self.cm, direction, mechanism, purviews)
 
     @cache.method('_mice_cache')
     def find_mice(self, direction, mechanism, purviews=False):
@@ -776,18 +772,12 @@ class Subsystem:
         cause_repertoire = self.cause_repertoire((), ())
         # Unconstrained effect repertoire.
         effect_repertoire = self.effect_repertoire((), ())
+
         # Null cause.
-        cause = Mice(
-            Mip(unpartitioned_repertoire=cause_repertoire,
-                phi=0, direction=DIRECTIONS[PAST], mechanism=(),
-                purview=(),
-                partition=None, partitioned_repertoire=None))
-        # Null mip.
-        effect = Mice(
-            Mip(unpartitioned_repertoire=effect_repertoire,
-                phi=0, direction=DIRECTIONS[FUTURE], mechanism=(),
-                purview=(),
-                partition=None, partitioned_repertoire=None))
+        cause = Mice(_null_mip(DIRECTIONS[PAST], (), (), cause_repertoire))
+        # Null effect.
+        effect = Mice(_null_mip(DIRECTIONS[FUTURE], (), (), effect_repertoire))
+
         # All together now...
         return Concept(mechanism=(), phi=0, cause=cause, effect=effect,
                        subsystem=self)
@@ -827,7 +817,7 @@ def mip_bipartitions(mechanism, purview):
         purview (tuple(int)): The purview to partition
 
     Returns:
-        bipartitions (list(tuple((Part, Part)))): Where each partition is
+        bipartitions (Bipartition): Where each partition is
 
             bipart[0].mechanism   bipart[1].mechanism
             ------------------- X -------------------
@@ -838,11 +828,11 @@ def mip_bipartitions(mechanism, purview):
         >>> mechanism = (0,)
         >>> purview = (2, 3)
         >>> mip_bipartitions(mechanism, purview)
-        [(Part(mechanism=(), purview=(2,)), Part(mechanism=(0,), purview=(3,))), (Part(mechanism=(), purview=(3,)), Part(mechanism=(0,), purview=(2,))), (Part(mechanism=(), purview=(2, 3)), Part(mechanism=(0,), purview=()))]
+        [Bipartition(Part(mechanism=(), purview=(2,)), Part(mechanism=(0,),    purview=(3,))), Bipartition(Part(mechanism=(), purview=(3,)), Part(mechanism=(0,), purview=(2,))), Bipartition(Part(mechanism=(), purview=(2, 3)), Part(mechanism=(0,), purview=()))]
     """
     numerators = utils.bipartition(mechanism)
     denominators = utils.directed_bipartition(purview)
 
-    return [(Part(n[0], d[0]), Part(n[1], d[1]))
+    return [Bipartition(Part(n[0], d[0]), Part(n[1], d[1]))
             for (n, d) in itertools.product(numerators, denominators)
             if len(n[0]) + len(d[0]) > 0 and len(n[1]) + len(d[1]) > 0]
