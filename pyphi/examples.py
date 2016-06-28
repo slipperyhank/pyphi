@@ -8,8 +8,6 @@ Example networks and subsystems to go along with the documentation.
 
 import numpy as np
 
-from pyphi.convert import loli_index2state
-
 from .network import Network
 from .subsystem import Subsystem
 from .actual import Context
@@ -460,28 +458,28 @@ def macro_subsystem():
 def blackbox_network():
     """A micro-network to demonstrate blackboxing.
 
-    Diagram:
+    Diagram::
 
-                            +----------+
-      +-------------------->+ A (COPY) + <---------------+
-      |                     +----------+                 |
-      |                 +----------+                     |
-      |     +-----------+ B (COPY) + <-------------+     |
-      v     v           +----------+               |     |
-    +-+-----+-+                                  +-+-----+-+
-    |         |                                  |         |
-    | C (AND) |                                  | F (AND) |
-    |         |                                  |         |
-    +-+-----+-+                                  +-+-----+-+
-      |     |                                      ^     ^
-      |     |           +----------+               |     |
-      |     +---------> + D (COPY) +---------------+     |
-      |                 +----------+                     |
-      |                     +----------+                 |
-      +-------------------> + E (COPY) +-----------------+
-                            +----------+
+                                +----------+
+          +-------------------->+ A (COPY) + <---------------+
+          |                     +----------+                 |
+          |                 +----------+                     |
+          |     +-----------+ B (COPY) + <-------------+     |
+          v     v           +----------+               |     |
+        +-+-----+-+                                  +-+-----+-+
+        |         |                                  |         |
+        | C (AND) |                                  | F (AND) |
+        |         |                                  |         |
+        +-+-----+-+                                  +-+-----+-+
+          |     |                                      ^     ^
+          |     |           +----------+               |     |
+          |     +---------> + D (COPY) +---------------+     |
+          |                 +----------+                     |
+          |                     +----------+                 |
+          +-------------------> + E (COPY) +-----------------+
+                                +----------+
 
-    Connectivity Matrix:
+    Connectivity Matrix::
 
         +---+---+---+---+---+---+---+
         | . | A | B | C | D | E | F |

@@ -1,11 +1,11 @@
 .. image:: http://wmayner.github.io/pyphi/_static/pyphi-icon-and-text-380x90.png
-    :target: http://wmayner.github.io/pyphi/
+    :target: http://pyphi.readthedocs.io/en/latest/
     :alt: PyPhi logo
 
 |
 
-.. image:: https://zenodo.org/badge/4651/wmayner/pyphi.svg
-    :target: https://zenodo.org/badge/latestdoi/4651/wmayner/pyphi
+.. image:: https://zenodo.org/badge/doi/10.5281/zenodo.55692.svg
+    :target: http://dx.doi.org/10.5281/zenodo.55692
     :alt: Zenodo DOI badge
 
 .. image:: https://travis-ci.org/wmayner/pyphi.svg?branch=master
@@ -25,25 +25,26 @@
 PyPhi is a Python library for computing integrated information (|phi|), and the
 associated quantities and objects.
 
-If you use this code, please cite both this repository and the `IIT 3.0 paper
+If you use this code, please cite it, as well as the `IIT 3.0 paper
 <http://dx.doi.org/10.1371/journal.pcbi.1003588>`_.
 
-To cite this code, use the Zenodo DOI for the verison you used. The latest one
-is `available here <https://zenodo.org/badge/latestdoi/4651/wmayner/pyphi>`_.
+To cite the code, use the Zenodo DOI for the verison you used. The latest one
+is `10.5281/zenodo.55692 <http://dx.doi.org/10.5281/zenodo.55692>`_.
 For example::
 
-    Will Mayner et al.. (2015). pyphi: 0.7.0. Zenodo. 10.5281/zenodo.17498
+    Will Mayner et al. (2016). pyphi: 0.8.1. Zenodo. 10.5281/zenodo.55692
 
 Or in BibTeX::
 
     @misc{pyphi
-      author = {Will Mayner and
-                William Marshall},
-      title  = {pyphi: 0.7.0},
-      month  = May,
-      year   = 2015,
-      doi    = {10.5281/zenodo.17498},
-      url    = {http://dx.doi.org/10.5281/zenodo.17498}
+      author = {Mayner, Will and
+                Marshall, William and
+                Marchman, Bo},
+      title  = {pyphi: 0.8.1},
+      month  = Feb,
+      year   = 2016,
+      doi    = {10.5281/zenodo.55692},
+      url    = {http://dx.doi.org/10.5281/zenodo.55692}
     }
 
 (Just make sure to use the version number, DOI, and URL for the version you
@@ -53,9 +54,10 @@ actually used.)
 Usage, Examples, and API documentation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Check out the `documentation for the latest release
-<https://pythonhosted.org/pyphi>`_, or the `documentation for the latest
-development version <https://wmayner.github.io/pyphi>`_.
+Check out the `documentation for the latest stable release
+<http://pyphi.readthedocs.io/en/stable/>`_, or the `documentation for the
+latest (potentially unstable) development version
+<http://pyphi.readthedocs.io/en/latest/>`_.
 
 The documentation is also available within the Python interpreter with the
 ``help`` function.
@@ -141,32 +143,30 @@ Contributing
 To help develop PyPhi, fork the project on GitHub and install the requirements
 with ``pip install -r requirements.txt``.
 
+
 Development workflow
 ````````````````````
 
-``Gruntfile.js`` defines some tasks to help with development. These are run
-with `Grunt.js <http:gruntjs.com>`_.
-
-To get ``grunt``, first install `Node.js <http://nodejs.org/>`_. Then, within
-the ``pyphi`` directory, run ``npm install`` to install the local ``npm``
-dependencies, then run ``sudo npm install -g grunt grunt-cli`` to install the
-``grunt`` command to your system. Now you should be able to run tasks with
-``grunt``, *e.g.*
+``Makefile`` defines some tasks to help with development:
 
 .. code:: bash
 
-    grunt test
+    make test
 
-which will run the unit tests every time you change the source code. Similarly,
+runs the unit tests every time you change the source code.
 
 .. code:: bash
 
-    grunt docs
+    make docs
 
-will rebuild the HTML documentation on every change.
+builds the HTML documentation.
 
-At some point I'll try to use a Makefile instead, since many more people have
-access to ``make``.
+``Gruntfile.js`` defines similar tasks. To get grunt, first install
+`Node.js <http://nodejs.org/>`_. Then, within the ``pyphi`` directory, run
+``npm install`` to install the local npm dependencies, then run
+``sudo npm install -g grunt grunt-cli`` to install the ``grunt`` command to your
+system. You should now be able to run tasks with ``grunt``.
+
 
 Developing on Linux
 ```````````````````

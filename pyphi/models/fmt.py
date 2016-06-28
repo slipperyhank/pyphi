@@ -8,7 +8,11 @@ Helper functions for formatting pretty representations of PyPhi models.
 
 from itertools import chain
 
-from .. import config
+from .. import config, utils
+
+# TODO: will these print correctly on all terminals?
+SMALL_PHI = "\u03C6"
+BIG_PHI = "\u03D5"
 
 
 def make_repr(self, attrs):
@@ -23,10 +27,10 @@ def make_repr(self, attrs):
 
     Args:
         self (obj): The object in question
-        attrs (iterable(str)): Attributes to include in the repr
+        attrs (Iterable[str]): Attributes to include in the repr
 
     Returns:
-        (str): the `repr`esentation of the object
+        str: the `repr`esentation of the object
     """
     # TODO: change this to a closure so we can do
     # __repr__ = make_repr(attrs) ???
@@ -54,17 +58,84 @@ def indent(lines, amount=2, chr=' '):
 
     Returns:
         str: The indented string.
+
+    Example:
+        >>> print(indent("line1\\nline2", chr="*"))
+        **line1
+        **line2
     """
     lines = str(lines)
     padding = amount * chr
     return padding + ('\n' + padding).join(lines.split('\n'))
 
 
-def fmt_constellation(c):
-    """Format a constellation."""
-    if not c:
-        return "()\n"
-    return "\n\n" + "\n".join(map(lambda x: indent(x), c)) + "\n"
+def box(text):
+    """Wrap a chunk of text in a box.
+
+    Example:
+        >>> print(box('line1\\nline2'))
+        ---------
+        | line1 |
+        | line2 |
+        ---------
+    """
+    lines = text.split("\n")
+
+    width = max(len(l) for l in lines)
+    bar = "-" * (4 + width)
+    lines = ["| {line:<{width}} |".format(line=line, width=width)
+             for line in lines]
+
+    return bar + "\n" + "\n".join(lines) + "\n" + bar
+
+
+def side_by_side(left, right):
+    """Put two boxes next to each other.
+
+    Assumes that all lines in the boxes are the same width.
+
+    Example:
+        >>> left = "A \\nC "
+        >>> right = "B\\nD"
+        >>> print(side_by_side(left, right))
+        A B
+        C D
+        <BLANKLINE>
+    """
+    left_lines = list(left.split("\n"))
+    right_lines = list(right.split("\n"))
+
+    # Pad the shorter column with whitespace
+    diff = abs(len(left_lines) - len(right_lines))
+    if len(left_lines) > len(right_lines):
+        fill = " " * len(right_lines[0])
+        right_lines += [fill] * diff
+    elif len(right_lines) > len(left_lines):
+        fill = " " * len(left_lines[0])
+        left_lines += [fill] * diff
+
+    return "\n".join(a + b for a, b in zip(left_lines, right_lines)) + "\n"
+
+
+def header(header, text, over_char=None, under_char=None):
+    """Center a header over a block of text.
+
+    Assumes that all lines in the text are the same width.
+    """
+    lines = list(text.split("\n"))
+    width = len(lines[0])
+
+    header = header.center(width) + "\n"
+
+    # Underline header
+    if under_char:
+        header = header + under_char * width + "\n"
+
+    # 'Overline' header
+    if over_char:
+        header = over_char * width + "\n" + header
+
+    return header + text
 
 
 def labels(indices, subsystem=None):
@@ -115,7 +186,7 @@ def fmt_bipartition(partition, subsystem=None):
          2    0,1
 
     Args:
-        partition (tuple(Part, Part)): The partition in question.
+        partition (Bipartition): The partition in question.
 
     Returns:
         str: A human-readable string representation of the partition.
@@ -136,19 +207,38 @@ def fmt_bipartition(partition, subsystem=None):
     return "".join(chain.from_iterable(zip(part0, times, part1, breaks)))
 
 
+def fmt_constellation(c, title=None):
+    """Format a constellation."""
+    if not c:
+        return "()\n"
+
+    if title is None:
+        title = "Constellation"
+
+    concepts = "\n".join(indent(x) for x in c) + "\n"
+    title = "{} ({} concept{})".format(
+        title, len(c), "" if len(c) == 1 else "s")
+
+    return "\n" + header(title, concepts, "*", "*")
+
+
 def fmt_concept(concept):
     """Format a |Concept|."""
-    return (
-        "phi: {phi}\n"
-        "mechanism: {mechanism}\n"
-        "cause: {cause}\n"
-        "effect: {effect}\n".format(
-            phi=concept.phi,
-            mechanism=fmt_mechanism(concept.mechanism, concept.subsystem),
-            cause=("\n" + indent(fmt_mip(concept.cause.mip, verbose=False))
-                   if concept.cause else ""),
-            effect=("\n" + indent(fmt_mip(concept.effect.mip, verbose=False))
-                    if concept.effect else "")))
+
+    def fmt_cause_or_effect(x):
+        if not x:
+            return ""
+        return box(indent(fmt_mip(x.mip, verbose=False), amount=1))
+
+    cause = header("Cause", fmt_cause_or_effect(concept.cause))
+    effect = header("Effect", fmt_cause_or_effect(concept.effect))
+    ce = side_by_side(cause, effect)
+
+    mechanism = fmt_mechanism(concept.mechanism, concept.subsystem)
+    title = "Concept: Mechanism = {}, {} = {}".format(
+        mechanism, SMALL_PHI, concept.phi)
+
+    return header(title, ce, "=", "=")
 
 
 def fmt_mip(mip, verbose=True):
@@ -157,40 +247,47 @@ def fmt_mip(mip, verbose=True):
         return ""
 
     if verbose:
-        mechanism = "mechanism: {}\n".format(
+        mechanism = "Mechanism: {}\n".format(
             fmt_mechanism(mip.mechanism, mip.subsystem))
-        direction = "direction: {}\n".format(mip.direction)
+        direction = "Direction: {}\n".format(mip.direction)
     else:
         mechanism = ""
         direction = ""
 
     return (
-        "phi: {phi}\n"
+        "{SMALL_PHI} = {phi}\n"
         "{mechanism}"
-        "purview: {purview}\n"
-        "partition:\n{partition}\n"
+        "Purview = {purview}\n"
+        "Partition:\n{partition}\n"
         "{direction}"
-        "unpartitioned_repertoire:\n{unpart_rep}\n"
-        "partitioned_repertoire:\n{part_rep}").format(
+        "Unpartitioned Repertoire:\n{unpartitioned_repertoire}\n"
+        "Partitioned Repertoire:\n{partitioned_repertoire}").format(
+            SMALL_PHI=SMALL_PHI,
             mechanism=mechanism,
             purview=fmt_mechanism(mip.purview, mip.subsystem),
             direction=direction,
             phi=mip.phi,
             partition=indent(fmt_bipartition(mip.partition, mip.subsystem)),
-            unpart_rep=indent(mip.unpartitioned_repertoire),
-            part_rep=indent(mip.partitioned_repertoire))
+            unpartitioned_repertoire=indent(fmt_repertoire(
+                mip.unpartitioned_repertoire)),
+            partitioned_repertoire=indent(fmt_repertoire(
+                mip.partitioned_repertoire)))
+# TODO: print the two repertoires side-by-side?
 
 
 def fmt_cut(cut, subsystem=None):
     """Format a |Cut|."""
-    try:
-        severed = fmt_mechanism(cut.severed, subsystem)
-        intact = fmt_mechanism(cut.intact, subsystem)
-    # Macro systems are cut at the micro level - hence conversion to Nodes will
-    # fail. Catch this error and use the raw micro node indices instead.
-    except ValueError:
+    # Cut indices cannot be converted to labels for macro systems since macro
+    # systems are cut at the micro label. Avoid this error by using micro
+    # indices directly in the representation.
+    # TODO: somehow handle this with inheritance instead of a conditional?
+    from ..macro import MacroSubsystem
+    if isinstance(subsystem, MacroSubsystem):
         severed = str(cut.severed)
         intact = str(cut.intact)
+    else:
+        severed = fmt_mechanism(cut.severed, subsystem)
+        intact = fmt_mechanism(cut.intact, subsystem)
 
     return "Cut {severed} --//--> {intact}".format(severed=severed,
                                                    intact=intact)
@@ -199,16 +296,21 @@ def fmt_cut(cut, subsystem=None):
 def fmt_big_mip(big_mip):
     """Format a |BigMip|."""
     return (
-        "phi: {phi}\n"
-        "subsystem: {subsystem}\n"
-        "cut: {cut}\n"
-        "unpartitioned_constellation: {unpart_const}"
-        "partitioned_constellation: {part_const}".format(
+        "{BIG_PHI} = {phi}\n"
+        "{subsystem}\n"
+        "{cut}\n"
+        "{unpartitioned_constellation}"
+        "{partitioned_constellation}".format(
+            BIG_PHI=BIG_PHI,
             phi=big_mip.phi,
             subsystem=big_mip.subsystem,
             cut=fmt_cut(big_mip.cut, big_mip.subsystem),
-            unpart_const=fmt_constellation(big_mip.unpartitioned_constellation),
-            part_const=fmt_constellation(big_mip.partitioned_constellation)))
+            unpartitioned_constellation=fmt_constellation(
+                big_mip.unpartitioned_constellation,
+                "Unpartitioned Constellation"),
+            partitioned_constellation=fmt_constellation(
+                big_mip.partitioned_constellation,
+                "Partitioned Constellation")))
 
 
 def fmt_ac_mip(acmip, verbose=True):
@@ -253,3 +355,26 @@ def fmt_ac_big_mip(ac_big_mip):
                 ac_big_mip.unpartitioned_account),
             partitioned_account=fmt_constellation(
                 ac_big_mip.partitioned_account)))
+
+
+def fmt_repertoire(r):
+    """Format a repertoire."""
+    # TODO: will this get unwieldy with large repertoires?
+    if r is None:
+        return ""
+
+    r = r.squeeze()
+
+    lines = []
+
+    # Header: "S      P(S)"
+    space = " " * 4
+    lines.append("{S:^{s_width}}{space}P({S})".format(
+        S="S", s_width=r.ndim, space=space))
+
+    # Lines: "001     .25"
+    for state in utils.all_states(r.ndim):
+        state_str = "".join(str(i) for i in state)
+        lines.append("{0}{1}{2:g}".format(state_str, space, r[state]))
+
+    return box("\n".join(lines))
