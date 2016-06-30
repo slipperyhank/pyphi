@@ -377,7 +377,7 @@ class Context:
         return utils.normalize(cjd)
 
     @cache.method('_repertoire_cache', DIRECTIONS[FUTURE])
-    def effect_repertoire(self, mechanism, purview):
+    def effect_repertoire(self, mechanism, purview, state=None):
         """Return the effect repertoire of a mechanism over a purview.
 
         Args:
@@ -398,6 +398,8 @@ class Context:
             purview-repertoires with each other, since cut vs. whole
             comparisons are only ever done over the same purview.
         """
+        if state is None:
+            state = self.state
 
         # Check that the position is "before", else adjust
         if not self.position == 'before':
@@ -461,7 +463,7 @@ class Context:
         mechanism_inputs = [node.index for node in mechanism_nodes
                             if set(node.output_indices) & set(purview)]
         accumulated_cjd = utils.condition_tpm(
-            accumulated_cjd, mechanism_inputs, self.state)
+            accumulated_cjd, mechanism_inputs, state)
 
         # The distribution still has twice as many dimensions as the network
         # has nodes, with the first half of the shape now all singleton
@@ -491,6 +493,13 @@ class Context:
         elif direction == DIRECTIONS[FUTURE]:
             return self.effect_repertoire
 
+    def _get_coefficent(self, direction):
+        """Returns the cause or effect coefficient function based on a direction."""
+        if direction == DIRECTIONS[PAST]:
+            return self.cause_coefficient
+        elif direction == DIRECTIONS[FUTURE]:
+            return self.effect_coefficient
+
     def _unconstrained_repertoire(self, direction, purview):
         """Return the unconstrained cause or effect repertoire over a
         purview."""
@@ -509,6 +518,24 @@ class Context:
         This is just the effect repertoire in the absence of any mechanism.
         """
         return self._unconstrained_repertoire(DIRECTIONS[FUTURE], purview)
+
+    def average_effect_repertoire(self, mechanism, purview):
+        """Return the average effect repertoire for a purview averaged over all possible mechanism states.
+        """
+        all_mech_states = np.array(list(utils.all_states(len(mechanism))))
+        # expand states so that they have the same length as self.state with 0 for non mechanism nodes
+        # transposed because I still don't know how to index columns (Matlab is so much easier!!!)
+        all_states = np.zeros((len(self.nodes), all_mech_states.shape[0]))
+
+        all_states[np.ix_(mechanism)] = all_mech_states.T
+        all_states = all_states.T
+
+        sum_effect_repertoires = sum([self.effect_repertoire(mechanism, purview, tuple(state)) for state in all_states])
+        sum_er = sum_effect_repertoires.sum()
+       
+        if sum_er == 0:
+            return sum_effect_repertoires
+        return sum_effect_repertoires/sum_er
 
     def expand_repertoire(self, direction, purview, repertoire,
                           new_purview=None):
@@ -580,18 +607,27 @@ class Context:
             self.unconstrained_cause_repertoire(purview)),
             PRECISION)
 
-    def cause_coefficient(self, mechanism, purview, norm=True):
-        """ Return the cause coefficient for a mechanism in a state over a
+    def cause_coefficient(self, mechanism_or_repertoire, purview, norm=True):
+        """ Return the cause coefficient for a mechanism in a state (or a cause repertoire) over a
         purview in the actual past state """
         if not self.position == 'after':
             self.position = 'after'
         if norm:
+            # here we use the unconstrained repertoire, because on the cause side that is the same
+            # as the average cause repertoire
             normalization = self.state_probability(self.cause_repertoire((), purview), purview)
         else:
             normalization = 1
-        return self.state_probability(self.cause_repertoire(mechanism, purview),
-                                      purview) / normalization
 
+        # assumes that mechanisms are given as tuples and repertoires are not tuples.
+        # Todo: I hope this is always true, but probably there is a better way to do this.
+        if isinstance(mechanism_or_repertoire, tuple):
+            repertoire = self.cause_repertoire(mechanism, purview)
+        else: 
+            repertoire = mechanism_or_repertoire    
+
+        return self.state_probability(repertoire, purview) / normalization
+        
     def effect_info(self, mechanism, purview):
         """Return the effect information for a mechanism over a purview."""
         return round(utils.hamming_emd(
@@ -600,14 +636,24 @@ class Context:
             PRECISION)
 
     def effect_coefficient(self, mechanism, purview, norm=True):
-        """ Return the effect coefficient for a mechanism in a state over a
+        """ Return the effect coefficient for a mechanism in a state (or an effect repertoire) over a
         purview in the actual future state """
         if not self.position == 'before':
             self.position = 'before'
         if norm:
-            normalization = self.state_probability(self.effect_repertoire((), purview), purview)
+            #normalization = self.state_probability(self.effect_repertoire((), purview), purview)
+            # Take the average repertoire not the unconstrained one here to comply with Bayes Rule!
+            normalization = self.state_probability(self.average_effect_repertoire(mechanism, purview), purview)
         else:
             normalization = 1
+
+        # assumes that mechanisms are given as tuples and repertoires are not tuples.
+        # Todo: I hope this is always true, but probably there is a better way to do this.
+        if isinstance(mechanism_or_repertoire, tuple):
+            repertoire = self.cause_repertoire(mechanism, purview)
+        else: 
+            repertoire = mechanism_or_repertoire    
+
         return self.state_probability(self.effect_repertoire(mechanism, purview),
                                       purview) / normalization
 
@@ -679,17 +725,13 @@ class Context:
         """
 
         repertoire = self._get_repertoire(direction)
+        coefficient = self._get_coefficient(direction)
+
         alpha_min = float('inf')
-        # Calculate the unpartitioned probability to compare against the
-        # partitioned probabilities
-        unpartitioned_repertoire = repertoire(mechanism, purview)
-        probability = self.state_probability(unpartitioned_repertoire, purview)
-        if norm:
-            unconstrained_repertoire = repertoire((), purview)
-            normalization = self.state_probability(
-                unconstrained_repertoire, purview)
-        else:
-            normalization = 1
+        # Calculate the unpartitioned coefficient to compare against the
+        # partitioned coefficient
+        unpartitioned_coefficient = coefficient(mechanism,purview,norm)
+            
         # Loop over possible MIP bipartitions
         for part0, part1 in self._mip_bipartition(mechanism, purview):
             # Find the distance between the unpartitioned repertoire and
@@ -698,8 +740,18 @@ class Context:
             part1rep = repertoire(part0.mechanism, part0.purview)
             part2rep = repertoire(part1.mechanism, part1.purview)
             partitioned_repertoire = part1rep * part2rep
-            partitioned_probability = self.state_probability(
-                partitioned_repertoire, purview)
+            partitioned_coefficient = coefficient(partitioned_repertoire, purview)
+            # Is the partitioned coefficient the product of the coefficient of the parts?
+            # That would make it easy
+            
+
+            if norm:
+            unconstrained_repertoire = repertoire((), purview)
+            normalization = self.state_probability(
+                unconstrained_repertoire, purview)
+            else:
+            normalization = 1
+
             alpha = (probability - partitioned_probability) / normalization
             # First check for 0
             # Default: don't count contrary causes and effects
