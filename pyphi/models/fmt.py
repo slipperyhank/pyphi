@@ -225,15 +225,15 @@ def fmt_ac_mip(acmip, verbose=True):
         "purview: {acmip.purview}\t"
         "{direction}"
         "partition:\n{partition}\n"
-        "probability:\t{probability}\t"
-        "partitioned_probability:\t{partitioned_probability}\n").format(
+        "coefficient:\t{coefficient}\t"
+        "partitioned_coefficient:\t{partitioned_coefficient}\n").format(
             alpha="{0:.4f}".format(round(acmip.alpha, 4)),
             mechanism=mechanism,
             direction=direction,
             acmip=acmip,
             partition=indent(fmt_bipartition(acmip.partition)),
-            probability=indent(acmip.probability),
-            partitioned_probability=indent(acmip.partitioned_probability))
+            coefficient=indent(acmip.coefficient),
+            partitioned_coefficient=indent(acmip.partitioned_coefficient))
 
 
 def fmt_ac_big_mip(ac_big_mip):
