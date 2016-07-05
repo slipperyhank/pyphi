@@ -527,10 +527,13 @@ class Context:
         else:
             all_mech_states = np.array(list(utils.all_states(len(mechanism))))
             # expand states so that they have the same length as self.state with 0 for non mechanism nodes
+            # note: self.state is always the full system, not just the set of nodes of the context
             # transposed because I still don't know how to index columns (Matlab is so much easier!!!)
-            all_states = np.zeros((len(self.nodes), all_mech_states.shape[0]))
+            all_states = np.zeros((len(self.state), all_mech_states.shape[0]))
+            mechanism_indices = [self.network.node_indices.index(m) for m in mechanism]
+            
+            all_states[np.ix_(mechanism_indices)] = all_mech_states.T
 
-            all_states[np.ix_(mechanism)] = all_mech_states.T
             all_states = all_states.T
             if partition == None:
                 sum_effect_repertoires = sum([self.effect_repertoire(mechanism, purview, tuple(state)) for state in all_states])
@@ -538,7 +541,7 @@ class Context:
                 sum_effect_repertoires = sum([self.effect_repertoire(partition[0].mechanism, partition[0].purview, tuple(state))*
                                               self.effect_repertoire(partition[1].mechanism, partition[1].purview, tuple(state))
                                               for state in all_states])    
-
+            
             sum_er = sum_effect_repertoires.sum()
         
             if sum_er == 0:
