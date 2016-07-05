@@ -378,6 +378,49 @@ def marginalize_out(index, tpm, perturb_value=0.5):
                            [1] + [i for i in tpm.shape[index:]])
 
 
+def marginal_zero(repertoire, node_index):
+    """Return the marginal probability that the node is off."""
+    index = [slice(None) for i in range(repertoire.ndim)]
+    index[node_index] = 0
+
+    return repertoire[index].sum()
+
+
+def marginal(repertoire, node_index):
+    """Get the marginal distribution for a node."""
+    index = tuple(i for i in range(repertoire.ndim) if i != node_index)
+
+    return repertoire.sum(index, keepdims=True)
+
+
+def independent(repertoire):
+    """Check whether the repertoire is independent."""
+    marginals = [marginal(repertoire, i) for i in range(repertoire.ndim)]
+
+    # TODO: is there a way to do without an explicit iteration?
+    joint = marginals[0]
+    for m in marginals[1:]:
+        joint = joint * m
+
+    # TODO: should we round here?
+    #repertoire = repertoire.round(config.PRECISION)
+    #joint = joint.round(config.PRECISION)
+
+    return np.array_equal(repertoire, joint)
+
+
+def purview_size(repertoire):
+    """Return the size of the purview of the repertoire.
+
+    Args:
+        repertoire (np.ndarray): A repertoire
+
+    Returns:
+        int: The size of purview that the repertoire was computed over.
+    """
+    return len(np.where(np.array(repertoire.shape) == 2)[0])
+
+
 @cache(cache={}, maxmem=None)
 def max_entropy_distribution(node_indices, number_of_nodes,
                              perturb_vector=None):

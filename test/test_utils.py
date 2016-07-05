@@ -337,3 +337,50 @@ def test_causally_significant_nodes():
         [0, 1, 1],
     ])
     assert utils.causally_significant_nodes(cm) == (1, 2)
+
+
+def test_marginal_zero():
+    repertoire = np.array([
+        [[0., 0.],
+         [0., 0.5]],
+        [[0., 0.],
+         [0., 0.5]]])
+    assert utils.marginal_zero(repertoire, 0) == 0.5
+    assert utils.marginal_zero(repertoire, 1) == 0
+    assert utils.marginal_zero(repertoire, 2) == 0
+
+
+def test_marginal():
+    repertoire = np.array([
+        [[0., 0.],
+         [0., 0.5]],
+        [[0., 0.],
+         [0., 0.5]]])
+    assert np.array_equal(utils.marginal(repertoire, 0), np.array([[[0.5]], [[0.5]]]))
+    assert np.array_equal(utils.marginal(repertoire, 1), np.array([[[0], [1]]]))
+    assert np.array_equal(utils.marginal(repertoire, 2), np.array([[[0, 1]]]))
+
+
+def test_independent():
+    repertoire = np.array([
+        [[ 0.25],
+         [ 0.25]],
+        [[ 0.25],
+         [ 0.25]]])
+    assert utils.independent(repertoire)
+
+    repertoire = np.array([
+        [[ 0.5],
+         [ 0. ]],
+        [[ 0. ],
+         [ 0.5]]])
+    assert not utils.independent(repertoire)
+
+
+def test_purview_size(s):
+    mechanisms = utils.powerset(s.node_indices)
+    purviews = utils.powerset(s.node_indices)
+
+    for mechanism, purview in zip(mechanisms, purviews):
+        repertoire = s.cause_repertoire(mechanism, purview)
+        assert utils.purview_size(repertoire) == len(purview)

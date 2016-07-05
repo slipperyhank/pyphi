@@ -531,17 +531,15 @@ class Subsystem:
 
     def cause_info(self, mechanism, purview):
         """Return the cause information for a mechanism over a purview."""
-        return round(utils.hamming_emd(
-            self.cause_repertoire(mechanism, purview),
-            self.unconstrained_cause_repertoire(purview)),
-            PRECISION)
+        return emd(DIRECTIONS[PAST],
+                   self.cause_repertoire(mechanism, purview),
+                   self.unconstrained_cause_repertoire(purview))
 
     def effect_info(self, mechanism, purview):
         """Return the effect information for a mechanism over a purview."""
-        return round(utils.hamming_emd(
-            self.effect_repertoire(mechanism, purview),
-            self.unconstrained_effect_repertoire(purview)),
-            PRECISION)
+        return emd(DIRECTIONS[FUTURE],
+                   self.effect_repertoire(mechanism, purview),
+                   self.unconstrained_effect_repertoire(purview))
 
     def cause_effect_info(self, mechanism, purview):
         """Return the cause-effect information for a mechanism over a purview.
@@ -604,10 +602,10 @@ class Subsystem:
             if config.L1_DISTANCE_APPROXIMATION:
                 phi = utils.l1(unpartitioned_repertoire,
                                partitioned_repertoire)
+                phi = round(phi, PRECISION)
             else:
-                phi = utils.hamming_emd(unpartitioned_repertoire,
-                                        partitioned_repertoire)
-            phi = round(phi, PRECISION)
+                phi = emd(direction, unpartitioned_repertoire,
+                          partitioned_repertoire)
 
             # Return immediately if mechanism is reducible.
             if phi == 0:
@@ -620,9 +618,8 @@ class Subsystem:
 
         # Recompute distance for minimal MIP using the EMD
         if config.L1_DISTANCE_APPROXIMATION:
-            phi = utils.hamming_emd(mip.unpartitioned_repertoire,
-                                    mip.partitioned_repertoire)
-            phi = round(phi, PRECISION)
+            phi = emd(direction, mip.unpartitioned_repertoire,
+                      mip.partitioned_repertoire)
             mip = _mip(phi, mip.partition, mip.partitioned_repertoire)
 
         return mip
@@ -841,3 +838,86 @@ def mip_bipartitions(mechanism, purview):
     return [Bipartition(Part(n[0], d[0]), Part(n[1], d[1]))
             for (n, d) in itertools.product(numerators, denominators)
             if len(n[0]) + len(d[0]) > 0 and len(n[1]) + len(d[1]) > 0]
+
+
+def effect_emd(d1, d2):
+    """Compute the EMD between two effect repertoires.
+
+    Billy's synopsis: Because the nodes are independent, the EMD between
+    effect repertoires is equal to the sum of the EMDs between the marginal
+    distributions of each node, and the EMD between marginal distribution for a
+    node is the absolute difference in the probabilities that the node is off.
+
+    Args:
+        d1 (np.ndarray): The first repertoire.
+        d2 (np.ndarray): The second repertoire.
+
+    Returns:
+        float: The EMD between ``d1`` and ``d2``.
+    """
+    return sum(np.abs(utils.marginal_zero(d1, i) - utils.marginal_zero(d2, i))
+               for i in range(d1.ndim))
+
+
+# Hack hack quick and dirty stats
+independent_repertoires = 0
+total_repertoires = 0
+
+import logging
+log = logging.getLogger(__file__)
+
+
+def cause_emd(d1, d2):
+    """Compute the EMD between two cause repertoires.
+
+    If the distributions are independent we can use the same shortcut we use
+    for effect repertoires. Otherwise fall back to the Hamming EMD.
+    """
+    # TODO: remove
+    # Log independent repertoires (irregardless of dimensionality)
+    # Note that each process has its own global variables so there will be
+    # weird interleavings of results.
+    #
+    # To enable logging, set LOG_CAUSE_REPERTOIRE_INDEPENDCE=True and
+    # the log level to 'INFO'.
+    if config.LOG_CAUSE_REPERTOIRE_INDEPENDENCE:
+        global independent_repertoires
+        global total_repertoires
+
+        total_repertoires += 1
+        if utils.independent(d1) and utils.independent(d2):
+            independent_repertoires += 1
+        log.info("{}/{} ({:.2g}%) independent cause repertoires".format(
+            independent_repertoires, total_repertoires,
+            100 * independent_repertoires / total_repertoires))
+
+    # TODO: benchmark with real repertoires and find the best cutoff
+    # TODO: do we need to check both distributions? or just one?
+    if utils.purview_size(d1) > 6 and (utils.independent(d1) and
+                                       utils.independent(d2)):
+        return effect_emd(d1, d2)
+
+    return utils.hamming_emd(d1, d2)
+
+
+def emd(direction, d1, d2):
+    """Compute the EMD between two repertoires for a given direction.
+
+    The full EMD computation is used for cause repertoires. A fast analytic
+    solution is used for effect repertoires.
+
+    Args:
+        direction (str): Either |past| or |future|.
+        d1 (np.ndarray): The first repertoire.
+        d2 (np.ndarray): The second repertoire.
+
+    Returns:
+        float: The EMD between ``d1`` and ``d2``, rounded to |PRECISION|.
+    """
+
+    if direction == DIRECTIONS[PAST]:
+        func = cause_emd
+    elif direction == DIRECTIONS[FUTURE]:
+        func = effect_emd
+
+    return round(func(d1, d2), PRECISION)
