@@ -532,7 +532,7 @@ class Context:
 
         sum_effect_repertoires = sum([self.effect_repertoire(mechanism, purview, tuple(state)) for state in all_states])
         sum_er = sum_effect_repertoires.sum()
-       
+
         if sum_er == 0:
             return sum_effect_repertoires
         return sum_effect_repertoires/sum_er
@@ -623,11 +623,11 @@ class Context:
         # Todo: I hope this is always true, but probably there is a better way to do this.
         if isinstance(mechanism_or_repertoire, tuple):
             repertoire = self.cause_repertoire(mechanism, purview)
-        else: 
-            repertoire = mechanism_or_repertoire    
+        else:
+            repertoire = mechanism_or_repertoire
 
         return self.state_probability(repertoire, purview) / normalization
-        
+
     def effect_info(self, mechanism, purview):
         """Return the effect information for a mechanism over a purview."""
         return round(utils.hamming_emd(
@@ -651,8 +651,8 @@ class Context:
         # Todo: I hope this is always true, but probably there is a better way to do this.
         if isinstance(mechanism_or_repertoire, tuple):
             repertoire = self.cause_repertoire(mechanism, purview)
-        else: 
-            repertoire = mechanism_or_repertoire    
+        else:
+            repertoire = mechanism_or_repertoire
 
         return self.state_probability(self.effect_repertoire(mechanism, purview),
                                       purview) / normalization
@@ -730,8 +730,8 @@ class Context:
         alpha_min = float('inf')
         # Calculate the unpartitioned coefficient to compare against the
         # partitioned coefficient
-        unpartitioned_coefficient = coefficient(mechanism,purview,norm)
-            
+        unpartitioned_coefficient = coefficient(mechanism, purview, norm)
+
         # Loop over possible MIP bipartitions
         for part0, part1 in self._mip_bipartition(mechanism, purview):
             # Find the distance between the unpartitioned repertoire and
@@ -743,14 +743,13 @@ class Context:
             partitioned_coefficient = coefficient(partitioned_repertoire, purview)
             # Is the partitioned coefficient the product of the coefficient of the parts?
             # That would make it easy
-            
+
 
             if norm:
-            unconstrained_repertoire = repertoire((), purview)
-            normalization = self.state_probability(
-                unconstrained_repertoire, purview)
+                unconstrained_repertoire = repertoire((), purview)
+                normalization = self.state_probability(unconstrained_repertoire, purview)
             else:
-            normalization = 1
+                normalization = 1
 
             alpha = (probability - partitioned_probability) / normalization
             # First check for 0
