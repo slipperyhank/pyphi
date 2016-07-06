@@ -1141,7 +1141,7 @@ def big_acmip(context, direction=None):
             if new_ac_mip < ac_mip:
                 ac_mip = new_ac_mip
             # Short-circuit as soon as we find a MIP with effectively 0 phi.
-            if not ac_mip:
+            if ac_mip.alpha <= 0:
                 break
         result = ac_mip
     log.info("Finished calculating big-ac-phi data for {}.".format(context))

@@ -363,7 +363,7 @@ class AcBigMip:
     def __bool__(self):
         """A BigMip is truthy if it is not reducible; i.e. if it has a
         significant amount of |big_ap_phi|."""
-        return not _ap_phi_eq(self.alpha, 0)
+        return not utils.phi_eq(max(0,self.alpha), 0)
 
     def __hash__(self):
         return hash((self.alpha, self.unpartitioned_account,
