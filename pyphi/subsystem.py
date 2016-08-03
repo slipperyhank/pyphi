@@ -477,28 +477,22 @@ class Subsystem:
 
         return part1rep * part2rep
 
-    # TODO: can the purview be extrapolated from the repertoire?
-    def expand_repertoire(self, direction, purview, repertoire,
-                          new_purview=None):
+    def expand_repertoire(self, direction, repertoire, new_purview=None):
         """Expand a partial repertoire over a purview to a distribution over a
         new state space.
 
         Args:
             direction (str): Either |past| or |future|.
-            purview (tuple[int] or None): The purview over which the repertoire
-                was calculated.
-            repertoire (``np.ndarray``): A repertoire computed over
-                ``purview``.
+            repertoire (np.ndarray): A repertoire.
 
         Keyword Args:
             new_purview (tuple[int]): The purview to expand the repertoire
                 over. Defaults to the entire subsystem.
 
         Returns:
-            ``np.ndarray``: The expanded repertoire.
+            np.ndarray: The expanded repertoire.
         """
-        if purview is None:
-            purview = ()
+        purview = utils.purview(repertoire)
 
         if new_purview is None:
             new_purview = self.node_indices  # full subsystem
@@ -515,18 +509,18 @@ class Subsystem:
 
         return utils.normalize(expanded_repertoire)
 
-    def expand_cause_repertoire(self, purview, repertoire, new_purview=None):
+    def expand_cause_repertoire(self, repertoire, new_purview=None):
         """Expand a partial cause repertoire over a purview to a distribution
         over the entire subsystem's state space.
         """
-        return self.expand_repertoire(DIRECTIONS[PAST], purview, repertoire,
+        return self.expand_repertoire(DIRECTIONS[PAST], repertoire,
                                       new_purview)
 
-    def expand_effect_repertoire(self, purview, repertoire, new_purview=None):
+    def expand_effect_repertoire(self, repertoire, new_purview=None):
         """Expand a partial effect repertoire over a purview to a distribution
         over the entire subsystem's state space.
         """
-        return self.expand_repertoire(DIRECTIONS[FUTURE], purview, repertoire,
+        return self.expand_repertoire(DIRECTIONS[FUTURE], repertoire,
                                       new_purview)
 
     def cause_info(self, mechanism, purview):
@@ -859,47 +853,6 @@ def effect_emd(d1, d2):
                for i in range(d1.ndim))
 
 
-# Hack hack quick and dirty stats
-independent_repertoires = 0
-total_repertoires = 0
-
-import logging
-log = logging.getLogger(__file__)
-
-
-def cause_emd(d1, d2):
-    """Compute the EMD between two cause repertoires.
-
-    If the distributions are independent we can use the same shortcut we use
-    for effect repertoires. Otherwise fall back to the Hamming EMD.
-    """
-    # TODO: remove
-    # Log independent repertoires (irregardless of dimensionality)
-    # Note that each process has its own global variables so there will be
-    # weird interleavings of results.
-    #
-    # To enable logging, set LOG_CAUSE_REPERTOIRE_INDEPENDCE=True and
-    # the log level to 'INFO'.
-    if config.LOG_CAUSE_REPERTOIRE_INDEPENDENCE:
-        global independent_repertoires
-        global total_repertoires
-
-        total_repertoires += 1
-        if utils.independent(d1) and utils.independent(d2):
-            independent_repertoires += 1
-        log.info("{}/{} ({:.2g}%) independent cause repertoires".format(
-            independent_repertoires, total_repertoires,
-            100 * independent_repertoires / total_repertoires))
-
-    # TODO: benchmark with real repertoires and find the best cutoff
-    # TODO: do we need to check both distributions? or just one?
-    if utils.purview_size(d1) > 6 and (utils.independent(d1) and
-                                       utils.independent(d2)):
-        return effect_emd(d1, d2)
-
-    return utils.hamming_emd(d1, d2)
-
-
 def emd(direction, d1, d2):
     """Compute the EMD between two repertoires for a given direction.
 
@@ -916,7 +869,7 @@ def emd(direction, d1, d2):
     """
 
     if direction == DIRECTIONS[PAST]:
-        func = cause_emd
+        func = utils.hamming_emd
     elif direction == DIRECTIONS[FUTURE]:
         func = effect_emd
 
