@@ -493,7 +493,7 @@ class Context:
         elif direction == DIRECTIONS[FUTURE]:
             return self.effect_repertoire
 
-    def _get_coefficent(self, direction):
+    def _get_coefficient(self, direction):
         """Returns the cause or effect coefficient function based on a direction."""
         if direction == DIRECTIONS[PAST]:
             return self.cause_coefficient
@@ -519,23 +519,36 @@ class Context:
         """
         return self._unconstrained_repertoire(DIRECTIONS[FUTURE], purview)
 
-    def average_effect_repertoire(self, mechanism, purview):
+    def average_effect_repertoire(self, mechanism, purview, partition=None):
         """Return the average effect repertoire for a purview averaged over all possible mechanism states.
         """
-        all_mech_states = np.array(list(utils.all_states(len(mechanism))))
-        # expand states so that they have the same length as self.state with 0 for non mechanism nodes
-        # transposed because I still don't know how to index columns (Matlab is so much easier!!!)
-        all_states = np.zeros((len(self.nodes), all_mech_states.shape[0]))
+        if not mechanism or not purview:
+            return self.effect_repertoire(mechanism,purview)
+        else:
+            all_mech_states = np.array(list(utils.all_states(len(mechanism))))
+            # expand states so that they have the same length as self.state with 0 for non mechanism nodes
+            # note: self.state is always the full system, not just the set of nodes of the context
+            # transposed because I still don't know how to index columns (Matlab is so much easier!!!)
+            all_states = np.zeros((len(self.state), all_mech_states.shape[0]))
+            mechanism_indices = [self.network.node_indices.index(m) for m in mechanism]
 
-        all_states[np.ix_(mechanism)] = all_mech_states.T
-        all_states = all_states.T
+            all_states[np.ix_(mechanism_indices)] = all_mech_states.T
+            all_states = all_states.T
+            if partition == None:
+                sum_effect_repertoires = sum([self.effect_repertoire(mechanism, purview, tuple(state))
+                                              for state in all_states])
+            else:
+                sum_effect_repertoires = sum([self.effect_repertoire(partition[0].mechanism,
+                                                                     partition[0].purview, tuple(state))*
+                                              self.effect_repertoire(partition[1].mechanism,
+                                                                     partition[1].purview, tuple(state))
+                                              for state in all_states])
 
-        sum_effect_repertoires = sum([self.effect_repertoire(mechanism, purview, tuple(state)) for state in all_states])
-        sum_er = sum_effect_repertoires.sum()
+            sum_er = sum_effect_repertoires.sum()
 
-        if sum_er == 0:
-            return sum_effect_repertoires
-        return sum_effect_repertoires/sum_er
+            if sum_er == 0:
+                return sum_effect_repertoires
+            return sum_effect_repertoires/sum_er
 
     def expand_repertoire(self, direction, purview, repertoire,
                           new_purview=None):
@@ -584,6 +597,9 @@ class Context:
         should receive 0 as the conditioning index. A single probability is
         returned.
         """
+        if not purview:
+            return None
+
         index = tuple(self.actual_state[i] if i in purview else 0
                       for i in range(len(self.state)))
         return repertoire[index]
@@ -607,24 +623,28 @@ class Context:
             self.unconstrained_cause_repertoire(purview)),
             PRECISION)
 
-    def cause_coefficient(self, mechanism_or_repertoire, purview, norm=True):
+    def cause_coefficient(self, mechanism, purview, norm=True, partition=None):
         """ Return the cause coefficient for a mechanism in a state (or a cause repertoire) over a
         purview in the actual past state """
+        # Return 1. here as that is the value for a state that has the same probability as the unconstrained.
+        if not purview:
+            return 1.
+
         if not self.position == 'after':
             self.position = 'after'
         if norm:
-            # here we use the unconstrained repertoire, because on the cause side that is the same
-            # as the average cause repertoire
+            # here we use the unconstrained repertoire instead of the average repertoire,
+            # because on the cause side they are the same anyways
             normalization = self.state_probability(self.cause_repertoire((), purview), purview)
         else:
             normalization = 1
 
-        # assumes that mechanisms are given as tuples and repertoires are not tuples.
-        # Todo: I hope this is always true, but probably there is a better way to do this.
-        if isinstance(mechanism_or_repertoire, tuple):
+        if partition == None:
             repertoire = self.cause_repertoire(mechanism, purview)
         else:
-            repertoire = mechanism_or_repertoire
+            part1rep = self.cause_repertoire(partition[0].mechanism, partition[0].purview)
+            part2rep = self.cause_repertoire(partition[1].mechanism, partition[1].purview)
+            repertoire = part1rep * part2rep
 
         return self.state_probability(repertoire, purview) / normalization
 
@@ -635,27 +655,31 @@ class Context:
             self.unconstrained_effect_repertoire(purview)),
             PRECISION)
 
-    def effect_coefficient(self, mechanism, purview, norm=True):
+    def effect_coefficient(self, mechanism, purview, norm=True, partition=None):
         """ Return the effect coefficient for a mechanism in a state (or an effect repertoire) over a
         purview in the actual future state """
         if not self.position == 'before':
             self.position = 'before'
+
+        #Todo: Deal with purview = ()
+        if not purview:
+            return 1.0
+
         if norm:
-            #normalization = self.state_probability(self.effect_repertoire((), purview), purview)
             # Take the average repertoire not the unconstrained one here to comply with Bayes Rule!
-            normalization = self.state_probability(self.average_effect_repertoire(mechanism, purview), purview)
+            av_effect_repertoire = self.average_effect_repertoire(mechanism, purview, partition)
+            normalization = self.state_probability(av_effect_repertoire, purview)
         else:
             normalization = 1
 
-        # assumes that mechanisms are given as tuples and repertoires are not tuples.
-        # Todo: I hope this is always true, but probably there is a better way to do this.
-        if isinstance(mechanism_or_repertoire, tuple):
-            repertoire = self.cause_repertoire(mechanism, purview)
+        if partition == None:
+            repertoire = self.effect_repertoire(mechanism, purview)
         else:
-            repertoire = mechanism_or_repertoire
+            part1rep = self.effect_repertoire(partition[0].mechanism, partition[0].purview)
+            part2rep = self.effect_repertoire(partition[1].mechanism, partition[1].purview)
+            repertoire = part1rep * part2rep
 
-        return self.state_probability(self.effect_repertoire(mechanism, purview),
-                                      purview) / normalization
+        return self.state_probability(repertoire, purview) / normalization
 
     def cause_effect_info(self, mechanism, purview):
         """Return the cause-effect information for a mechanism over a
@@ -678,7 +702,7 @@ class Context:
         TODO: use ``itertools.product``??
         """
         purview_bipartitions = utils.bipartition(purview)
-        # Also consider reverse or each parition, eg:
+        # Also consider reverse or each partition, eg:
         #   [((A), (BC)), ...] -> [((BC), (A)), ...]
         reverse_bipartitions = [x[::-1] for x in purview_bipartitions]
         result = []
@@ -709,9 +733,8 @@ class Context:
                      mechanism=mechanism,
                      purview=purview,
                      partition=None,
-                     probability=None,
-                     partitioned_probability=None,
-                     unconstrained_probability=None,
+                     coefficient=None,
+                     partitioned_coefficient=None,
                      alpha=0.0)
 
     def find_mip(self, direction, mechanism, purview,
@@ -724,7 +747,6 @@ class Context:
             Todo: also return cut etc. ?
         """
 
-        repertoire = self._get_repertoire(direction)
         coefficient = self._get_coefficient(direction)
 
         alpha_min = float('inf')
@@ -737,21 +759,13 @@ class Context:
             # Find the distance between the unpartitioned repertoire and
             # the product of the repertoires of the two parts, e.g.
             #   D( p(ABC/ABC) || p(AC/C) * p(B/AB) )
-            part1rep = repertoire(part0.mechanism, part0.purview)
-            part2rep = repertoire(part1.mechanism, part1.purview)
-            partitioned_repertoire = part1rep * part2rep
-            partitioned_coefficient = coefficient(partitioned_repertoire, purview)
-            # Is the partitioned coefficient the product of the coefficient of the parts?
-            # That would make it easy
 
+            # The partitioned coefficient is identical to the product of the coefficients of the parts
+            product_coefficient = coefficient(part0.mechanism, part0.purview) * coefficient(part1.mechanism, part1.purview)
+            #partitioned_coefficient = coefficient(mechanism, purview, partition=[part0, part1])
+            #print([mechanism, purview, direction, partitioned_coefficient, product_coefficient])
 
-            if norm:
-                unconstrained_repertoire = repertoire((), purview)
-                normalization = self.state_probability(unconstrained_repertoire, purview)
-            else:
-                normalization = 1
-
-            alpha = (probability - partitioned_probability) / normalization
+            alpha = unpartitioned_coefficient - product_coefficient
             # First check for 0
             # Default: don't count contrary causes and effects
             if phi_eq(alpha, 0) or (alpha < 0 and not allow_neg):
@@ -760,9 +774,8 @@ class Context:
                              mechanism=mechanism,
                              purview=purview,
                              partition=(part0, part1),
-                             probability=probability,
-                             partitioned_probability=partitioned_probability,
-                             unconstrained_probability=normalization,
+                             coefficient=coefficient,
+                             partitioned_coefficient=product_coefficient,
                              alpha=0.0)
             # Then take closest to 0
             if (abs(alpha_min) - abs(alpha)) > EPSILON:
@@ -772,9 +785,8 @@ class Context:
                               mechanism=mechanism,
                               purview=purview,
                               partition=(part0, part1),
-                              probability=probability,
-                              partitioned_probability=partitioned_probability,
-                              unconstrained_probability=normalization,
+                              coefficient=unpartitioned_coefficient,
+                              partitioned_coefficient=product_coefficient,
                               alpha=alpha_min)
         return acmip
 
@@ -1131,7 +1143,7 @@ def big_acmip(context, direction=None):
             if new_ac_mip < ac_mip:
                 ac_mip = new_ac_mip
             # Short-circuit as soon as we find a MIP with effectively 0 phi.
-            if not ac_mip:
+            if ac_mip.alpha <= 0:
                 break
         result = ac_mip
     log.info("Finished calculating big-ac-phi data for {}.".format(context))
@@ -1174,12 +1186,23 @@ def nexus(network, before_state, after_state, direction=None):
         raise ValueError(
             """Input must be a Network (perhaps you passed a Subsystem
             instead?)""")
-
     if not direction:
         direction = 'bidirectional'
-
     return tuple(filter(None, (big_acmip(context, direction) for context in
                                contexts(network, before_state, after_state))))
+
+def all_disjoint_nexus(network, before_state, after_state, direction=None):
+    """Return a tuple of all non-overlapping irreducible nexus
+    Direction options are past, future, bidirectional. """
+    if not isinstance(network, Network):
+        raise ValueError(
+            """Input must be a Network (perhaps you passed a Subsystem
+            instead?)""")
+    if not direction:
+        direction = 'bidirectional'
+    all_nexus = tuple(filter(None, (big_acmip(context, direction) for context in
+                               contexts(network, before_state, after_state))))
+
 
 
 def causal_nexus(network, before_state, after_state, direction=None):

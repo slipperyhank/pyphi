@@ -113,10 +113,9 @@ def _general_eq(a, b, attributes):
 # Todo: Why do we even need this?
 # Todo: add second state
 _acmip_attributes = ['alpha', 'state', 'direction', 'mechanism', 'purview',
-                     'partition', 'probability', 'partitioned_probability',
-                     'unconstrained_probability']
+                     'partition', 'coefficient', 'partitioned_coefficient']
 _acmip_attributes_for_eq = ['alpha', 'direction', 'mechanism',
-                            'unpartitioned_ap']
+                            'coefficient']
 
 
 class AcMip(namedtuple('AcMip', _acmip_attributes)):
@@ -145,12 +144,10 @@ class AcMip(namedtuple('AcMip', _acmip_attributes)):
         partition (tuple(Part, Part)):
             The partition that makes the least difference to the mechanism's
             repertoire.
-        probability (float):
+        coefficient (float):
             The probability of the state in the past/future.
-        partitioned_probability (float):
+        partitioned_coefficient (float):
             The probability of the state in the partitioned repertoire.
-        unconstrained_probability (float):
-            The unconstrained probability of the state, used for normalization.
     """
     __slots__ = ()
 
@@ -238,7 +235,7 @@ class AcMice:
     def alpha(self):
         """
         ``float`` -- The difference between the mechanism's unpartitioned and
-        partitioned actual probabilities.
+        partitioned coefficient.
         """
         return self._mip.alpha
 
@@ -366,7 +363,7 @@ class AcBigMip:
     def __bool__(self):
         """A BigMip is truthy if it is not reducible; i.e. if it has a
         significant amount of |big_ap_phi|."""
-        return not _ap_phi_eq(self.alpha, 0)
+        return not utils.phi_eq(max(0,self.alpha), 0)
 
     def __hash__(self):
         return hash((self.alpha, self.unpartitioned_account,
