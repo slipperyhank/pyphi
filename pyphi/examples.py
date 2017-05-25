@@ -987,7 +987,6 @@ def fig16():
     ])
     return Network(tpm, connectivity_matrix=cm)
 
-
 ###################################################################
 #                                                                 #
 #                      Actual Causation                           #
@@ -997,19 +996,21 @@ def fig16():
 
 def ac_ex1_network():
     """A network of three elements, an OR gate with two inputs. """
-    tpm = np.array([[0, 0.5, 0.5],
-                    [0, 0.5, 0.5],
-                    [1, 0.5, 0.5],
-                    [1, 0.5, 0.5],
-                    [1, 0.5, 0.5],
-                    [1, 0.5, 0.5],
-                    [1, 0.5, 0.5],
-                    [1, 0.5, 0.5]])
+    tpm = np.array([
+        [0, 0.5, 0.5],
+        [0, 0.5, 0.5],
+        [1, 0.5, 0.5],
+        [1, 0.5, 0.5],
+        [1, 0.5, 0.5],
+        [1, 0.5, 0.5],
+        [1, 0.5, 0.5],
+        [1, 0.5, 0.5]
+    ])
     cm = np.array([
         [0, 0, 0],
         [1, 0, 0],
-        [1, 0, 0]]
-    )
+        [1, 0, 0]
+    ])
     return Network(tpm, cm)
 
 
@@ -1018,28 +1019,30 @@ def ac_ex1_context():
     net = ac_ex1_network()
     before_state = (0, 1, 1)
     after_state = (1, 0, 0)
-    return Context(net, before_state, after_state (1, 2), (0,))
+    return Context(net, before_state, after_state, (1, 2), (0,))
 
 
 def ac_ex2_network():
     """A network of four elements, one 'output' with three 'inputs' (A B C).
     The output turns ON if A AND B are ON or if C is ON."""
-    tpm = np.array([[0, 0, 0, 0],
-                    [0, 0, 0, 0],
-                    [0, 0, 0, 0],
-                    [0, 0, 0, 1],
-                    [0, 0, 0, 1],
-                    [0, 0, 0, 1],
-                    [0, 0, 0, 1],
-                    [0, 0, 0, 1],
-                    [0, 0, 0, 0],
-                    [0, 0, 0, 0],
-                    [0, 0, 0, 0],
-                    [0, 0, 0, 1],
-                    [0, 0, 0, 1],
-                    [0, 0, 0, 1],
-                    [0, 0, 0, 1],
-                    [0, 0, 0, 1]])
+    tpm = np.array([
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 1],
+        [0, 0, 0, 1],
+        [0, 0, 0, 1],
+        [0, 0, 0, 1],
+        [0, 0, 0, 1],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 1],
+        [0, 0, 0, 1],
+        [0, 0, 0, 1],
+        [0, 0, 0, 1],
+        [0, 0, 0, 1]
+    ])
     cm = np.array([
         [0, 0, 0, 0],
         [0, 0, 0, 1],
@@ -1061,14 +1064,16 @@ def ac_ex2_context():
 def ac_ex3_network():
     """A network of three elements, an output that only turns ON for a specific
     pattern of its input."""
-    tpm = np.array([[0, 0, 0],
-                    [0, 0, 0],
-                    [1, 0, 0],
-                    [1, 0, 0],
-                    [0, 0, 0],
-                    [0, 0, 0],
-                    [0, 0, 0],
-                    [0, 0, 0]])
+    tpm = np.array([
+        [0, 0, 0],
+        [0, 0, 0],
+        [1, 0, 0],
+        [1, 0, 0],
+        [0, 0, 0],
+        [0, 0, 0],
+        [0, 0, 0],
+        [0, 0, 0]
+    ])
     cm = np.array([
         [0, 0, 0],
         [1, 0, 0],

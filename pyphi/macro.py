@@ -11,8 +11,10 @@ import itertools
 import logging
 
 import numpy as np
+from scipy.stats import entropy
 
 from . import compute, config, constants, convert, utils, validate
+from .exceptions import ConditionallyDependentError, StateUnreachableError
 from .network import irreducible_purviews
 from .node import expand_node_tpm, generate_nodes
 from .subsystem import Subsystem
@@ -25,18 +27,13 @@ _NUM_PRECOMPUTED_PARTITION_LISTS = 10
 _partition_lists = utils.load_data('partition_lists',
                                    _NUM_PRECOMPUTED_PARTITION_LISTS)
 
-
-class ConditionallyDependentError(ValueError):
-    pass
-
-
 def reindex(indices):
     """Generate a new set of node indices, the size of indices."""
     return tuple(range(len(indices)))
 
 
 def rebuild_system_tpm(node_tpms):
-    """Reconstruct the network TPM from a collection of node tpms."""
+    """Reconstruct the network TPM from a collection of node TPMs."""
     expanded_tpms = np.array([expand_node_tpm(tpm) for tpm in node_tpms])
     return np.rollaxis(expanded_tpms, 0, len(expanded_tpms) + 1)
 
@@ -79,7 +76,7 @@ class MacroSubsystem(Subsystem):
 
         # Shrink TPM to size of internal indices
         # ======================================
-        self.tpm, self.cm, self.node_indices, self._state = (
+        self.tpm, self.cm, self.node_indices, self.state = (
             self._squeeze(node_indices))
 
         validate.blackbox_and_coarse_grain(blackbox, coarse_grain)
@@ -102,7 +99,7 @@ class MacroSubsystem(Subsystem):
         # Blackbox in space
         # =================
         if blackbox is not None:
-            self.tpm, self.cm, self.node_indices, self._state = (
+            self.tpm, self.cm, self.node_indices, self.state = (
                 self._blackbox_space(blackbox))
 
         # Coarse-grain in space
@@ -110,7 +107,7 @@ class MacroSubsystem(Subsystem):
         if coarse_grain is not None:
             validate.coarse_grain(coarse_grain)
             coarse_grain = coarse_grain.reindex()
-            self.tpm, self.cm, self.node_indices, self._state = (
+            self.tpm, self.cm, self.node_indices, self.state = (
                 self._coarsegrain_space(coarse_grain))
 
         # Regenerate nodes
@@ -245,13 +242,13 @@ class MacroSubsystem(Subsystem):
         return self._node_indices
 
     def apply_cut(self, cut):
-        """Return a cut version of this |MacroSubsystem|
+        """Return a cut version of this |MacroSubsystem|.
 
         Args:
-            cut (|Cut|): The cut to apply to this |MacroSubsystem|.
+            cut (Cut): The cut to apply to this |MacroSubsystem|.
 
         Returns:
-            |MacroSubsystem|
+            MacroSubsystem: The cut version of this |MacroSubsystem|.
         """
         return MacroSubsystem(self.network, self._network_state,
                               self._node_indices, cut=cut,
@@ -269,7 +266,7 @@ class MacroSubsystem(Subsystem):
 
     def macro2micro(self, macro_indices):
         """Returns all micro indices which compose the elements specified by
-        `macro_indices`."""
+        ``macro_indices``."""
         def from_partition(partition, macro_indices):
             micro_indices = itertools.chain.from_iterable(
                 partition[i] for i in macro_indices)
@@ -337,12 +334,12 @@ class CoarseGrain(namedtuple('CoarseGrain', ['partition', 'grouping'])):
     def reindex(self):
         """Re-index this coarse graining to use squeezed indices.
 
-        The output grouping is translated to use indices `0..n`, where `n` is
-        the number of micro indices in the coarse-graining. Re-indexing does
+        The output grouping is translated to use indices ``0..n``, where ``n``
+        is the number of micro indices in the coarse-graining. Re-indexing does
         not effect the state grouping, which is already index-independent.
 
         Returns:
-            CoarseGrain: A new CoarseGrain object, indexed from `0..n`
+            CoarseGrain: A new |CoarseGrain| object, indexed from ``0..n``.
 
         Example:
             >>> partition = ((1, 2),)
@@ -367,7 +364,7 @@ class CoarseGrain(namedtuple('CoarseGrain', ['partition', 'grouping'])):
 
         Returns:
             tuple[int]: The state of the macro system, translated as specified
-                by this coarse-graining.
+            by this coarse-graining.
 
         Example:
             >>> coarse_grain = CoarseGrain(((1, 2),), (((0,), (1, 2)),))
@@ -413,12 +410,12 @@ class CoarseGrain(namedtuple('CoarseGrain', ['partition', 'grouping'])):
 
         Args:
             micro_tpm (nd.array): The TPM of the micro-system.
-            check_independence (boolean): If True, the method will raise a
-                ``ConditionallyDependentError`` if the macro tpm is not
+            check_independence (bool): If ``True``, the method will raise a
+                ``ConditionallyDependentError`` if the macro TPM is not
                 conditionally independent.
 
         Returns:
-            (np.ndarray): The state-by-node TPM of the macro-system.
+            np.ndarray: The state-by-node TPM of the macro-system.
         """
         validate.tpm(micro_tpm)
 
@@ -443,9 +440,8 @@ class CoarseGrain(namedtuple('CoarseGrain', ['partition', 'grouping'])):
         # Re-normalize each row because we're going from larger to smaller TPM
         macro_tpm = np.array([utils.normalize(row) for row in macro_tpm])
 
-        if (check_independence and
-                not validate.conditionally_independent(macro_tpm)):
-            raise ConditionallyDependentError
+        if check_independence:
+            validate.conditionally_independent(macro_tpm)
 
         return convert.state_by_state2state_by_node(macro_tpm)
 
@@ -480,7 +476,7 @@ class Blackbox(namedtuple('Blackbox', ['partition', 'output_indices'])):
         """Squeeze the indices of this blackboxing to ``0..n``.
 
         Returns:
-            Blackbox: a new, reindexed ``Blackbox``.
+            Blackbox: a new, reindexed |Blackbox|.
 
         Example:
             >>> partition = ((3,), (2, 4))
@@ -516,7 +512,7 @@ class Blackbox(namedtuple('Blackbox', ['partition', 'output_indices'])):
         return utils.state_of(reindexed.output_indices, micro_state)
 
     def in_same_box(self, a, b):
-        """Returns True if nodes ``a`` and ``b``` are in the same box."""
+        """Returns ``True`` if nodes ``a`` and ``b``` are in the same box."""
         assert a in self.micro_indices
         assert b in self.micro_indices
 
@@ -597,13 +593,13 @@ def all_groupings(partition):
 
 
 def all_coarse_grains(indices):
-    """Generator over all possible ``CoarseGrains`` of these indices.
+    """Generator over all possible |CoarseGrain|s of these indices.
 
     Args:
         indices (tuple[int]): Node indices to coarse grain.
 
     Yields:
-        CoarseGrain: The next coarse-grain for ``indices``.
+        CoarseGrain: The next |CoarseGrain| for ``indices``.
     """
     for partition in all_partitions(indices):
         for grouping in all_groupings(partition):
@@ -611,7 +607,7 @@ def all_coarse_grains(indices):
 
 
 def all_coarse_grains_for_blackbox(blackbox):
-    """Generator over all ``CoarseGrains`` for the given blackbox.
+    """Generator over all |CoarseGrain|s for the given blackbox.
 
     If a box has multiple outputs, those outputs are partitioned into the same
     coarse-grain macro-element.
@@ -633,7 +629,7 @@ def all_blackboxes(indices):
         indices (tuple[int]): Nodes to blackbox.
 
     Yields:
-        Blackbox: The next blackbox of ``indices``.
+        Blackbox: The next |Blackbox| of ``indices``.
     """
     for partition in all_partitions(indices):
         for output_indices in utils.powerset(indices):
@@ -658,8 +654,8 @@ class MacroNetwork:
             system.
         micro_phi (float): The |big_phi| of the main complex of the
             corresponding micro-system.
-        coarse_grain (CoarseGrain): The coarse-graining of micro-elements into
-            macro-elements.
+        coarse_grain (CoarseGrain): The coarse-graining of micro-elements
+            into macro-elements.
         time_scale (int): The time scale the macro-network run over.
         blackbox (Blackbox): The blackboxing of micro elements in the network.
         emergence (float): The difference between the |big_phi| of the macro-
@@ -695,7 +691,7 @@ def coarse_grain(network, state, internal_indices):
         internal_indices (tuple[int]): Nodes in the micro-system.
 
     Returns:
-        tuple[int, CoarseGrain]: The phi-value of the maximal CoarseGrain.
+        tuple[int, CoarseGrain]: The phi-value of the maximal |CoarseGrain|.
     """
     max_phi = float('-inf')
     max_coarse_grain = CoarseGrain((), ())
@@ -745,7 +741,7 @@ def all_macro_systems(network, state, blackbox, coarse_grain, time_scales):
                             time_scale=time_scale,
                             blackbox=blackbox,
                             coarse_grain=coarse_grain)
-                    except (validate.StateUnreachableError,
+                    except (StateUnreachableError,
                             ConditionallyDependentError):
                         continue
 
@@ -764,15 +760,16 @@ def emergence(network, state, blackbox=False, coarse_grain=True,
     Args:
         network (Network): The network of the micro-system under investigation.
         state (tuple[int]): The state of the network.
-        blackbox (boolean): Set to True to enable blackboxing. Defaults to
-            False.
-        coarse_grain (boolean): Set to True to enable coarse-graining.
-            Defaults to True.
+        blackbox (bool): Set to ``True`` to enable blackboxing. Defaults to
+            ``False``.
+        coarse_grain (bool): Set to ``True`` to enable coarse-graining.
+            Defaults to ``True``.
         time_scales (list[int]): List of all time steps over which to check
             for emergence.
 
     Returns:
-        MacroNetwork: The maximal macro-system generated from the micro-system.
+        MacroNetwork: The maximal macro-system generated from the
+        micro-system.
     """
     micro_phi = compute.main_complex(network, state).phi
 
@@ -825,17 +822,6 @@ def phi_by_grain(network, state):
 def effective_info(network):
     """Return the effective information of the given network.
 
-    This is equivalent to the average of the
-    :func:`~pyphi.subsystem.Subsystem.effect_info` (with the entire network as
-    the mechanism and purview) over all possible states of the network. It can
-    be interpreted as the “noise in the network's TPM,” weighted by the size of
-    its state space.
-
-    .. warning::
-
-        If ``config.VALIDATE_SUBSYSTEM_STATES`` is enabled, then unreachable
-        states are omitted from the average.
-
     .. note::
 
         For details, see:
@@ -848,13 +834,10 @@ def effective_info(network):
         Available online: `doi: 10.1073/pnas.1314922110
         <http://www.pnas.org/content/110/49/19790.abstract>`_.
     """
-    subsystems = []
-    for state in utils.all_states(network.size):
-        try:
-            subsystems.append(Subsystem(network, state, network.node_indices))
-        except validate.StateUnreachableError:
-            continue
-    return np.array([
-        subsystem.effect_info(network.node_indices, network.node_indices)
-        for subsystem in subsystems
-    ]).mean()
+    validate.is_network(network)
+
+    sbs_tpm = convert.state_by_node2state_by_state(network.tpm)
+    avg_repertoire = np.mean(sbs_tpm, 0)
+
+    return np.mean([entropy(repertoire, avg_repertoire, 2.0)
+                    for repertoire in sbs_tpm])

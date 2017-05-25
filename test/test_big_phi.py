@@ -4,10 +4,11 @@
 
 import pickle
 import pytest
+import numpy as np
 from unittest.mock import patch
 
 from pyphi import constants, config, compute, models, utils, Network, Subsystem
-from pyphi.constants import DIRECTIONS, PAST, FUTURE
+from pyphi.constants import Direction
 from pyphi.models import Cut, _null_bigmip
 from pyphi.compute import constellation
 from pyphi.compute.big_phi import (_find_mip_parallel, _find_mip_sequential,
@@ -227,11 +228,11 @@ def test_null_concept(s, flushcache, restore_fs_cache):
     flushcache()
     cause = models.Mice(models.Mip(
         unpartitioned_repertoire=s.unconstrained_cause_repertoire(()),
-        phi=0, direction=DIRECTIONS[PAST], mechanism=(), purview=(),
+        phi=0, direction=Direction.PAST, mechanism=(), purview=(),
         partition=None, partitioned_repertoire=None))
     effect = models.Mice(models.Mip(
         unpartitioned_repertoire=s.unconstrained_effect_repertoire(()),
-        phi=0, direction=DIRECTIONS[FUTURE], mechanism=(), purview=(),
+        phi=0, direction=Direction.FUTURE, mechanism=(), purview=(),
         partition=None, partitioned_repertoire=None))
     assert (s.null_concept ==
             models.Concept(mechanism=(), phi=0, cause=cause, effect=effect,
@@ -273,6 +274,30 @@ def test_constellation_distance_uses_simple_vs_emd(mock_emd_distance,
     compute.constellation_distance((lone_concept,), (other_concept,))
     assert mock_emd_distance.called is True
     assert mock_simple_distance.called is False
+
+
+@config.override(MEASURE='KLD')
+def test_kld_distance_no_inf():
+    a = np.array([1.0, 0])
+    b = np.array([0, 1.0])
+
+    d = compute.distance.measure(a, b)
+    assert not np.isinf(d)
+    assert d == compute.distance.BIG_NUMBER
+
+
+@config.override(CACHE_BIGMIPS=True)
+def test_big_mip_cache_key_includes_config_dependencies(s, flushcache,
+                                                        restore_fs_cache):
+    flushcache()
+
+    with config.override(MEASURE='EMD'):
+        emd_big_phi = compute.big_phi(s)
+
+    with config.override(MEASURE='KLD'):
+        kld_big_phi = compute.big_phi(s)
+
+    assert kld_big_phi != emd_big_phi
 
 
 def test_conceptual_information(s, flushcache, restore_fs_cache):
@@ -523,7 +548,7 @@ def test_find_mip_sequential_micro(micro_s, flushcache, restore_fs_cache):
     check_mip(mip, micro_answer)
 
 
-@pytest.mark.filter
+@pytest.mark.dev
 def test_big_mip_macro(macro_s, flushcache, restore_fs_cache):
     flushcache()
     mip = compute.big_mip(macro_s)

@@ -8,6 +8,7 @@ import numpy as np
 import pytest
 
 from pyphi import models, constants, config, Subsystem
+from pyphi.constants import Direction
 
 
 # TODO: better way to build test objects than Mock?
@@ -188,6 +189,24 @@ def test_cut_indices():
     cut = models.Cut((7,), (3, 1))
     assert cut.indices == (1, 3, 7)
 
+
+def test_apply_cut():
+    cm = np.array([
+        [1, 0, 1, 0],
+        [1, 1, 1, 1],
+        [0, 1, 0, 1],
+        [1, 0, 1, 0]
+    ])
+    cut = models.Cut(severed=(0, 3), intact=(1, 2))
+    cut_cm = np.array([
+        [1, 0, 0, 0],
+        [1, 1, 1, 1],
+        [0, 1, 0, 1],
+        [1, 0, 0, 0]
+    ])
+    assert np.array_equal(cut.apply_cut(cm), cut_cm)
+
+
 # }}}
 
 
@@ -213,18 +232,18 @@ def test_mip_ordering_and_equality():
     assert mip(phi=1.0) == mip(phi=1.0)
     assert mip(phi=1.0) == mip(phi=(1.0 - constants.EPSILON/2))
     assert mip(phi=1.0) != mip(phi=(1.0 - constants.EPSILON * 2))
-    assert mip(dir='past') != mip(dir='future')
+    assert mip(dir=Direction.PAST) != mip(dir=Direction.FUTURE)
     assert mip(mech=(1,)) != mip(mech=(1, 2))
 
     with pytest.raises(TypeError):
-        mip(dir='past') < mip(dir='future')
+        mip(dir=Direction.PAST) < mip(dir=Direction.FUTURE)
 
     with pytest.raises(TypeError):
-        mip(dir='past') >= mip(dir='future')
+        mip(dir=Direction.PAST) >= mip(dir=Direction.FUTURE)
 
 
 def test_null_mip():
-    direction = 'past'
+    direction = Direction.PAST
     mechanism = (0,)
     purview = (1,)
     unpartitioned_repertoire = 'repertoire'
@@ -299,7 +318,7 @@ def test_mice_repr_str():
 
 
 def test_relevant_connections(s, subsys_n1n2):
-    mice = models.Mice(mip(mech=(0,), purv=(1,), dir='past'))
+    mice = models.Mice(mip(mech=(0,), purv=(1,), dir=Direction.PAST))
     answer = np.array([
         [0, 0, 0],
         [1, 0, 0],
@@ -307,7 +326,7 @@ def test_relevant_connections(s, subsys_n1n2):
     ])
     assert np.array_equal(mice._relevant_connections(s), answer)
 
-    mice = models.Mice(mip(mech=(1,), purv=(1, 2), dir='future'))
+    mice = models.Mice(mip(mech=(1,), purv=(1, 2), dir=Direction.FUTURE))
     answer = np.array([
         [1, 1],
         [0, 0],
@@ -321,12 +340,12 @@ def test_damaged(s):
     subsys = Subsystem(s.network, s.state, s.node_indices, cut=cut)
 
     # Cut splits mechanism:
-    mice = models.Mice(mip(mech=(0, 1), purv=(1, 2), dir='future'))
+    mice = models.Mice(mip(mech=(0, 1), purv=(1, 2), dir=Direction.FUTURE))
     assert mice.damaged_by_cut(subsys)
     assert not mice.damaged_by_cut(s)
 
     # Cut splits mechanism & purview (but not *only* mechanism)
-    mice = models.Mice(mip(mech=(0,), purv=(1, 2), dir='future'))
+    mice = models.Mice(mip(mech=(0,), purv=(1, 2), dir=Direction.FUTURE))
     assert mice.damaged_by_cut(subsys)
     assert not mice.damaged_by_cut(s)
 
@@ -504,7 +523,7 @@ def test_constellation_is_still_a_tuple():
     assert len(c) == 1
 
 
-@config.override(READABLE_REPRS=False)
+@config.override(REPR_VERBOSITY=0)
 def test_constellation_repr():
     c = models.Constellation()
     assert repr(c) == "Constellation(())"
@@ -609,15 +628,57 @@ class ReadableReprClass:
         return "A nice fat explicit string"
 
 
-@config.override(READABLE_REPRS=False)
+@config.override(REPR_VERBOSITY=0)
 def test_make_reprs_uses___repr__():
     assert repr(ReadableReprClass()) == "ReadableReprClass(some_attr=3.14)"
 
 
-@config.override(READABLE_REPRS=True)
+@config.override(REPR_VERBOSITY=2)
 def test_make_reprs_calls_out_to_string():
     assert repr(ReadableReprClass()) == "A nice fat explicit string"
 
 # }}}
+
+
+# Test partitions
+# ===============
+
+@pytest.fixture
+def bipartition():
+    return models.Bipartition(
+        models.Part((0,), (0, 4)),
+        models.Part((), (1,)))
+
+
+def test_bipartition_properties(bipartition):
+    assert bipartition.mechanism == (0,)
+    assert bipartition.purview == (0, 1, 4)
+
+
+def test_bipartition_str(bipartition):
+    assert str(bipartition) == (
+        " 0    []\n"
+        "--- X --\n"
+        "0,4   1 ")
+
+
+@pytest.fixture
+def tripartition():
+    return models.Tripartition(
+        models.Part((0,), (0, 4)),
+        models.Part((), (1,)),
+        models.Part((2,), (2,)))
+
+
+def test_tripartion_properties(tripartition):
+    assert tripartition.mechanism == (0, 2)
+    assert tripartition.purview == (0, 1, 2, 4)
+
+
+def test_tripartition_str(tripartition):
+    assert str(tripartition) == (
+        " 0    []   2\n"
+        "--- X -- X -\n"
+        "0,4   1    2")
 
 # vim: set foldmarker={{{,}}} foldlevel=0  foldmethod=marker :

@@ -2,15 +2,14 @@
 # -*- coding: utf-8 -*-
 # test_subsystem.py
 
-from unittest import mock
-
 import numpy as np
 import pytest
 
 import example_networks
-from pyphi import config, Network, utils, validate
-from pyphi.models import Cut, Part
-from pyphi.subsystem import Subsystem, mip_bipartitions
+from pyphi import config, exceptions, Network
+from pyphi.constants import Direction
+from pyphi.models import Bipartition, Cut, Part, Tripartition
+from pyphi.subsystem import Subsystem, mip_bipartitions, wedge_partitions
 
 
 @config.override(VALIDATE_SUBSYSTEM_STATES=True)
@@ -24,7 +23,7 @@ def test_subsystem_validation(s):
     # Disallow impossible states at subsystem level (we don't want to return a
     # phi-value associated with an impossible state).
     net = example_networks.simple()
-    with pytest.raises(validate.StateUnreachableError):
+    with pytest.raises(exceptions.StateUnreachableError):
         s = Subsystem(net, (0, 1, 0), s.node_indices)
 
 
@@ -126,14 +125,60 @@ def test_indices2nodes_with_bad_indices(subsys_n1n2):
         subsys_n1n2.indices2nodes((0,))  # index n0 in network but not subsytem
 
 
-def test_mip_bipartition():
+def test_mip_bipartitions():
     mechanism, purview = (0,), (1, 2)
-    answer = [
-        (Part((), (2,)), Part((0,), (1,))),
-        (Part((), (1,)), Part((0,), (2,))),
-        (Part((), (1, 2)), Part((0,), ())),
-    ]
-    assert set(mip_bipartitions(mechanism, purview)) == set(answer)
+    answer = set([
+        Bipartition(Part((), (2,)), Part((0,), (1,))),
+        Bipartition(Part((), (1,)), Part((0,), (2,))),
+        Bipartition(Part((), (1, 2)), Part((0,), ())),
+    ])
+    assert set(mip_bipartitions(mechanism, purview)) == answer
+
+
+def test_wedge_partitions():
+    mechanism, purview = (0,), (1, 2)
+    assert set(wedge_partitions(mechanism, purview)) == set([
+        Tripartition(Part((), ()), Part((), (1, 2)), Part((0,), ())),
+    ])
+
+    mechanism, purview = (3, 4), (5, 6)
+    assert set(wedge_partitions(mechanism, purview)) == set([
+        Tripartition(Part((), ()),   Part((),   (5, 6)), Part((3, 4), ())),
+        Tripartition(Part((), ()),   Part((3,), ()),     Part((4,), (5, 6))),
+        Tripartition(Part((), ()),   Part((3,), (5,)),   Part((4,), (6,))),
+        Tripartition(Part((), ()),   Part((3,), (5, 6)), Part((4,), ())),
+        Tripartition(Part((), ()),   Part((3,), (6,)),   Part((4,), (5,))),
+        Tripartition(Part((), (5,)), Part((3,), ()),     Part((4,), (6,))),
+        Tripartition(Part((), (5,)), Part((3,), (6,)),   Part((4,), ())),
+        Tripartition(Part((), (6,)), Part((3,), ()),     Part((4,), (5,))),
+        Tripartition(Part((), (6,)), Part((3,), (5,)),   Part((4,), ())),
+    ])
+
+
+def test_partitioned_repertoire_with_tripartition(s):
+    mechanism, purview = (0,), (1, 2)
+    tripartition = Tripartition(Part((), (1,)), Part((0,), ()), Part((), (2,)))
+
+    assert np.array_equal(
+        s.partitioned_repertoire(Direction.PAST, tripartition),
+        np.array([[[0.25, 0.25], [0.25, 0.25]]]))
+
+
+def test_PARTITION_MECHANISMS_choses_smallest_purview(s):
+    mechanism = (1, 2)
+
+    with config.override(PARTITION_MECHANISMS=False):
+        effect = s.core_effect(mechanism)
+        assert effect.phi == 0.5
+        assert effect.purview == (0, 1)
+
+    s.clear_caches()
+
+    # In phi-tie, chose the smaller purview (0,)
+    with config.override(PARTITION_MECHANISMS=True):
+        effect = s.core_effect(mechanism)
+        assert effect.phi == 0.5
+        assert effect.purview == (0,)
 
 
 def test_is_cut(s):
@@ -142,12 +187,10 @@ def test_is_cut(s):
     assert s.is_cut is True
 
 
-def test_proper_state(s, subsys_n0n2):
-    # subsys_n0n2.state == (1, 0, 0)
+def test_proper_state(subsys_n0n2, subsys_n1n2):
+    # state == (1, 0, 0)
     assert subsys_n0n2.proper_state == (1, 0)
-    subsys_n0n2.proper_state = (0, 1)
-    assert subsys_n0n2.proper_state == (0, 1)
-    assert subsys_n0n2.state == (0, 0, 1)
+    assert subsys_n1n2.proper_state == (0, 0)
 
 
 def test_apply_cut(s):
@@ -157,8 +200,7 @@ def test_apply_cut(s):
     assert s.state == cut_s.state
     assert s.node_indices == cut_s.node_indices
     assert np.array_equal(cut_s.tpm, s.tpm)
-    assert np.array_equal(cut_s.connectivity_matrix,
-                          utils.apply_cut(cut, s.connectivity_matrix))
+    assert np.array_equal(cut_s.cm, cut.apply_cut(s.cm))
 
 
 def test_cut_indices(s, subsys_n1n2):

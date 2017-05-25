@@ -3,6 +3,7 @@
 # models/cuts.py
 
 from collections import namedtuple
+from itertools import chain
 
 import numpy as np
 
@@ -39,8 +40,8 @@ class Cut(namedtuple('Cut', ['severed', 'intact'])):
             mechanism (tuple[int]): The mechanism in question
 
         Returns:
-            bool: True if `mechanism` has elements on both sides of the cut,
-                otherwise False.
+            bool: ``True`` if `mechanism` has elements on both sides of the
+            cut, otherwise ``False``.
         """
         # TODO: use cuts_connections
         return ((set(mechanism) & set(self[0])) and
@@ -58,6 +59,18 @@ class Cut(namedtuple('Cut', ['severed', 'intact'])):
         """
         all_mechanisms = utils.powerset(self.indices)
         return tuple(m for m in all_mechanisms if self.splits_mechanism(m))
+
+    def apply_cut(self, cm):
+        """Return a modified connectivity matrix where the connections from one
+        set of nodes to the other are destroyed.
+        """
+        cm = cm.copy()
+
+        for i in self[0]:
+            for j in self[1]:
+                cm[i][j] = 0
+
+        return cm
 
     # TODO: pass in `size` arg and keep expanded to full network??
     # TODO: memoize?
@@ -93,7 +106,65 @@ class Cut(namedtuple('Cut', ['severed', 'intact'])):
         return fmt.fmt_cut(self)
 
     def to_json(self):
-        return [self.severed, self.intact]
+        return {'severed': self.severed, 'intact': self.intact}
+
+
+class ActualCut(namedtuple('ActualCut', ['cause_part1', 'cause_part2',
+                                         'effect_part1', 'effect_part2'])):
+
+    """Represents an actual cut for a context.
+
+    Attributes:
+        cause_part1 (tuple(int)):
+            Connections from this group to those in ``effect_part2`` are cut
+        cause_part2 (tuple(int)):
+            Connections from this group to those in ``effect_part1`` are cut
+        effect_part1 (tuple(int)):
+            Connections to this group from ``cause_part2`` are cut
+        effect_part2 (tuple(int)):
+             Connections to this group from ``cause_part1`` are cut
+    """
+
+    __slots__ = ()
+
+    @property
+    def indices(self):
+        """tuple[int]: The indices in this cut."""
+        return tuple(sorted(set(chain.from_iterable(self))))
+
+    # TODO test
+    def apply_cut(self, cm):
+        """Cut a connectivity matrix.
+
+        Args:
+            cm (np.ndarray): A connectivity matrix
+
+        Returns:
+            np.ndarray: A copy of the connectivity matrix with connections cut
+                across the cause and effect indices.
+        """
+        cm = cm.copy()
+
+        for i in self.cause_part1:
+            for j in self.effect_part2:
+                cm[i][j] = 0
+
+        for i in self.cause_part2:
+            for j in self.effect_part1:
+                cm[i][j] = 0
+
+        return cm
+
+    # TODO implement
+    def cut_matrix(self):
+        return "DUMMY MATRIX"
+
+    def __repr__(self):
+        return fmt.make_repr(self, ['cause_part1', 'cause_part2',
+                                    'effect_part1', 'effect_part2'])
+
+    def __str__(self):
+        return fmt.fmt_actual_cut(self)
 
 
 class Actual_Cut(namedtuple('Cut', ['cause_part1', 'cause_part2',
@@ -150,7 +221,25 @@ class Part(namedtuple('Part', ['mechanism', 'purview'])):
         return {'mechanism': self.mechanism, 'purview': self.purview}
 
 
-class Bipartition(namedtuple('Bipartition', ['part0', 'part1'])):
+class _BasePartition:
+    __slots__ = ()
+
+    @property
+    def mechanism(self):
+        """tuple[int]: The nodes of the mechanism in the partition."""
+        return tuple(sorted(chain.from_iterable(part.mechanism for part in self)))
+
+    @property
+    def purview(self):
+        """tuple[int]: The nodes of the purview in the partition."""
+        return tuple(sorted(chain.from_iterable(part.purview for part in self)))
+
+    def __str__(self):
+        return fmt.fmt_bipartition(self)
+
+
+class Bipartition(_BasePartition, namedtuple('Bipartition',
+                                             ['part0', 'part1'])):
     """A bipartition of a mechanism and purview.
 
     Attributes:
@@ -158,23 +247,21 @@ class Bipartition(namedtuple('Bipartition', ['part0', 'part1'])):
         part1 (Part): The second part of the partition.
     """
 
-    @property
-    def mechanism(self):
-        """tuple[int]: The nodes of the mechanism in the partition."""
-        return tuple(sorted(self[0].mechanism + self[1].mechanism))
-
-    @property
-    def purview(self):
-        """tuple[int]: The nodes of the purview in the partition."""
-        return tuple(sorted(self[0].purview + self[1].purview))
-
     __slots__ = ()
 
     def to_json(self):
         return {'part0': self.part0, 'part1': self.part1}
 
-    def __str__(self):
-        return fmt.fmt_bipartition(self)
-
     def __repr__(self):
         return fmt.make_repr(self, ['part0', 'part1'])
+
+
+class Tripartition(_BasePartition, namedtuple('Tripartition',
+                                              ['part0', 'part1', 'part2'])):
+    __slots__ = ()
+
+    def to_json(self):
+        raise NotImplemented
+
+    def __repr__(self):
+        return fmt.make_repr(self, ['part0', 'part1', 'part2'])

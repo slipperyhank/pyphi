@@ -42,7 +42,7 @@ class Node:
 
         # Label for display.
         if label is None:
-            label = 'n' + str(index)
+            label = default_label(index)
         self.label = label
 
         # State of this node.
@@ -156,6 +156,16 @@ class Node:
         return self.index
 
 
+def default_label(index):
+    """Default label for a node."""
+    return "n{}".format(index)
+
+
+def default_labels(indices):
+    """Default labels for serveral nodes."""
+    return tuple(default_label(i) for i in indices)
+
+
 # TODO: rework MacroSubsystem to not need the indices arg
 def generate_nodes(subsystem, indices=None, labels=False):
     """Generate the |Node| objects for these indices.
@@ -167,10 +177,10 @@ def generate_nodes(subsystem, indices=None, labels=False):
     Keyword Args:
         indices (tuple[int]): Used by |MacroSubsystem| to force generation to
             use certain indices.
-        labels (boolean): If True, nodes will be labeled with the labels of the
-            network. (This is also used by macro systems to keep labels from
-            being mixed up when many micro elements are combined into one macro
-            element.)
+        labels (bool): If ``True``, nodes will be labeled with the labels of
+            the network. (This is also used by macro systems to keep labels
+            from being mixed up when many micro elements are combined into one
+            macro element.)
 
     Returns:
         tuple[|Node|]: The nodes of the |Subsystem|.

@@ -3,122 +3,26 @@
 # models/actual_causation.py
 
 """
-Containers for AcMip and AcMice and AcBigMip.
+Containers for AcMip and Occurence and AcBigMip.
 """
+
 from collections import namedtuple
-from .. import utils
-from ..utils import phi_eq
-from .cmp import _numpy_aware_eq
-from .fmt import fmt_ac_mip, fmt_ac_big_mip, make_repr, indent
+
+from . import cmp, fmt
+from .. import config, utils
 
 # TODO use properties to avoid data duplication
-
-# Ac_diff-ordering methods
-# =============================================================================
-
-
-# Compare ac_diff
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Todo: check how that works out also with abs values
-def _ap_phi_eq(self, other):
-    try:
-        return phi_eq(self.alpha, other.alpha)
-    except AttributeError:
-        return False
-
-
-def _ap_phi_lt(self, other):
-    try:
-        if not phi_eq(self.alpha, other.alpha):
-            return self.alpha < other.alpha
-        return False
-    except AttributeError:
-        return False
-
-
-def _ap_phi_gt(self, other):
-    try:
-        if not phi_eq(self.alpha, other.alpha):
-            return self.alpha > other.alpha
-        return False
-    except AttributeError:
-        return False
-
-
-def _ap_phi_le(self, other):
-    return _ap_phi_lt(self, other) or _ap_phi_eq(self, other)
-
-
-def _ap_phi_ge(self, other):
-    return _ap_phi_gt(self, other) or _ap_phi_eq(self, other)
-
-
-# First compare ap_phi, then mechanism size
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-def _ap_phi_then_mechanism_size_lt(self, other):
-    if _ap_phi_eq(self, other):
-        return (len(self.mechanism) < len(other.mechanism)
-                if hasattr(other, 'mechanism') else False)
-    else:
-        return _ap_phi_lt(self, other)
-
-
-def _ap_phi_then_mechanism_size_gt(self, other):
-    return (not _ap_phi_then_mechanism_size_lt(self, other) and
-            not self == other)
-
-
-def _ap_phi_then_mechanism_size_le(self, other):
-    return (_ap_phi_then_mechanism_size_lt(self, other) or
-            _ap_phi_eq(self, other))
-
-
-def _ap_phi_then_mechanism_size_ge(self, other):
-    return (_ap_phi_then_mechanism_size_gt(self, other) or
-            _ap_phi_eq(self, other))
-
-
-# Equality helpers
-# =============================================================================
-def _general_eq(a, b, attributes):
-    """Return whether two objects are equal up to the given attributes.
-
-    If an attribute is called ``'ap_phi'``, it is compared up to |PRECISION|.
-    All other attributes are compared with :func:`_numpy_aware_eq`.
-
-    If an attribute is called ``'mechanism'`` or ``'purview'``, it is compared
-    using set equality."""
-    try:
-        for attr in attributes:
-            _a, _b = getattr(a, attr), getattr(b, attr)
-            if attr == 'ap_phi':
-                if not phi_eq(_a, _b):
-                    return False
-            elif (attr == 'mechanism' or attr == 'purview'):
-                if _a is None or _b is None and not _a == _b:
-                    return False
-                # Don't use `set` because hashes may be different (contexts are
-                # included in node hashes); we want to use Node.__eq__.
-                elif not (all(n in _b for n in _a) and len(_a) == len(_b)):
-                    return False
-            else:
-                if not _numpy_aware_eq(_a, _b):
-                    return False
-        return True
-    except AttributeError:
-        return False
 
 # =============================================================================
 # Todo: Why do we even need this?
 # Todo: add second state
 _acmip_attributes = ['alpha', 'state', 'direction', 'mechanism', 'purview',
-                     'partition', 'coefficient', 'partitioned_coefficient']
-_acmip_attributes_for_eq = ['alpha', 'direction', 'mechanism',
-                            'coefficient']
+                     'partition', 'probability', 'partitioned_probability']
+_acmip_attributes_for_eq = ['alpha', 'state', 'direction', 'mechanism',
+                            'purview', 'probability']
 
 
-class AcMip(namedtuple('AcMip', _acmip_attributes)):
+class AcMip(cmp._Orderable, namedtuple('AcMip', _acmip_attributes)):
 
     """A minimum information partition for ac_coef calculation.
 
@@ -144,98 +48,77 @@ class AcMip(namedtuple('AcMip', _acmip_attributes)):
         partition (tuple(Part, Part)):
             The partition that makes the least difference to the mechanism's
             repertoire.
-        coefficient (float):
+        probability (float):
             The probability of the state in the past/future.
-        partitioned_coefficient (float):
+        partitioned_probability (float):
             The probability of the state in the partitioned repertoire.
     """
     __slots__ = ()
 
+    _unorderable_unless_eq = ['direction']
+
+    def _order_by(self):
+        return [self.alpha, len(self.mechanism), len(self.purview)]
+
     def __eq__(self, other):
-        # We don't count the partition and partitioned repertoire in checking
-        # for MIP equality, since these are lost during normalization. We also
-        # don't count the mechanism and purview, since these may be different
-        # depending on the order in which purviews were evaluated.
-        # TODO!!! clarify the reason for that
-        # We do however check whether the size of the mechanism or purview is
-        # the same, since that matters (for the exclusion principle).
         # TODO: include 2nd state here?
-        if not self.purview or not other.purview:
-            return (_general_eq(self, other, _acmip_attributes_for_eq) and
-                    len(self.mechanism) == len(other.mechanism))
-        else:
-            return (_general_eq(self, other, _acmip_attributes_for_eq) and
-                    len(self.mechanism) == len(other.mechanism) and
-                    len(self.purview) == len(other.purview))
+        return cmp._general_eq(self, other, _acmip_attributes_for_eq)
 
     def __bool__(self):
         """An AcMip is truthy if it is not reducible; i.e. if it has a significant
         amount of |ap_phi|."""
-        return not phi_eq(self.alpha, 0)
+        return not utils.phi_eq(self.alpha, 0)
 
     @property
     def phi(self):
-        self.phi = self.alpha
+        return self.alpha
 
-    # def __hash__(self):
-    #     return hash((self.ap_phi, self.actual_state, self.direction,
-    #                  self.mechanism, self.purview,
-    #                  utils.np_hash(self.unpartitioned_ap)))
+    def __hash__(self):
+        attrs = tuple(getattr(self, attr) for attr in _acmip_attributes_for_eq)
+        return hash(attrs)
 
     def to_json(self):
         d = self.__dict__
         return d
 
     def __repr__(self):
-        return make_repr(self, _acmip_attributes)
+        return fmt.make_repr(self, _acmip_attributes)
 
     def __str__(self):
-        return "Mip\n" + indent(fmt_ac_mip(self))
+        return "Mip\n" + fmt.indent(fmt.fmt_ac_mip(self))
 
-    # Order by ap_phi value, then by mechanism size
-    __lt__ = _ap_phi_then_mechanism_size_lt
-    __gt__ = _ap_phi_then_mechanism_size_gt
-    __le__ = _ap_phi_then_mechanism_size_le
-    __ge__ = _ap_phi_then_mechanism_size_ge
 
+def _null_ac_mip(state, direction, mechanism, purview):
+    return AcMip(state=state,
+                 direction=direction,
+                 mechanism=mechanism,
+                 purview=purview,
+                 partition=None,
+                 probability=None,
+                 partitioned_probability=None,
+                 alpha=0.0)
 
 # =============================================================================
 
-class AcMice:
 
+class Occurence(cmp._Orderable):
     """A maximally irreducible actual cause or effect (i.e., "actual cause” or
     “actual effect”).
 
-    relevant_connections (np.array):
-        An ``N x N`` matrix, where ``N`` is the number of nodes in this
-        corresponding subsystem, that identifies connections that “matter” to
-        this AcMICE.
-
-        ``direction == 'past'``:
-            ``relevant_connections[i,j]`` is ``1`` if node ``i`` is in the
-            cause purview and node ``j`` is in the mechanism (and ``0``
-            otherwise).
-
-        ``direction == 'future'``:
-            ``relevant_connections[i,j]`` is ``1`` if node ``i`` is in the
-            mechanism and node ``j`` is in the effect purview (and ``0``
-            otherwise).
-
-    AcMICEs may be compared with the built-in Python comparison operators
-    (``<``, ``>``, etc.). First, ``phi`` values are compared. Then, if these
+    Occurences may be compared with the built-in Python comparison operators
+    (``<``, ``>``, etc.). First, ``alpha`` values are compared. Then, if these
     are equal up to |PRECISION|, the size of the mechanism is compared
     (exclusion principle).
     """
 
-    def __init__(self, mip, relevant_connections=None):
+    def __init__(self, mip):
         self._mip = mip
-        self._relevant_connections = relevant_connections
 
     @property
     def alpha(self):
         """
         ``float`` -- The difference between the mechanism's unpartitioned and
-        partitioned coefficient.
+        partitioned actual probabilities.
         """
         return self._mip.alpha
 
@@ -257,7 +140,7 @@ class AcMice:
     @property
     def mechanism(self):
         """
-        ``list(int)`` -- The mechanism for which the AcMICE is evaluated.
+        ``list(int)`` -- The mechanism for which the action is evaluated.
         """
         return self._mip.mechanism
 
@@ -277,31 +160,63 @@ class AcMice:
         return self._mip
 
     def __repr__(self):
-        return make_repr(self, ['acmip'])
+        return fmt.make_repr(self, ['mip'])
 
     def __str__(self):
-        return "AcMice\n" + indent(fmt_ac_mip(self.mip))
+        return "Occurence\n" + fmt.indent(fmt.fmt_ac_mip(self.mip))
+
+    _unorderable_unless_eq = AcMip._unorderable_unless_eq
+
+    def _order_by(self):
+        return self.mip._order_by()
 
     def __eq__(self, other):
         return self.mip == other.mip
 
     def __hash__(self):
-        return hash(('AcMice', self._mip))
+        return hash(('Occurence', self._mip))
 
     def __bool__(self):
-        """An AcMice is truthy if it is not reducible; i.e. if it has a
+        """An Occurence is truthy if it is not reducible; i.e. if it has a
         significant amount of |ap_phi|."""
         return not utils.phi_eq(self._mip.alpha, 0)
 
     def to_json(self):
         return {'acmip': self._mip}
 
-    # Order by ap_phi value, then by mechanism size
-    __lt__ = _ap_phi_then_mechanism_size_lt
-    __gt__ = _ap_phi_then_mechanism_size_gt
-    __le__ = _ap_phi_then_mechanism_size_le
-    __ge__ = _ap_phi_then_mechanism_size_ge
 
+class Event(namedtuple('Event', ['actual_cause', 'actual_effect'])):
+    """A mechanism which has both an actual cause and an actual effect.
+
+    Attributes:
+        actual_cause (Occurence): The actual cause of the mechanism.
+        actual_effect (Occurence): The actual effect of the mechanism.
+    """
+
+    @property
+    def mechanism(self):
+        assert self.actual_cause.mechanism == self.actual_effect.mechanism
+        return self.actual_cause.mechanism
+
+# =============================================================================
+
+
+class Account(tuple):
+    """The set of occurences with alpha > 0 for both |past| and |future|."""
+
+    def __repr__(self):
+        if config.READABLE_REPRS:
+            return self.__str__()
+        return "{0}({1})".format(
+            self.__class__.__name__, super().__repr__())
+
+    def __str__(self):
+        return fmt.fmt_account(self)
+
+
+class DirectedAccount(Account):
+    """The set of occurences with alpha > 0 for one direction of a context."""
+    pass
 
 # =============================================================================
 
@@ -309,7 +224,7 @@ _acbigmip_attributes = ['alpha', 'direction', 'unpartitioned_account',
                         'partitioned_account', 'context', 'cut']
 
 
-class AcBigMip:
+class AcBigMip(cmp._Orderable):
 
     """A minimum information partition for |big_ap_phi| calculation.
 
@@ -342,10 +257,10 @@ class AcBigMip:
         self.cut = cut
 
     def __repr__(self):
-        return make_repr(self, _acbigmip_attributes)
+        return fmt.make_repr(self, _acbigmip_attributes)
 
     def __str__(self):
-        return "\nAcBigMip\n======\n" + fmt_ac_big_mip(self)
+        return "\nAcBigMip\n======\n" + fmt.fmt_ac_big_mip(self)
 
     @property
     def before_state(self):
@@ -357,42 +272,29 @@ class AcBigMip:
         '''Return actual current state of the context'''
         return self.context.after_state
 
+    _unorderable_unless_eq = ['direction']
+
+    def _order_by(self):
+        return [self.alpha, len(self.context)]
+
     def __eq__(self, other):
-        return _general_eq(self, other, _acbigmip_attributes)
+        return cmp._general_eq(self, other, _acbigmip_attributes)
 
     def __bool__(self):
         """A BigMip is truthy if it is not reducible; i.e. if it has a
         significant amount of |big_ap_phi|."""
-        return not utils.phi_eq(max(0,self.alpha), 0)
+        return not utils.phi_eq(self.alpha, 0)
 
     def __hash__(self):
         return hash((self.alpha, self.unpartitioned_account,
                      self.partitioned_account, self.context,
                      self.cut))
 
-    # First compare alpha then context
-    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def __lt__(self, other):
-        if _ap_phi_eq(self, other):
-            if len(self.context) == len(other.context):
-                return False
-            else:
-                return len(self.context) < len(other.context)
-        else:
-            return _ap_phi_lt(self, other)
-
-    def __gt__(self, other):
-        if _ap_phi_eq(self, other):
-            if len(self.context) == len(other.context):
-                return False
-            else:
-                return len(self.context) > len(other.context)
-        else:
-            return _ap_phi_gt(self, other)
-
-    def __le__(self, other):
-        return (self.__lt__(other) or _ap_phi_eq(self, other))
-
-    def __ge__(self, other):
-        return (self.__gt__(other) or _ap_phi_eq(self, other))
+def _null_ac_bigmip(context, direction):
+    """Returns an ac |BigMip| with zero |big_ap_phi| and empty constellations."""
+    return AcBigMip(context=context,
+                    direction=direction,
+                    alpha=0.0,
+                    unpartitioned_account=(),
+                    partitioned_account=())

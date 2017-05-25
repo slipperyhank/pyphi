@@ -12,7 +12,14 @@ import json
 import numpy as np
 
 from . import cache, convert, utils, validate
-from .constants import DIRECTIONS, FUTURE, PAST
+from .constants import Direction
+from .node import default_labels
+
+
+def immutable(array):
+    """Make a numpy array immutable."""
+    array.flags.writeable = False
+    return array
 
 
 class Network:
@@ -58,13 +65,12 @@ class Network:
 
     # TODO make tpm also optional when implementing logical network definition
     def __init__(self, tpm, connectivity_matrix=None, node_labels=None,
-                 perturb_vector=None, purview_cache=None):
+                 purview_cache=None):
 
         self._tpm, self._tpm_hash = self._build_tpm(tpm)
         self._cm, self._cm_hash = self._build_cm(connectivity_matrix)
         self._node_indices = tuple(range(self.size))
-        self._node_labels = node_labels
-        self.perturb_vector = perturb_vector
+        self._node_labels = node_labels or default_labels(self._node_indices)
         self.purview_cache = purview_cache or cache.PurviewCache()
 
         validate.network(self)
@@ -87,8 +93,7 @@ class Network:
         else:
             tpm = convert.to_n_dimensional(tpm)
 
-        # Make the underlying attribute immutable.
-        tpm.flags.writeable = False
+        immutable(tpm)
 
         return (tpm, utils.np_hash(tpm))
 
@@ -110,8 +115,7 @@ class Network:
         else:
             cm = np.array(cm)
 
-        # Make the underlying attribute immutable.
-        cm.flags.writeable = False
+        immutable(cm)
 
         return (cm, utils.np_hash(cm))
 
@@ -142,27 +146,7 @@ class Network:
     @property
     def node_labels(self):
         """tuple[str]: The labels of nodes in the network."""
-        if self._node_labels is None:
-            self._node_labels = tuple("n{}".format(i)
-                                      for i in self.node_indices)
         return self._node_labels
-
-    @property
-    def perturb_vector(self):
-        return self._perturb_vector
-
-    @perturb_vector.setter
-    def perturb_vector(self, perturb_vector):
-        # Get pertubation vector.
-        if perturb_vector is not None:
-            self._perturb_vector = np.array(perturb_vector)
-        else:
-            # If none was provided, assume maximum-entropy.
-            self._perturb_vector = np.ones(self.size) / 2
-        # Make the underlying attribute immutable.
-        self._perturb_vector.flags.writeable = False
-        # Update hash.
-        self._pv_hash = utils.np_hash(self.perturb_vector)
 
     def labels2indices(self, labels):
         """Convert a tuple of node labels to node indices."""
@@ -192,7 +176,8 @@ class Network:
         """All purviews which are not clearly reducible for mechanism.
 
         Args:
-            direction (str): |past| or |future|
+            direction (Direction): :const:`~pyphi.constants.Direction.PAST` or
+            :const:`~pyphi.constants.Direction.FUTURE`.
             mechanism (tuple[int]): The mechanism which all purviews are
                 checked for reducibility over.
 
@@ -205,23 +190,18 @@ class Network:
                                     all_purviews)
 
     def __repr__(self):
-        return ('Network({}, connectivity_matrix={}, '
-                'perturb_vector={})'.format(repr(self.tpm),
-                                            repr(self.cm),
-                                            repr(self.perturb_vector)))
+        return 'Network({}, connectivity_matrix={})'.format(self.tpm, self.cm)
 
     def __str__(self):
-        return 'Network({}, connectivity_matrix={})'.format(self.tpm, self.cm)
+        return self.__repr__()
 
     def __eq__(self, other):
         """Return whether this network equals the other object.
 
-        Two networks are equal if they have the same TPM, connectivity matrix,
-        and perturbation vector.
+        Two networks are equal if they have the same TPM and CM.
         """
         return (np.array_equal(self.tpm, other.tpm)
                 and np.array_equal(self.cm, other.cm)
-                and np.array_equal(self.perturb_vector, other.perturb_vector)
                 if isinstance(other, type(self)) else False)
 
     def __ne__(self, other):
@@ -229,7 +209,7 @@ class Network:
 
     def __hash__(self):
         # TODO: hash only once?
-        return hash((self._tpm_hash, self._cm_hash, self._pv_hash))
+        return hash((self._tpm_hash, self._cm_hash))
 
     def to_json(self):
         return {
@@ -239,26 +219,37 @@ class Network:
             'labels': self.node_labels
         }
 
+    @classmethod
+    def from_json(cls, json):
+        return Network(json['tpm'], json['cm'], node_labels=json['labels'])
+
 
 def irreducible_purviews(cm, direction, mechanism, purviews):
     """Returns all purview which are irreducible for the mechanism.
 
     Args:
         cm (np.ndarray): A |N x N| connectivity matrix.
-        direction (str): |past| or |future|.
+        direction (Direction): :const:`~pyphi.constants.Direction.PAST` or
+            :const:`~pyphi.constants.Direction.FUTURE`.
         purviews (list[tuple[int]]): The purviews to check.
         mechanism (tuple[int]): The mechanism in question.
 
     Returns:
         list[tuple[int]]: All purviews in ``purviews`` which are not reducible
             over ``mechanism``.
+
+    Raises:
+        ValueError: If ``direction`` is invalid.
     """
     def reducible(purview):
         # Returns True if purview is trivially reducible.
-        if direction == DIRECTIONS[PAST]:
+        if direction == Direction.PAST:
             _from, to = purview, mechanism
-        elif direction == DIRECTIONS[FUTURE]:
+        elif direction == Direction.FUTURE:
             _from, to = mechanism, purview
+        else:
+            # TODO: test that ValueError is raised
+            validate.direction(direction)
         return utils.block_reducible(cm, _from, to)
 
     return [purview for purview in purviews if not reducible(purview)]
@@ -276,8 +267,4 @@ def from_json(filename):
     with open(filename) as f:
         loaded = json.load(f)
 
-    tpm = loaded['tpm']
-    cm = loaded['cm']
-    labels = loaded['labels']
-
-    return Network(tpm, connectivity_matrix=cm, node_labels=labels)
+    return Network.from_json(loaded)

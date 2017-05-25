@@ -8,26 +8,16 @@ Methods for validating common types of input.
 
 import numpy as np
 
-from . import config, constants, convert, utils
-from .constants import EPSILON
-
-
-class StateUnreachableError(ValueError):
-    """Raised when the current state cannot be reached from any past state."""
-
-    def __init__(self, state, message):
-        self.state = state
-        self.message = message
-
-    def __str__(self):
-        return self.message
+from . import config, constants, convert, exceptions, utils
+from .constants import EPSILON, Direction
 
 
 def direction(direction):
     """Validate that the given direction is one of the allowed constants."""
-    if direction not in constants.DIRECTIONS:
-        raise ValueError('Direction must be one of '
-                         '{}.'.format(constants.DIRECTIONS))
+    if direction not in Direction:
+        raise ValueError(
+            '`direction` must be either `pyphi.constants.Direction.PAST` '
+            'or `pyphi.constants.Direction.FUTURE`')
     return True
 
 
@@ -54,11 +44,8 @@ def tpm(tpm):
                 'there must be ' '2^N rows and N columns, where N is the '
                 'number of nodes. State-by-state TPM must be square. '
                 '{}'.format(tpm.shape, see_tpm_docs))
-        if (tpm.shape[0] == tpm.shape[1]
-                and not conditionally_independent(tpm)):
-            raise ValueError('TPM is not conditionally independent. See the '
-                             'conditional independence example in the '
-                             'documentation for more information.')
+        if tpm.shape[0] == tpm.shape[1]:
+            conditionally_independent(tpm)
     elif tpm.ndim == (N + 1):
         if not (tpm.shape == tuple([2] * N + [N])):
             raise ValueError(
@@ -82,9 +69,13 @@ def conditionally_independent(tpm):
         else:
             there_and_back_again = convert.state_by_state2state_by_node(
                 convert.state_by_node2state_by_state(tpm))
-        return np.all((tpm - there_and_back_again) < EPSILON)
-    else:
-        return True
+
+        if np.any((tpm - there_and_back_again) >= EPSILON):
+            raise exceptions.ConditionallyDependentError(
+                'TPM is not conditionally independent. See the conditional '
+                'independence example in the documentation for more info')
+
+    return True
 
 
 def connectivity_matrix(cm):
@@ -115,25 +106,13 @@ def node_labels(node_labels, node_indices):
         raise ValueError("Labels {0} must be unique.""".format(node_labels))
 
 
-# TODO test
-def perturb_vector(pv, size):
-    """Validate a network's pertubation vector."""
-    if pv.size != size:
-        raise ValueError("Perturbation vector must have one element per node.")
-    if np.any(pv > 1) or np.any(pv < 0):
-        raise ValueError("Perturbation vector elements must be probabilities, "
-                         "between 0 and 1.")
-    return True
-
-
 def network(n):
     """Validate a |Network|.
 
-    Checks the TPM, connectivity matrix, and perturbation vector.
+    Checks the TPM and connectivity matrix.
     """
     tpm(n.tpm)
     connectivity_matrix(n.cm)
-    perturb_vector(n.perturb_vector, n.size)
     node_labels(n.node_labels, n.node_indices)
     if n.cm.shape[0] != n.size:
         raise ValueError("Connectivity matrix must be NxN, where N is the "
@@ -175,11 +154,9 @@ def state_reachable(subsystem):
     # the nodes that are actually in the subsystem...
     tpm = subsystem.tpm[..., subsystem.node_indices]
     # Then we do the subtraction and test.
-    test = tpm - np.array(subsystem.state)[list(subsystem.node_indices)]
+    test = tpm - np.array(subsystem.proper_state)
     if not np.any(np.logical_and(-1 < test, test < 1).all(-1)):
-        raise StateUnreachableError(
-            subsystem.state, 'This state cannot be reached according to the '
-                             'given TPM.')
+        raise exceptions.StateUnreachableError(subsystem.state)
 
 
 def cut(cut, node_indices):
@@ -272,3 +249,11 @@ def blackbox_and_coarse_grain(blackbox, coarse_grain):
             raise ValueError(
                 'Multiple outputs from a blackbox must be partitioned into '
                 'the same macro-element of the coarse-graining')
+
+
+def measure(value):
+    """Validate a distance measure."""
+    if value not in constants.MEASURES:
+        raise ValueError(
+            "Invalid value `{}` for `config.MEASURE`. "
+            "Choose one of {}".format(value, constants.MEASURES))

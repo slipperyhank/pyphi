@@ -4,7 +4,36 @@
 
 import numpy as np
 
-from .. import utils
+from .. import config, utils, validate
+from ..constants import EMD, KLD, L1
+
+BIG_NUMBER = 1000000
+
+
+def measure(d1, d2):
+    """Compute the distance between two repertoires.
+
+    Args:
+        d1 (np.ndarray): The first repertoire.
+        d2 (np.ndarray): The second repertoire.
+
+    Returns:
+        float: The distance between ``d1`` and ``d2``.
+    """
+    if config.MEASURE in [EMD, L1]:
+        return utils.hamming_emd(d1, d2)
+
+    # If the distance is `inf` return a very large number instead so that
+    # the generalized EMD can still operate on a KLD distance matrix.
+    elif config.MEASURE == KLD:
+        result = utils.kld(d1, d2)
+
+        if np.isinf(result):
+            return BIG_NUMBER
+
+        return result
+
+    validate.measure(config.MEASURE)
 
 
 def concept_distance(c1, c2):
@@ -22,11 +51,12 @@ def concept_distance(c1, c2):
     # are the same size.
     cause_purview = tuple(set(c1.cause.purview + c2.cause.purview))
     effect_purview = tuple(set(c1.effect.purview + c2.effect.purview))
+
     return sum([
-        utils.hamming_emd(c1.expand_cause_repertoire(cause_purview),
-                          c2.expand_cause_repertoire(cause_purview)),
-        utils.hamming_emd(c1.expand_effect_repertoire(effect_purview),
-                          c2.expand_effect_repertoire(effect_purview))])
+        measure(c1.expand_cause_repertoire(cause_purview),
+                c2.expand_cause_repertoire(cause_purview)),
+        measure(c1.expand_effect_repertoire(effect_purview),
+                c2.expand_effect_repertoire(effect_purview))])
 
 
 def _constellation_distance_simple(C1, C2):

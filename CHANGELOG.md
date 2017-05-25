@@ -17,12 +17,23 @@ Next Release
   arguments.
 - Removed `utils.submatrix`.
 - Made `Network.tpm` and `Network.cm` immutable properties.
+- Removed the `purview` argument from `Subsystem.expand_repertoire`.
+- Moved `validate.StateUnreachableError` and `macro.ConditionallyDependentError`
+  to the `exceptions` module.
+- Removed perturbation vector support.
+- Changed `utils.marginalize_out` to take a list of indices.
+- Fixed `macro.effective_info` to use the algorithm from the macro-micro paper.
+- Replace `constants.DIRECTIONS`, `constants.PAST`, and `constants.FUTURE` with
+  a proper `Enum` class: `constants.Direction`. Past and future are now
+  represented by `constants.Direction.PAST` and `constants.Direction.FUTURE`.
+- Simplifed logging config to use `config.LOG_STDOUT_LEVEL`,
+  `config.LOG_FILE_LEVEL` and `config.LOG_FILE`.
 
 ### API Additions
-- Added config.L1_DISTANCE_APPROXIMATION which uses the L1-distance to
-  approximate the Earth-Movers Distance in MIP computations. If the mechanism
-  is found to be irreducible over the purview, φ is recalculated using the
-  proper EMD.
+- Added `subsystem.evaluate_partition`. This returns the φ for a particular
+  partition.
+- Added `config.MEASURE` to choose between EMD, KLD, or L1 for distance
+  computations.
 - Added `macro.MacroSubsystem`. This subclass of `Subsystem` is used to performs
   macro computations.
 - Added `macro.CoarseGrain` to represent coarse-grainings of a system.
@@ -40,10 +51,19 @@ Next Release
 - Added `models.normalize_constellation` for deterministically ordering a
   constellation.
 - Added a `Makefile`.
+- Added `utils.purview` for computing the purview of a repertoire.
+- Added an `exceptions` module.
+- Added `utils.repertoire_shape`.
+- Added `config.PARTITION_MECHANISMS` to require that MIP bipartitions strictly
+  partition the mechanism.
 
 ### Refactor
 - Existing macro coarse-grain logic to use `MacroSubsystem` and `CoarseGrain`.
 - Improved string representations of PyPhi objects.
+- Refactored JSON support. The `jsonify` module now dumps PyPhi models to a
+  a format which can be loaded to reproduce the full object graph of PyPhi
+  objects. This causes backwards incompatible changes to the JSON format of
+  some model representations.
 
 ### Optimizations
 - Added an analytic solution for the EMD computation between effect
@@ -92,8 +112,8 @@ _2016-02-06_
 - Disabled concept caching; removed the `config.CACHE_CONCEPTS` option.
 
 ### API Additions
-- Added `config.READABLE_REPRS` to control whether `__reprs__` of PyPhi models
-  default to using pretty string formatting.
+- Added `config.REPR_VERBOSITY` to control whether `__reprs__` of PyPhi models
+  use pretty string formatting and control the verbosity of the output.
 - Added a `Constellation` object.
 - Added `utils.submatrix` and `utils.relevant_connections` functions.
 - Added the `macro.effective_info` function.
@@ -119,7 +139,7 @@ _2016-02-06_
 - Updated documentation and examples to reflect node-to-index conversion.
 
 
-0.7.5
+0.7.5 [unreleased]
 ------------------
 _2015-11-02_
 
@@ -136,7 +156,7 @@ _2015-11-02_
   default but can be disabled via the `VALIDATE_SUBSYSTEM_STATES` option.
 
 
-0.7.4
+0.7.4 [unreleased]
 ------------------
 _2015-10-12_
 
@@ -145,7 +165,7 @@ _2015-10-12_
   value, leading to collisions.
 
 
-0.7.3
+0.7.3 [unreleased]
 ------------------
 _2015-09-08_
 
@@ -153,7 +173,7 @@ _2015-09-08_
 - Heavily refactored the `pyphi.json` module and renamed it to `pyphi.jsonify`.
 
 
-0.7.2
+0.7.2 [unreleased]
 ------------------
 _2015-07-01_
 

@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# fmt.py
+# models/fmt.py
 
 """
+
 Helper functions for formatting pretty representations of PyPhi models.
 """
 
@@ -14,13 +15,18 @@ from .. import config, utils
 SMALL_PHI = "\u03C6"
 BIG_PHI = "\u03D5"
 
+# repr verbosity levels
+LOW = 0
+MEDIUM = 1
+HIGH = 2
+
 
 def make_repr(self, attrs):
     """Construct a repr string.
 
-    If `config.READABLE_REPRS` is True, this function calls out to the object's
-    __str__ method. Although this breaks the convention that __repr__ should
-    return a string which can reconstruct the object, readable reprs are
+    If `config.REPR_VERBOSITY` is ``1`` or ``2``, this function calls the
+    object's __str__ method. Although this breaks the convention that __repr__
+    should return a string which can reconstruct the object, readable reprs are
     invaluable since the Python interpreter calls `repr` to represent all
     objects in the shell. Since PyPhi is often used in the interpreter we want
     to have meaningful and useful representations.
@@ -30,17 +36,21 @@ def make_repr(self, attrs):
         attrs (Iterable[str]): Attributes to include in the repr
 
     Returns:
-        str: the `repr`esentation of the object
+        str: the ``repr``esentation of the object
     """
     # TODO: change this to a closure so we can do
     # __repr__ = make_repr(attrs) ???
 
-    if config.READABLE_REPRS:
+    if config.REPR_VERBOSITY in [MEDIUM, HIGH]:
         return self.__str__()
 
-    return "{}({})".format(
-        self.__class__.__name__,
-        ", ".join(attr + '=' + repr(getattr(self, attr)) for attr in attrs))
+    elif config.REPR_VERBOSITY is LOW:
+        return "{}({})".format(
+            self.__class__.__name__,
+            ", ".join(attr + '=' + repr(getattr(self, attr)) for attr in attrs))
+
+    raise ValueError("Invalid `REPR_VERBOSITY` value of {}. Must be one of "
+                     "[0, 1, 2]".format(config.REPR_VERBOSITY))
 
 
 def indent(lines, amount=2, chr=' '):
@@ -117,15 +127,19 @@ def side_by_side(left, right):
     return "\n".join(a + b for a, b in zip(left_lines, right_lines)) + "\n"
 
 
-def header(header, text, over_char=None, under_char=None):
+def header(header, text, over_char=None, under_char=None, center=True):
     """Center a header over a block of text.
 
-    Assumes that all lines in the text are the same width.
+    The width of the text is the width of the longest line of the text.
     """
     lines = list(text.split("\n"))
-    width = len(lines[0])
+    width = max(len(l) for l in lines)
 
-    header = header.center(width) + "\n"
+    # Center or left-justify
+    if center:
+        header = header.center(width) + "\n"
+    else:
+        header = header.ljust(width) + "\n"
 
     # Underline header
     if under_char:
@@ -194,17 +208,19 @@ def fmt_bipartition(partition, subsystem=None):
     if not partition:
         return ""
 
-    part0, part1 = partition
-    part0 = fmt_part(part0, subsystem).split("\n")
-    part1 = fmt_part(part1, subsystem).split("\n")
+    parts = [fmt_part(part, subsystem).split("\n") for part in partition]
 
     times = ("   ",
              " X ",
              "   ")
-
     breaks = ("\n", "\n", "")  # No newline at the end of string
+    between = [times] * (len(parts) - 1) + [breaks]
 
-    return "".join(chain.from_iterable(zip(part0, times, part1, breaks)))
+    # Alternate [part, break, part, ..., end]
+    elements = chain.from_iterable(zip(parts, between))
+
+    # Transform vertical stacks into horizontal lines
+    return "".join(chain.from_iterable(zip(*elements)))
 
 
 def fmt_constellation(c, title=None):
@@ -238,7 +254,10 @@ def fmt_concept(concept):
     title = "Concept: Mechanism = {}, {} = {}".format(
         mechanism, SMALL_PHI, concept.phi)
 
-    return header(title, ce, "=", "=")
+    # Only center headers for high-verbosity output
+    center = config.REPR_VERBOSITY is HIGH
+
+    return header(title, ce, "=", "=", center=center)
 
 
 def fmt_mip(mip, verbose=True):
@@ -249,30 +268,40 @@ def fmt_mip(mip, verbose=True):
     if verbose:
         mechanism = "Mechanism: {}\n".format(
             fmt_mechanism(mip.mechanism, mip.subsystem))
-        direction = "Direction: {}\n".format(mip.direction)
+        direction = "\nDirection: {}\n".format(mip.direction)
     else:
         mechanism = ""
         direction = ""
 
+    if config.REPR_VERBOSITY is HIGH:
+        partition = "\nPartition:\n{}".format(
+            indent(fmt_bipartition(mip.partition, mip.subsystem)))
+        unpartitioned_repertoire = "\nUnpartitioned Repertoire:\n{}".format(
+            indent(fmt_repertoire(mip.unpartitioned_repertoire)))
+        partitioned_repertoire = "\nPartitioned Repertoire:\n{}".format(
+            indent(fmt_repertoire(mip.partitioned_repertoire)))
+    else:
+        partition = ""
+        unpartitioned_repertoire = ""
+        partitioned_repertoire = ""
+
     return (
         "{SMALL_PHI} = {phi}\n"
         "{mechanism}"
-        "Purview = {purview}\n"
-        "Partition:\n{partition}\n"
+        "Purview = {purview}"
+        "{partition}"
         "{direction}"
-        "Unpartitioned Repertoire:\n{unpartitioned_repertoire}\n"
-        "Partitioned Repertoire:\n{partitioned_repertoire}").format(
+        "{unpartitioned_repertoire}"
+        "{partitioned_repertoire}").format(
             SMALL_PHI=SMALL_PHI,
             mechanism=mechanism,
             purview=fmt_mechanism(mip.purview, mip.subsystem),
             direction=direction,
             phi=mip.phi,
-            partition=indent(fmt_bipartition(mip.partition, mip.subsystem)),
-            unpartitioned_repertoire=indent(fmt_repertoire(
-                mip.unpartitioned_repertoire)),
-            partitioned_repertoire=indent(fmt_repertoire(
-                mip.partitioned_repertoire)))
-# TODO: print the two repertoires side-by-side?
+            partition=partition,
+            unpartitioned_repertoire=unpartitioned_repertoire,
+            partitioned_repertoire=partitioned_repertoire)
+            # TODO: print the two repertoires side-by-side?
 
 
 def fmt_cut(cut, subsystem=None):
@@ -313,50 +342,6 @@ def fmt_big_mip(big_mip):
                 "Partitioned Constellation")))
 
 
-def fmt_ac_mip(acmip, verbose=True):
-    """Helper function to format a nice Mip string"""
-
-    if acmip is False or acmip is None:  # mips can be Falsy
-        return ""
-
-    mechanism = "mechanism: {}\t".format(acmip.mechanism) if verbose else ""
-    direction = "direction: {}\n".format(acmip.direction) if verbose else ""
-    return (
-        "{alpha}\t"
-        "{mechanism}"
-        "purview: {acmip.purview}\t"
-        "{direction}"
-        "partition:\n{partition}\n"
-        "coefficient:\t{coefficient}\t"
-        "partitioned_coefficient:\t{partitioned_coefficient}\n").format(
-            alpha="{0:.4f}".format(round(acmip.alpha, 4)),
-            mechanism=mechanism,
-            direction=direction,
-            acmip=acmip,
-            partition=indent(fmt_bipartition(acmip.partition)),
-            coefficient=indent(acmip.coefficient),
-            partitioned_coefficient=indent(acmip.partitioned_coefficient))
-
-
-def fmt_ac_big_mip(ac_big_mip):
-    """Format a AcBigMip"""
-    return (
-        "{alpha}\n"
-        "direction: {ac_big_mip.direction}\n"
-        "context: {ac_big_mip.context}\n"
-        "past_state: {ac_big_mip.before_state}\n"
-        "current_state: {ac_big_mip.after_state}\n"
-        "cut: {ac_big_mip.cut}\n"
-        "unpartitioned_account: {unpartitioned_account}"
-        "partitioned_account: {partitioned_account}".format(
-            alpha="{0:.4f}".format(round(ac_big_mip.alpha, 4)),
-            ac_big_mip=ac_big_mip,
-            unpartitioned_account=fmt_constellation(
-                ac_big_mip.unpartitioned_account),
-            partitioned_account=fmt_constellation(
-                ac_big_mip.partitioned_account)))
-
-
 def fmt_repertoire(r):
     """Format a repertoire."""
     # TODO: will this get unwieldy with large repertoires?
@@ -378,3 +363,67 @@ def fmt_repertoire(r):
         lines.append("{0}{1}{2:g}".format(state_str, space, r[state]))
 
     return box("\n".join(lines))
+
+
+def fmt_ac_mip(acmip, verbose=True):
+    """Helper function to format a nice Mip string"""
+
+    if acmip is False or acmip is None:  # mips can be Falsy
+        return ""
+
+    mechanism = "mechanism: {}\t".format(acmip.mechanism) if verbose else ""
+    direction = "direction: {}\n".format(acmip.direction) if verbose else ""
+    return (
+        "{alpha}\t"
+        "{mechanism}"
+        "purview: {acmip.purview}\t"
+        "{direction}"
+        "partition:\n{partition}\n"
+        "probability:\t{probability}\t"
+        "partitioned_probability:\t{partitioned_probability}\n").format(
+            alpha="{0:.4f}".format(round(acmip.alpha, 4)),
+            mechanism=mechanism,
+            direction=direction,
+            acmip=acmip,
+            partition=indent(fmt_bipartition(acmip.partition)),
+            probability=indent(acmip.probability),
+            partitioned_probability=indent(acmip.partitioned_probability))
+
+
+def fmt_ac_big_mip(ac_big_mip):
+    """Format a AcBigMip"""
+    return (
+        "{alpha}\n"
+        "direction: {ac_big_mip.direction}\n"
+        "context: {ac_big_mip.context}\n"
+        "past_state: {ac_big_mip.before_state}\n"
+        "current_state: {ac_big_mip.after_state}\n"
+        "cut: {ac_big_mip.cut}\n"
+        "{unpartitioned_account}"
+        "{partitioned_account}".format(
+            alpha="{0:.4f}".format(round(ac_big_mip.alpha, 4)),
+            ac_big_mip=ac_big_mip,
+            unpartitioned_account=fmt_account(
+                ac_big_mip.unpartitioned_account, "Unpartitioned Account"),
+            partitioned_account=fmt_account(
+                ac_big_mip.partitioned_account, "Partitioned Account")))
+
+
+def fmt_account(account, title=None):
+    """Format an Account or a DirectedAccount"""
+
+    if title is None:
+        title = account.__class__.__name__  # `Account` or `DirectedAccount`
+
+    title = "{} ({} coefficient{})".format(
+        title, len(account), "" if len(account) == 1 else "s")
+
+    content = "\n".join(str(m) for m in account)
+
+    return "\n" + header(title, content, under_char="*")
+
+
+def fmt_actual_cut(cut):
+    """Format an ActualCut"""
+    return ("{cut.cause_part1} --//--> {cut.effect_part2} && "
+            "{cut.cause_part2} --//--> {cut.effect_part1}").format(cut=cut)

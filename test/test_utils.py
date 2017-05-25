@@ -4,24 +4,7 @@
 import numpy as np
 import pytest
 
-from pyphi import utils, constants, models
-
-
-def test_apply_cut():
-    cm = np.array([
-        [1, 0, 1, 0],
-        [1, 1, 1, 1],
-        [0, 1, 0, 1],
-        [1, 0, 1, 0]
-    ])
-    cut = models.Cut(severed=(0, 3), intact=(1, 2))
-    cut_cm = np.array([
-        [1, 0, 0, 0],
-        [1, 1, 1, 1],
-        [0, 1, 0, 1],
-        [1, 0, 0, 0]
-    ])
-    assert np.array_equal(utils.apply_cut(cut, cm), cut_cm)
+from pyphi import utils, constants
 
 
 def test_fully_connected():
@@ -48,13 +31,17 @@ def test_phi_eq():
 
 
 def test_marginalize_out(s):
-    marginalized_distribution = utils.marginalize_out(s.nodes[0].index,
-                                                      s.network.tpm)
+    marginalized_distribution = utils.marginalize_out([0], s.tpm)
     assert np.array_equal(marginalized_distribution,
                           np.array([[[[0.,  0.,  0.5],
                                       [1.,  1.,  0.5]],
                                      [[1.,  0.,  0.5],
                                       [1.,  1.,  0.5]]]]))
+
+    marginalized_distribution = utils.marginalize_out([0, 1], s.tpm)
+    assert np.array_equal(marginalized_distribution,
+                          np.array([[[[ 0.5,  0. ,  0.5],
+                                      [ 1. ,  1. ,  0.5]]]]))
 
 
 def test_purview_max_entropy_distribution():
@@ -118,6 +105,19 @@ def test_directed_bipartition():
     assert [] == utils.directed_bipartition(())
 
 
+def test_directed_tripartition_indices():
+    assert utils.directed_tripartition_indices(0) == []
+    assert utils.directed_tripartition_indices(2) == [
+        ((0, 1), (), ()),
+        ((0,), (1,), ()),
+        ((0,), (), (1,)),
+        ((1,), (0,), ()),
+        ((), (0, 1), ()),
+        ((), (0,), (1,)),
+        ((1,), (), (0,)),
+        ((), (1,), (0,)),
+        ((), (), (0, 1))]
+
 def test_emd_same_distributions():
     a = np.ones((2, 2, 2)) / 8
     b = np.ones((2, 2, 2)) / 8
@@ -135,6 +135,13 @@ def test_l1_distance():
     a = np.array([0, 1, 2])
     b = np.array([2, 2, 4.5])
     assert utils.l1(a, b) == 5.5
+
+
+def test_kld():
+    a = np.array([0, 1.0])
+    b = np.array([0.5, 0.5])
+
+    assert utils.kld(a, b) == 1
 
 
 def test_uniform_distribution():
@@ -393,3 +400,12 @@ def test_purview(s):
     for mechanism, purview in zip(mechanisms, purviews):
         repertoire = s.cause_repertoire(mechanism, purview)
         assert utils.purview(repertoire) == purview
+
+    assert utils.purview(None) == None
+
+
+def test_repertoire_shape():
+    N = 3
+    assert utils.repertoire_shape((), N) == [1, 1, 1]
+    assert utils.repertoire_shape((1, 2), N) == [1, 2, 2]
+    assert utils.repertoire_shape((0, 2), N) == [2, 1, 2]

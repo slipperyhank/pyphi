@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # models/__init__.py
@@ -18,10 +17,17 @@ Attributes:
     AcMice: Alias for :class:`actual_causation.AcMice`
     AcBigMip: Alias for :class:`actual_causation.AcBigMip`
     Bipartition: Alias for :class:`cuts.Bipartition`
+    ActualCut: Alias for :class:`cuts.ActualCut`
+    AcMip: Alias for :class:`actual_causation.AcMip`
+    Occurence: Alias for :class:`actual_causation.Occurence`
+    AcBigMip: Alias for :class:`actual_causation.AcBigMip`
+    Account: Alias for :class:`actual_causation.Account`
+    DirectedAccount: Alias for :class:`actual_causation.DirectedAccount`
 """
 
+from .actual_causation import (AcBigMip, Occurence, AcMip, _null_ac_mip, Event,
+                               _null_ac_bigmip, DirectedAccount, Account)
 from .big_phi import BigMip, _null_bigmip, _single_node_bigmip
 from .concept import (Mip, _null_mip, Mice, Concept, Constellation,
                       normalize_constellation)
-from .actual_causation import AcBigMip, AcMice, AcMip
-from .cuts import Cut, Part, Bipartition, Actual_Cut
+from .cuts import ActualCut, Cut, Part, Bipartition, Tripartition

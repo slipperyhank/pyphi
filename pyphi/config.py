@@ -25,7 +25,7 @@ Or load a dictionary of configuration values:
 Theoretical approximations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-This section with deals assumptions that speed up computation at the cost of
+This section deals with assumptions that speed up computation at the cost of
 theoretical accuracy.
 
 - ``pyphi.config.ASSUME_CUTS_CANNOT_CREATE_NEW_CONCEPTS``:
@@ -37,13 +37,27 @@ theoretical accuracy.
     >>> defaults['ASSUME_CUTS_CANNOT_CREATE_NEW_CONCEPTS']
     False
 
-- ``pyphi.config.L1_DISTANCE_APPROXIMATION``: If enabled, the ``L1`` distance
-  will be used instead of the EMD when computing MIPs. If a mechanism and
-  purview are found to be irreducible, the |small_phi| value of the MIP is
-  recalculated using the EMD.
+- ``pyphi.config.CUT_ONE_APPROXIMATION``:
+  When determining the MIP for |big_phi|, this restricts the set of system cuts
+  that are considered to only those that cut the inputs or outputs of a single
+  node. This restricted set of cuts scales linearly with the size of the
+  system; the full set of all possible bipartitions scales exponentially. This
+  approximation is more likely to give theoretically accurate results with
+  modular, sparsely-connected, or homogeneous networks.
 
-    >>> defaults['L1_DISTANCE_APPROXIMATION']
+    >>> defaults['CUT_ONE_APPROXIMATION']
     False
+
+- ``pyphi.config.MEASURE``: The measure to use when computing distances
+  between repertoires and concepts. The default is ``EMD``; the Earth Movers's
+  Distance. ``KLD`` is the Kullback-Leibler Divergence. If ``L1`` is chosen,
+  the ``L1`` distance is initially used instead of the EMD when computing MIPs
+  but, if a mechanism and purview are found to be irreducible, the |small_phi|
+  value of the MIP is recalculated using the EMD.
+
+    >>> defaults['MEASURE']
+    'EMD'
+
 
 System resources
 ~~~~~~~~~~~~~~~~
@@ -94,12 +108,12 @@ long time!), resulting in data loss.
 Caching
 ~~~~~~~
 
-PyPhi is equipped with a transparent caching system for the |BigMip| and
-|Concept| objects, which stores them as they are computed to avoid having to
-recompute them later. This makes it easy to play around interactively with the
-program, or to accumulate results with minimal effort. For larger projects,
-however, it is recommended that you manage the results explicitly, rather than
-relying on the cache. For this reason it is disabled by default.
+PyPhi is equipped with a transparent caching system for |BigMip| objects which
+stores them as they are computed to avoid having to recompute them later. This
+makes it easy to play around interactively with the program, or to accumulate
+results with minimal effort. For larger projects, however, it is recommended
+that you manage the results explicitly, rather than relying on the cache. For
+this reason it is disabled by default.
 
 - ``pyphi.config.CACHE_BIGMIPS``: Control whether |BigMip| objects are cached
   and automatically retreived.
@@ -169,41 +183,34 @@ relying on the cache. For this reason it is disabled by default.
 Logging
 ~~~~~~~
 
-These are the settings for PyPhi logging. You can control the format of the
-logs and the name of the log file. Logs can be written to standard output, a
-file, both, or none. See the `documentation on Python's logger
+These settings control how PyPhi handles log messages. Logs can be written to
+standard output, a file, both, or none. If these simple default controls are
+not flexible enough for you, you can override the entire logging configuration.
+See the `documentation on Python's logger
 <https://docs.python.org/3.4/library/logging.html>`_ for more information.
 
-- ``pyphi.config.LOGGING_CONFIG['file']['enabled']``: Control whether logs are
-  written to a file.
+- ``pyphi.config.LOG_STDOUT_LEVEL``: Controls the level of log messages written
+  to standard output. Can be one of ``'DEBUG'``, ``'INFO'``,
+  ``'WARNING'``, ``'ERROR'``, ``'CRITICAL'``, or ``None``. ``DEBUG`` is the
+  least restrictive level and will show the most log messages. ``CRITICAL`` is
+  the most restrictive level and will only display information about
+  unrecoverable errors. If set to ``None``, logging to standard output will be
+  disabled entirely.
 
-    >>> defaults['LOGGING_CONFIG']['file']['enabled']
-    True
+    >>> defaults['LOG_STDOUT_LEVEL']
+    'WARNING'
 
-- ``pyphi.config.LOGGING_CONFIG['file']['filename']``: Control the name of the
-  logfile.
+- ``pyphi.config.LOG_FILE_LEVEL: Controls the level of log messages written to
+  the log file. This option has the same possible values as
+  ``LOG_STDOUT_LEVEL``.
 
-    >>> defaults['LOGGING_CONFIG']['file']['filename']
-    'pyphi.log'
-
-- ``pyphi.config.LOGGING_CONFIG['file']['level']``: Control the concern level
-  of file logging. Can be one of ``'DEBUG'``, ``'INFO'``, ``'WARNING'``,
-  ``'ERROR'``, or ``'CRITICAL'``.
-
-    >>> defaults['LOGGING_CONFIG']['file']['level']
+    >>> defaults['LOG_FILE_LEVEL']
     'INFO'
 
-- ``pyphi.config.LOGGING_CONFIG['stdout']['enabled']``: Control whether logs
-  are written to standard output.
+- ``pyphi.config.LOG_FILE``: Control the name of the logfile.
 
-    >>> defaults['LOGGING_CONFIG']['stdout']['enabled']
-    True
-
-- ``pyphi.config.LOGGING_CONFIG['stdout']['level']``: Control the concern level
-  of standard output logging. Same possible values as file logging.
-
-    >>> defaults['LOGGING_CONFIG']['stdout']['level']
-    'WARNING'
+    >>> defaults['LOG_FILE']
+    'pyphi.log'
 
 - ``pyphi.config.LOG_CONFIG_ON_IMPORT``: Controls whether the current
   configuration is printed when PyPhi is imported.
@@ -251,26 +258,100 @@ Miscellaneous
     False
 
 
-- ``pyphi.config.READABLE_REPRS``: If set to ``True``, this causes ``repr``
-  calls on PyPhi objects to return pretty-formatted and legible strings.
+- ``pyphi.config.REPR_VERBOSITY``: Controls the verbosity of ``__repr__``
+  methods on PyPhi objects. Can be set to ``0``, ``1``, or ``2``. If set to
+  ``1``, calling ``repr`` on PyPhi objects will return pretty-formatted and
+  legible strings, excluding repertoires. If set to ``2``, ``repr`` calls also
+  include repertoires.
+
   Although this breaks the convention that ``__repr__`` methods should return a
   representation which can reconstruct the object, readable representations are
   convenient since the Python REPL calls ``repr`` to represent all objects in
   the shell and PyPhi is often used interactively with the REPL. If set to
-  ``False``, ``repr`` returns more traditional object representations.
+  ``0``, ``repr`` returns more traditional object representations.
 
-    >>> defaults['READABLE_REPRS']
-    True
+    >>> defaults['REPR_VERBOSITY']
+    2
+
+- ``pyphi.config.PARTITION_MECHANISMS``: If ``True``, |small_phi|-MIP
+  computations will only consider bipartitions that strictly partition the
+  mechanism. That is, for the mechanism ``(A, B)`` and purview ``(B, C, D)``
+  the partition ::
+
+    AB   []
+    -- X --
+    B    CD
+
+  is not considered, but ::
+
+    A    B
+    -- X --
+    B    CD
+
+  is. The following is also valid::
+
+    AB   []
+    -- X ---
+    []   BCD
+
+  In addition, this option introduces wedge tripartitions of the form ::
+
+    A    B   []
+    -- X - X --
+    B    C   D
+
+  where the mechanism in the third part is always empty.
+
+  Finally, in the case of a |small_phi|-tie when computing MICE, this
+  setting choses the MIP with smallest purview instead the largest (which is
+  the default behavior.)
+
+    >>> defaults['PARTITION_MECHANISMS']
+    False
+
+
+- ``pyphi.config.PARTITION_MECHANISMS``: If ``True``, |small_phi|-MIP
+  computations will only consider bipartitions that strictly partition the
+  mechanism. That is, for the mechanism ``(A, B)`` and purview ``(B, C, D)``
+  the partition ::
+
+    AB   []
+    -- X --
+    B    CD
+
+  is not considered, but ::
+
+    A    B
+    -- X --
+    B    CD
+
+  is. The following is also valid::
+
+    AB   []
+    -- X ---
+    []   BCD
+
+  Additionally, in the case of a |small_phi|-tie when computing MICE, this
+  setting choses the MIP with smallest purview instead the largest (which is
+  the default behavior.)
+
+    >>> defaults['PARTITION_MECHANISMS']
+    False
+
 
 -------------------------------------------------------------------------------
 """
 
 import contextlib
+import logging
+import logging.config
 import os
 import pprint
 import sys
 
 import yaml
+
+from . import __about__
 
 # TODO: document mongo config
 # Defaults for configurable constants.
@@ -281,8 +362,8 @@ DEFAULTS = {
     'ASSUME_CUTS_CANNOT_CREATE_NEW_CONCEPTS': False,
     # Only check single nodes cuts for the MIP. 2**n cuts instead of n.
     'CUT_ONE_APPROXIMATION': False,
-    # Use L1 distance to approximate the EMD when computing MIPs.
-    'L1_DISTANCE_APPROXIMATION': False,
+    # The measure to use when computing phi ('EMD', 'KLD', 'L1')
+    'MEASURE': 'EMD',
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # Controls whether concepts are evaluated in parallel.
     'PARALLEL_CONCEPT_EVALUATION': False,
@@ -322,20 +403,12 @@ DEFAULTS = {
         'host': 'localhost',
         'port': 6379,
     },
-    # These are the settings for PyPhi logging.
-    'LOGGING_CONFIG': {
-        'format': '%(asctime)s [%(name)s] %(levelname)s: %(message)s',
-        # `level` can be "DEBUG", "INFO", "WARNING", "ERROR", or "CRITICAL".
-        'file': {
-            'enabled': True,
-            'level': 'INFO',
-            'filename': 'pyphi.log'
-        },
-        'stdout': {
-            'enabled': True,
-            'level': 'WARNING'
-        }
-    },
+    # The file to log to
+    'LOG_FILE': 'pyphi.log',
+    # The log level to write to `LOG_FILE`
+    'LOG_FILE_LEVEL': 'INFO',
+    # The log level to write to stdout
+    'LOG_STDOUT_LEVEL': 'WARNING',
     # Controls whether the current configuration is logged upon import.
     'LOG_CONFIG_ON_IMPORT': True,
     # The number of decimal points to which phi values are considered accurate.
@@ -347,7 +420,9 @@ DEFAULTS = {
     # single-node subsystems as having 0.5 Phi.
     'SINGLE_NODES_WITH_SELFLOOPS_HAVE_PHI': False,
     # Use prettier __str__-like formatting in `repr` calls.
-    'READABLE_REPRS': True,
+    'REPR_VERBOSITY': 2,
+    # Only consider bipartitions which strictly partition the mechanism.
+    'PARTITION_MECHANISMS': False,
 }
 
 # Get a reference to this module's dictionary so we can set the configuration
@@ -386,6 +461,45 @@ def print_config():
     print('Current PyPhi configuration:\n', get_config_string())
 
 
+def configure_logging():
+    """Configure PyPhi logging based on the loaded configuration.
+
+    Note: if PyPhi config options that control logging are changed after they
+    are loaded (eg. in testing), the Python logging configuration will stay
+    the same unless you manually reconfigure the logging by calling this
+    function.
+
+    TODO: call this in `config.override`?
+    """
+    logging.config.dictConfig({
+        'version': 1,
+        'disable_existing_loggers': False,
+        'formatters': {
+            'standard': {
+                'format': '%(asctime)s [%(name)s] %(levelname)s: %(message)s'
+            }
+        },
+        'handlers': {
+            'file': {
+                'level': this_module.LOG_FILE_LEVEL,
+                'filename': this_module.LOG_FILE,
+                'class': 'logging.FileHandler',
+                'formatter': 'standard',
+            },
+            'stdout': {
+                'level': this_module.LOG_STDOUT_LEVEL,
+                'class': 'logging.StreamHandler',
+                'formatter': 'standard',
+            }
+        },
+        'root': {
+            'level': 'DEBUG',
+            'handlers': (['file'] if this_module.LOG_FILE_LEVEL else []) +
+                        (['stdout'] if this_module.LOG_STDOUT_LEVEL else [])
+        }
+    })
+
+
 class override(contextlib.ContextDecorator):
     """Decorator and context manager to override config values.
 
@@ -421,12 +535,29 @@ class override(contextlib.ContextDecorator):
         return False
 
 
-# The name of the file to load configuration data from.
 PYPHI_CONFIG_FILENAME = 'pyphi_config.yml'
 
-# Try to load the config file, falling back to the default configuration.
+# Load the default config
 load_config_default()
+
+# Then try and load the config file
 file_loaded = False
 if os.path.exists(PYPHI_CONFIG_FILENAME):
     load_config_file(PYPHI_CONFIG_FILENAME)
     file_loaded = True
+
+# Setup logging
+configure_logging()
+
+# Log the PyPhi version and loaded configuration
+if this_module.LOG_CONFIG_ON_IMPORT:
+    log = logging.getLogger(__name__)
+
+    log.info('PyPhi version {}'.format(__about__.__version__))
+    if file_loaded:
+        log.info('Loaded configuration from '
+                 '`./{}`'.format(PYPHI_CONFIG_FILENAME))
+    else:
+        log.info('Using default configuration (no config file provided)')
+
+    log.info('Current PyPhi configuration:\n {}'.format(get_config_string()))

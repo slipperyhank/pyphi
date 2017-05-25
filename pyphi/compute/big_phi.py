@@ -15,7 +15,7 @@ from time import time
 from . import parallel
 from .concept import constellation
 from .distance import constellation_distance
-from .. import config, memory, utils, validate
+from .. import config, exceptions, memory, utils, validate
 from ..models import BigMip, Cut, _null_bigmip, _single_node_bigmip
 from ..subsystem import Subsystem
 
@@ -236,12 +236,30 @@ def _big_mip(cache_key, subsystem):
     return result
 
 
+def _big_mip_cache_key(subsystem):
+    """The cache key of the subsystem.
+
+    This includes the native hash of the subsystem and all configuration values
+    which change the results of ``big_mip``.
+    """
+    return (
+        hash(subsystem),
+        config.ASSUME_CUTS_CANNOT_CREATE_NEW_CONCEPTS,
+        config.CUT_ONE_APPROXIMATION,
+        config.MEASURE,
+        config.PRECISION,
+        config.VALIDATE_SUBSYSTEM_STATES,
+        config.SINGLE_NODES_WITH_SELFLOOPS_HAVE_PHI
+    )
+
+
 # Wrapper to ensure that the cache key is the native hash of the subsystem, so
 # joblib doesn't mistakenly recompute things when the subsystem's MICE cache is
-# changed.
+# changed. The cache is also keyed on configuration values which affect the
+# value of the computation.
 @functools.wraps(_big_mip)
 def big_mip(subsystem):
-    return _big_mip(hash(subsystem), subsystem)
+    return _big_mip(_big_mip_cache_key(subsystem), subsystem)
 
 
 def big_phi(subsystem):
@@ -259,7 +277,7 @@ def subsystems(network, state):
     for subset in utils.powerset(network.node_indices):
         try:
             yield Subsystem(network, state, subset)
-        except validate.StateUnreachableError:
+        except exceptions.StateUnreachableError:
             pass
 
 
@@ -301,12 +319,12 @@ def possible_complexes(network, state):
         # Don't return subsystems that are in an impossible state.
         try:
             yield Subsystem(network, state, subset)
-        except validate.StateUnreachableError:
+        except exceptions.StateUnreachableError:
             continue
 
 
 def complexes(network, state):
-    """Return a generator for all irreducible complexes of the network."""
+    """Return all irreducible complexes of the network."""
     return tuple(filter(None, (big_mip(subsystem) for subsystem in
                                possible_complexes(network, state))))
 

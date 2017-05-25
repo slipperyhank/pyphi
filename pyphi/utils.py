@@ -7,23 +7,23 @@ Functions used by more than one PyPhi module or class, or that might be of
 external use.
 """
 
-import os
-import itertools
-import re
-import logging
 import hashlib
-import numpy as np
+import itertools
+import logging
+import os
 from itertools import chain, combinations
+
+import numpy as np
 
 from pyemd import emd
 from scipy.misc import comb
-from scipy.spatial.distance import cdist
 from scipy.sparse import csc_matrix
 from scipy.sparse.csgraph import connected_components
+from scipy.spatial.distance import cdist
+from scipy.stats import entropy
 
 from . import constants, convert
 from .cache import cache
-
 
 # Create a logger for this module.
 log = logging.getLogger(__name__)
@@ -67,7 +67,7 @@ def dense_time(tpm, time_scale):
 
 
 def run_tpm(tpm, time_scale):
-    """Iterate a tpm by the specified number of time steps.
+    """Iterate a TPM by the specified number of time steps.
 
     Args:
         tpm (np.ndarray): A state-by-node tpm.
@@ -104,7 +104,8 @@ def run_cm(cm, time_scale):
 # ============================================================================
 
 def state_by_state(tpm):
-    """Return True if the tpm is in state-by-state form, otherwise False."""
+    """Return ``True`` if ``tpm`` is in state-by-state form, otherwise
+    ``False``."""
     return tpm.ndim == 2 and tpm.shape[0] == tpm.shape[1]
 
 
@@ -135,37 +136,6 @@ def expand_tpm(tpm):
     return tpm * uc
 
 
-def apply_cut(cut, cm):
-    """Return a modified connectivity matrix where the connections from one set
-    of nodes to the other are destroyed.
-    """
-    if cut is None:
-        return cm
-
-    cm = cm.copy()
-    for i in cut.severed:
-        for j in cut.intact:
-            cm[i][j] = 0
-
-    return cm
-
-
-# TODO test
-def apply_actual_cut(cut, connectivity_matrix):
-    """Returns a modified connectivity matrix where the connections from one
-    set of nodes to the other are destroyed."""
-    if cut is None:
-        return connectivity_matrix
-    cm = connectivity_matrix.copy()
-    for i in cut.cause_part1:
-        for j in cut.effect_part2:
-            cm[i][j] = 0
-    for i in cut.cause_part2:
-        for j in cut.effect_part1:
-            cm[i][j] = 0
-    return cm
-
-
 def fully_connected(cm, nodes1, nodes2):
     """Test connectivity of one set of nodes to another.
 
@@ -177,10 +147,10 @@ def fully_connected(cm, nodes1, nodes2):
             be tested.
 
     Returns:
-        bool: Returns True if all elements in ``nodes1`` output to
-            some element in ``nodes2`` AND all elements in ``nodes2``
-            have an input from some element in ``nodes1``. Otherwise
-            return False. Return True if either set of nodes is empty.
+        bool: Returns ``True`` if all elements in ``nodes1`` output to some
+        element in ``nodes2`` AND all elements in ``nodes2`` have an input from
+        some element in ``nodes1``. Otherwise return ``False``. Return ``True``
+        if either set of nodes is empty.
     """
     if not nodes1 or not nodes2:
         return True
@@ -219,7 +189,7 @@ def get_outputs_from_cm(index, cm):
 
 
 def causally_significant_nodes(cm):
-    """Returns a tuple of all nodes indices in the connectivity matrix which
+    """Return a tuple of all nodes indices in the connectivity matrix which
     are causally significant (have inputs and outputs)."""
     inputs = cm.sum(0)
     outputs = cm.sum(1)
@@ -269,7 +239,7 @@ def combs(a, r):
         r (int): The length of the combinations.
 
     Returns:
-        combinations (``np.ndarray``): An array of combinations.
+        np.ndarray: An array of combinations.
     """
     # Special-case for 0-length combinations
     if r == 0:
@@ -290,8 +260,7 @@ def comb_indices(n, k):
         k (int): The desired length of the combinations.
 
     Returns:
-        combination_indices (``np.ndarray``): Indices that give the
-            |k|-combinations of |n| elements.
+        np.ndarray: Indices that give the |k|-combinations of |n| elements.
 
     Example:
         >>> n, k = 3, 2
@@ -325,7 +294,7 @@ def powerset(iterable):
         iterable (Iterable): The iterable from which to generate the power set.
 
     Returns:
-        chain (``Iterable``): An chained iterator over the power set.
+        generator: An chained generator over the power set.
 
     Example:
         >>> ps = powerset(np.arange(2))
@@ -346,8 +315,7 @@ def uniform_distribution(number_of_nodes):
         nodes (np.ndarray): A set of indices of binary nodes.
 
     Returns:
-        distribution (``np.ndarray``): The uniform distribution over the set of
-            nodes.
+        np.ndarray: The uniform distribution over the set of nodes.
     """
     # The size of the state space for binary nodes is 2^(number of nodes).
     number_of_states = 2 ** number_of_nodes
@@ -357,25 +325,20 @@ def uniform_distribution(number_of_nodes):
             number_of_states).reshape([2] * number_of_nodes)
 
 
-def marginalize_out(index, tpm, perturb_value=0.5):
+def marginalize_out(indices, tpm):
     """
     Marginalize out a node from a TPM.
 
     Args:
-        index (list): The index of the node to be marginalized out.
+        indices (list[int]): The indices of nodes to be marginalized out.
         tpm (np.ndarray): The TPM to marginalize the node out of.
 
     Returns:
-        tpm (``np.ndarray``): A TPM with the same number of dimensions, with
-            the node marginalized out.
+        np.ndarray: A TPM with the same number of dimensions, with the nodes
+        marginalized out.
     """
-    if perturb_value == 0.5:
-        return tpm.sum(index, keepdims=True) / tpm.shape[index]
-    else:
-        tpm = np.average(tpm, index,
-                         weights=[1 - perturb_value, perturb_value])
-        return tpm.reshape([i for i in tpm.shape[0:index]] +
-                           [1] + [i for i in tpm.shape[index:]])
+    return tpm.sum(tuple(indices), keepdims=True) / (
+        np.array(tpm.shape)[list(indices)].prod())
 
 
 def marginal_zero(repertoire, node_index):
@@ -418,6 +381,9 @@ def purview(repertoire):
     Returns:
         tuple[int]: The purview that the repertoire was computed over.
     """
+    if repertoire is None:
+        return None
+
     return tuple(np.where(np.array(repertoire.shape) == 2)[0])
 
 
@@ -433,9 +399,30 @@ def purview_size(repertoire):
     return len(purview(repertoire))
 
 
+def repertoire_shape(purview, N):
+    """Return the shape a repertoire.
+
+    Args:
+        purview (tuple[int]): The purview over which the repertoire is
+            computed.
+        N (int): The number of elements in the system.
+
+    Returns:
+        list[int]: The shape of the repertoire. Purview nodes have two
+        dimensions and non-purview nodes are collapsed to a unitary dimension.
+
+    Example:
+        >>> purview = (0, 2)
+        >>> N = 3
+        >>> repertoire_shape(purview, N)
+        [2, 1, 2]
+    """
+    # TODO: extend to non-binary nodes
+    return [2 if i in purview else 1 for i in range(N)]
+
+
 @cache(cache={}, maxmem=None)
-def max_entropy_distribution(node_indices, number_of_nodes,
-                             perturb_vector=None):
+def max_entropy_distribution(node_indices, number_of_nodes):
     """Return the maximum entropy distribution over a set of nodes.
 
     This is different from the network's uniform distribution because nodes
@@ -448,35 +435,14 @@ def max_entropy_distribution(node_indices, number_of_nodes,
         number_of_nodes (int): The total number of nodes in the network.
 
     Returns:
-        distribution (``np.ndarray``): The maximum entropy distribution over
-            the set of nodes.
+        np.ndarray: The maximum entropy distribution over the set of nodes.
     """
-    # TODO extend to nonbinary nodes
-    if ((perturb_vector is None) or
-            (np.all(perturb_vector == 0.5)) or
-            (len(perturb_vector) == 0)):
-        distribution = np.ones([2 if index in node_indices else 1 for index in
-                                range(number_of_nodes)])
-        return distribution / distribution.size
-    else:
-        perturb_vector = np.array(perturb_vector)
-        bin_states = [bin(x)[2:].zfill(len(node_indices))[::-1] for x in
-                      range(2 ** len(node_indices))]
-        distribution = np.array([
-            np.prod(perturb_vector[[m.start() for m in
-                                    re.finditer('1', bin_states[x])]])
-            * np.prod(1 - perturb_vector[[m.start() for m in
-                                          re.finditer('0', bin_states[x])]])
-            for x in range(2 ** len(node_indices))
-        ])
-        return distribution.reshape(
-            [2 if index in node_indices else 1 for index in
-             range(number_of_nodes)],
-            order='F')
+    distribution = np.ones(repertoire_shape(node_indices, number_of_nodes))
+
+    return distribution / distribution.size
 
 
 # TODO extend to binary nodes
-# TODO? parametrize and use other metrics (KDL, L1)
 def hamming_emd(d1, d2):
     """Return the Earth Mover's Distance between two distributions (indexed
     by state, one dimension per node).
@@ -504,6 +470,20 @@ def l1(d1, d2):
     return np.absolute(d1 - d2).sum()
 
 
+def kld(d1, d2):
+    """Return the Kullback-Leibler Divergence (KLD) between two distributions.
+
+    Args:
+        d1 (np.ndarray): The first distribution.
+        d2 (np.ndarray): The second distribution.
+
+    Returns:
+        float: The KLD of ``d1`` from ``d2``.
+    """
+    d1, d2 = d1.squeeze().ravel(), d2.squeeze().ravel()
+    return entropy(d1, d2, 2.0)
+
+
 def bipartition(a):
     """Return a list of bipartitions for a sequence.
 
@@ -512,7 +492,7 @@ def bipartition(a):
 
     Returns:
         list[tuple[tuple]]: A list of tuples containing each of the two
-            partitions.
+        partitions.
 
     Example:
         >>> bipartition((1,2,3))
@@ -532,7 +512,7 @@ def directed_bipartition(a):
 
     Returns:
         list[tuple[tuple]]: A list of tuples containing each of the two
-            partitions.
+        partitions.
 
     Example:
         >>> directed_bipartition((1, 2, 3))  # doctest: +NORMALIZE_WHITESPACE
@@ -558,7 +538,7 @@ def directed_bipartition_of_one(a):
 
     Returns:
         list[tuple[tuple]]: A list of tuples containing each of the two
-            partitions.
+        partitions.
 
     Example:
         >>> directed_bipartition_of_one((1,2,3))  # doctest: +NORMALIZE_WHITESPACE
@@ -577,14 +557,12 @@ def directed_bipartition_of_one(a):
 def directed_bipartition_indices(N):
     """Return indices for directed bipartitions of a sequence.
 
-    The directed bipartion
-
     Args:
         N (int): The length of the sequence.
 
     Returns:
         list: A list of tuples containing the indices for each of the two
-            partitions.
+        partitions.
 
     Example:
         >>> N = 3
@@ -604,14 +582,14 @@ def directed_bipartition_indices(N):
 
 @cache(cache={}, maxmem=None)
 def bipartition_indices(N):
-    """Return indices for bipartitions of a sequence.
+    """Return indices for undirected bipartitions of a sequence.
 
     Args:
         N (int): The length of the sequence.
 
     Returns:
         list: A list of tuples containing the indices for each of the two
-            partitions.
+        partitions.
 
     Example:
         >>> N = 3
@@ -631,6 +609,65 @@ def bipartition_indices(N):
     return result
 
 
+@cache(cache={}, maxmem=None)
+def directed_tripartition_indices(N):
+    """Return indices for directed tripartitions of a sequence.
+
+    Args:
+        N (int): The length of the sequence.
+
+    Returns:
+        list[tuple]: A list of tuples containing the indices for each partition.
+
+    Example:
+        >>> N = 1
+        >>> directed_tripartition_indices(N)
+        [((0,), (), ()), ((), (0,), ()), ((), (), (0,))]
+    """
+
+    result = []
+    if N <= 0:
+        return result
+
+    base = [0, 1, 2]
+    for key in itertools.product(base, repeat=N):
+        part = [[], [], []]
+        for i, location in enumerate(key):
+            part[location].append(i)
+
+        result.append(tuple(tuple(p) for p in part))
+
+    return result
+
+
+def directed_tripartition(seq):
+    """Generator over all directed tripartitions of a sequence.
+
+    Args:
+        seq (Iterable): a sequence.
+
+    Yields:
+        tuple[tuple]: A tripartition of ``seq``.
+
+    Example:
+        >>> seq = (2, 5)
+        >>> list(directed_tripartition(seq))  # doctest: +NORMALIZE_WHITESPACE
+        [((2, 5), (), ()),
+         ((2,), (5,), ()),
+         ((2,), (), (5,)),
+         ((5,), (2,), ()),
+         ((), (2, 5), ()),
+         ((), (2,), (5,)),
+         ((5,), (), (2,)),
+         ((), (5,), (2,)),
+         ((), (), (2, 5))]
+    """
+    for a, b, c in directed_tripartition_indices(len(seq)):
+        yield (tuple(seq[i] for i in a),
+               tuple(seq[j] for j in b),
+               tuple(seq[k] for k in c))
+
+
 # Internal helper methods
 # =============================================================================
 
@@ -641,8 +678,8 @@ def load_data(dir, num):
     ``0.npy, 1.npy, ... {num - 1}.npy``.
 
     Returns:
-        list: A list of loaded data, such that ``list[i]`` contains the
-        the contents of ``i.npy``.
+        list: A list of loaded data, such that ``list[i]`` contains the the
+        contents of ``i.npy``.
     """
 
     root = os.path.abspath(os.path.dirname(__file__))
@@ -668,8 +705,8 @@ def _hamming_matrix(N):
         N (int): The number of nodes under consideration
 
     Returns:
-        ``np.ndarray``: A |2^N x 2^N| matrix where the |ith| element is the
-            Hamming distance between state |i| and state |j|.
+        np.ndarray: A |2^N x 2^N| matrix where the |ith| element is the Hamming
+        distance between state |i| and state |j|.
 
     Example:
         >>> _hamming_matrix(2)
@@ -681,32 +718,48 @@ def _hamming_matrix(N):
     if N < _NUM_PRECOMPUTED_HAMMING_MATRICES:
         return _hamming_matrices[N]
     else:
-        log.warn(
-            "Hamming matrices for more than {} nodes have not been "
-            "precomputed. This will make EMD calculations less inefficient; "
-            "calculating hamming matrices is an exponential-time procedure. "
-            "Consider pre-computing the hamming matrices up to the desired "
-            "number of nodes with the ``pyphi.utils._hamming_matrix`` "
-            "function and saving them to the 'data' directory in the "
-            "directory where PyPhi was installed (you can find this directory "
-            "by typing ``import pyphi; pyphi;`` into a Python interperter)."
-            .format(_NUM_PRECOMPUTED_HAMMING_MATRICES - 1)
-        )
-        possible_states = np.array(list(all_states((N))))
-        return cdist(possible_states, possible_states, 'hamming') * N
+        return _compute_hamming_matrix(N)
+
+
+@constants.joblib_memory.cache
+def _compute_hamming_matrix(N):
+    """
+    Compute and store a Hamming matrix for |N| nodes.
+
+    Hamming matrices have the following sizes:
+
+    n   MBs
+    ==  ===
+    9   2
+    10  8
+    11  32
+    12  128
+    13  512
+
+    Given these sizes and the fact that large matrices are needed infrequently,
+    we store computed matrices using the Joblib filesystem cache instead of
+    adding computed matrices to the ``_hamming_matrices`` global and clogging
+    up memory.
+
+    This function is only called when N > _NUM_PRECOMPUTED_HAMMING_MATRICES.
+    Don't call this function directly; use ``utils._hamming_matrix`` instead.
+    """
+    possible_states = np.array(list(all_states((N))))
+    return cdist(possible_states, possible_states, 'hamming') * N
 
 
 # TODO: better name?
 def relevant_connections(n, _from, to):
     """Construct a connectivity matrix.
 
-    Returns an |n x n| connectivity matrix with the |i,jth| entry
-    set to ``1`` if |i| is in ``_from`` and |j| is in ``to``.
-
     Args:
         n (int): The dimensions of the matrix
         _from (tuple[int]): Nodes with outgoing connections to ``to``
         to (tuple[int]): Nodes with incoming connections from ``_from``
+
+    Returns:
+        np.ndarray: An |n x n| connectivity matrix with the |i,jth| entry set
+        to ``1`` if |i| is in ``_from`` and |j| is in ``to``.
     """
     cm = np.zeros((n, n))
 
@@ -812,6 +865,15 @@ def block_reducible(cm, nodes1, nodes2):
     return False
 
 
+def _connected(cm, nodes, connection):
+    """Test connectivity for the connectivity matrix."""
+    if nodes is not None:
+        cm = cm[np.ix_(nodes, nodes)]
+
+    num_components, _ = connected_components(cm, connection=connection)
+    return num_components < 2
+
+
 def strongly_connected(cm, nodes=None):
     """Return whether the connectivity matrix is strongly connected.
 
@@ -822,11 +884,20 @@ def strongly_connected(cm, nodes=None):
         nodes (tuple[int]): An optional subset of node indices to test strong
             connectivity over.
     """
-    if nodes is not None:
-        cm = cm[np.ix_(nodes, nodes)]
+    return _connected(cm, nodes, 'strong')
 
-    num_components, _ = connected_components(cm, connection='strong')
-    return num_components < 2
+
+def weakly_connected(cm, nodes=None):
+    """Return whether the connectivity matrix is weakly connected.
+
+    Args:
+        cm (np.ndarray): A square connectivity matrix.
+
+    Keyword Args:
+        nodes (tuple[int]): An optional subset of node indices to test weak
+            connectivity over.
+    """
+    return _connected(cm, nodes, 'weak')
 
 
 # Custom printing methods

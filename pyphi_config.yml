@@ -14,9 +14,9 @@ ASSUME_CUTS_CANNOT_CREATE_NEW_CONCEPTS: false
 # cut off a single node. It is possible that the MIP cut will cut off multiple
 # nodes, but this approximation is usually correct, and at worst provides an
 # upper bound for integrated information.
-CUT_ONE_APPROXIMATION: true
-# Use L1 distance to approximate the EMD when computing MIPs.
-L1_DISTANCE_APPROXIMATION: false
+CUT_ONE_APPROXIMATION: false
+# The measure to use when computing phi ("EMD", "KLD", "L1")
+MEASURE: "EMD"
 
 # System resources
 # ~~~~~~~~~~~~~~~~
@@ -69,16 +69,12 @@ REDIS_CONFIG:
 # Logging
 # ~~~~~~~
 # These are the settings for PyPhi logging.
-LOGGING_CONFIG:
-    format: "%(asctime)s [%(name)s.%(funcName)s] %(levelname)s: %(message)s"
-    # `level` can be "DEBUG", "INFO", "WARNING", "ERROR", or "CRITICAL".
-    file:
-        enabled: true
-        level: "INFO"
-        filename: "pyphi.log"
-    stdout:
-        enabled: true
-        level: "WARNING"
+# The file to log to
+LOG_FILE: "pyphi.log"
+# The log level to write to `LOG_FILE`
+LOG_FILE_LEVEL: "INFO"
+# The log level to write to stdout
+LOG_STDOUT_LEVEL: "WARNING"
 # Log the current configuration when PyPhi is imported. This is useful for
 # checking what settings were used for a previous calculation.
 LOG_CONFIG_ON_IMPORT: true
@@ -97,4 +93,6 @@ VALIDATE_SUBSYSTEM_STATES: true
 # with a self-loop as having 0.5 Phi, a priori.
 SINGLE_NODES_WITH_SELFLOOPS_HAVE_PHI: false
 # Use pretty __str__-like formatting in repr calls
-READABLE_REPRS: true
+REPR_VERBOSITY: 2
+# Only consider bipartitions which strictly partition the mechanism.
+PARTITION_MECHANISMS: false

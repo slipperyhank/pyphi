@@ -4,22 +4,22 @@
 
 """Represents a candidate system for |small_phi| and |big_phi| evaluation."""
 
+import functools
 import itertools
 
 import numpy as np
 
 from . import cache, config, utils, validate
-from .config import PRECISION
-from .constants import DIRECTIONS, FUTURE, PAST
-from .jsonify import jsonify
-from .models import Concept, Cut, Mice, Mip, _null_mip, Part, Bipartition
+from .constants import EMD, KLD, L1, Direction
+from .models import (Bipartition, Concept, Cut, Mice, Mip, Part, Tripartition,
+                     _null_mip)
 from .network import irreducible_purviews
 from .node import generate_nodes
 
 
 class Subsystem:
     # TODO! go through docs and make sure to say when things can be None
-    # TODO: make subsystem attributes immutable
+    # TODO: make subsystem attributes private and wrap them in getters?
     """A set of nodes in a network.
 
     Args:
@@ -34,21 +34,21 @@ class Subsystem:
 
     Attributes:
         network (Network): The network the subsystem belongs to.
-        tpm (np.array): The TPM conditioned on the state of the external nodes.
-        cm (np.array): The connectivity matrix after applying the cut.
-        nodes (list[Node]): A list of nodes in the subsystem.
+        tpm (np.ndarray): The TPM conditioned on the state of the external nodes.
+        cm (np.ndarray): The connectivity matrix after applying the cut.
+        state (tuple[int]): The state of the network.
+        nodes (tuple[Node]): The nodes of the subsystem.
         node_indices (tuple[int]): The indices of the nodes in the subsystem.
         cut (Cut): The cut that has been applied to this subsystem.
-        cut_matrix (np.array): A matrix of connections which have been severed
+        cut_matrix (np.ndarray): A matrix of connections which have been severed
             by the cut.
         null_cut (Cut): The cut object representing no cut.
-        perturb_vector (np.array): The vector of perturbation probabilities for
-            each node.
     """
 
     def __init__(self, network, state, nodes, cut=None,
                  mice_cache=None, repertoire_cache=None):
         # The network this subsystem belongs to.
+        validate.is_network(network)
         self.network = network
 
         # Remove duplicates, sort, and ensure native Python `int`s
@@ -58,7 +58,7 @@ class Subsystem:
         validate.state_length(state, self.network.size)
 
         # The state of the network.
-        self._state = tuple(state)
+        self.state = tuple(state)
 
         # Get the external node indices.
         # TODO: don't expose this as an attribute?
@@ -82,10 +82,7 @@ class Subsystem:
         self.cut_matrix = self.cut.cut_matrix()
 
         # The network's connectivity matrix with cut applied
-        self.cm = utils.apply_cut(cut, network.cm)
-
-        # The perturbation probabilities for each node in the network
-        self.perturb_vector = network.perturb_vector
+        self.cm = self.cut.apply_cut(network.cm)
 
         # Only compute hash once.
         self._hash = hash((self.network, self.node_indices, self.state,
@@ -104,19 +101,6 @@ class Subsystem:
         validate.subsystem(self)
 
     @property
-    def state(self):
-        """tuple[int]: The state of the Network this Subsystem belongs to."""
-        return self._state
-
-    @state.setter
-    def state(self, state):
-        # Cast state to a tuple so it can be hashed and properly used as
-        # np.array indices.
-        self._state = tuple(state)
-        # Validate.
-        validate.subsystem(self)
-
-    @property
     def proper_state(self):
         """tuple[int]): The state of the subsystem.
 
@@ -125,23 +109,10 @@ class Subsystem:
         """
         return utils.state_of(self.node_indices, self.state)
 
-    @proper_state.setter
-    def proper_state(self, proper_state):
-        # Update the network's state.
-        self.state = tuple(proper_state[self.node_indices.index(n)]
-                           if n in self.node_indices else self.state[n]
-                           for n in self.network.node_indices)
-        # Validate.
-        validate.subsystem(self)
-
     @property
     def connectivity_matrix(self):
         """np.ndarray: Alias for ``Subsystem.cm``."""
         return self.cm
-
-    @connectivity_matrix.setter
-    def connectivity_matrix(self, cm):
-        self.cm = cm
 
     @property
     def size(self):
@@ -150,7 +121,7 @@ class Subsystem:
 
     @property
     def is_cut(self):
-        """boolean: True if this Subsystem has a cut applied to it."""
+        """bool: ``True`` if this Subsystem has a cut applied to it."""
         return self.cut != self.null_cut
 
     @property
@@ -164,13 +135,18 @@ class Subsystem:
         return self.node_indices
 
     @property
-    def tpm_indices(self):
-        """tuple[int]: The indices of nodes in the tpm."""
-        return tuple(range(self.tpm.shape[-1]))
+    def tpm_size(self):
+        """int: The number of nodes in the TPM."""
+        return self.tpm.shape[-1]
 
     def repertoire_cache_info(self):
         """Report repertoire cache statistics."""
         return self._repertoire_cache.info()
+
+    def clear_caches(self):
+        """Clear the mice and repertoire caches."""
+        self._repertoire_cache.clear()
+        self._mice_cache.clear()
 
     def __repr__(self):
         """Return a representation of this Subsystem."""
@@ -226,8 +202,10 @@ class Subsystem:
     def to_json(self):
         """Return this Subsystem as a JSON object."""
         return {
-            'node_indices': jsonify(self.node_indices),
-            'cut': jsonify(self.cut),
+            'network': self.network,
+            'state': self.state,
+            'nodes': self.node_indices,
+            'cut': self.cut,
         }
 
     def apply_cut(self, cut):
@@ -267,7 +245,7 @@ class Subsystem:
         """Returns the node labels for these indices."""
         return tuple(n.label for n in self.indices2nodes(indices))
 
-    @cache.method('_repertoire_cache', DIRECTIONS[PAST])
+    @cache.method('_repertoire_cache', Direction.PAST)
     def cause_repertoire(self, mechanism, purview):
         """Return the cause repertoire of a mechanism over a purview.
 
@@ -278,7 +256,7 @@ class Subsystem:
                 cause repertoire.
 
         Returns:
-            ``np.ndarray``: The cause repertoire of the mechanism over the purview.
+            np.ndarray: The cause repertoire of the mechanism over the purview.
 
         .. note::
             The returned repertoire is a distribution over the nodes in the
@@ -295,15 +273,12 @@ class Subsystem:
 
         # If the mechanism is empty, nothing is specified about the past state
         # of the purview -- return the purview's maximum entropy distribution.
-        max_entropy_dist = utils.max_entropy_distribution(
-            purview, len(self.tpm_indices),
-            tuple(self.perturb_vector[i] for i in purview))
         if not mechanism:
-            return max_entropy_dist
+            return utils.max_entropy_distribution(purview, self.tpm_size)
 
         # Preallocate the mechanism's conditional joint distribution.
         # TODO extend to nonbinary nodes
-        cjd = np.ones([2 if i in purview else 1 for i in self.tpm_indices])
+        cjd = np.ones(utils.repertoire_shape(purview, self.tpm_size))
 
         # Loop over all nodes in this mechanism, successively taking the
         # product (with expansion/broadcasting of singleton dimensions) of each
@@ -314,31 +289,23 @@ class Subsystem:
             # TODO extend to nonbinary nodes
             # We're conditioning on this node's state, so take the probability
             # table for the node being in that state.
-            conditioned_tpm = mechanism_node.tpm[mechanism_node.state]
+            tpm = mechanism_node.tpm[mechanism_node.state]
 
             # Marginalize-out all nodes which connect to this node but which
             # are not in the purview:
-            non_purview_inputs = (set(mechanism_node.input_indices) -
-                                  set(purview))
-            for index in non_purview_inputs:
-                conditioned_tpm = utils.marginalize_out(
-                    index, conditioned_tpm, self.perturb_vector[index])
+            other_inputs = set(mechanism_node.input_indices) - set(purview)
+            tpm = utils.marginalize_out(other_inputs, tpm)
 
             # Incorporate this node's CPT into the mechanism's conditional
             # joint distribution by taking the product (with singleton
             # broadcasting, which spreads the singleton probabilities in the
             # collapsed dimensions out along the whole distribution in the
             # appropriate way.
-            cjd *= conditioned_tpm
-
-        # If the perturbation vector is not maximum entropy, weight the
-        # probabilities before normalization.
-        if not np.all(self.perturb_vector == 0.5):
-            cjd *= max_entropy_dist
+            cjd *= tpm
 
         return utils.normalize(cjd)
 
-    @cache.method('_repertoire_cache', DIRECTIONS[FUTURE])
+    @cache.method('_repertoire_cache', Direction.FUTURE)
     def effect_repertoire(self, mechanism, purview):
         """Return the effect repertoire of a mechanism over a purview.
 
@@ -349,8 +316,8 @@ class Subsystem:
                 effect repertoire.
 
         Returns:
-            ``np.ndarray``: The effect repertoire of the mechanism over the
-                purview.
+            np.ndarray: The effect repertoire of the mechanism over the
+            purview.
 
         .. note::
             The returned repertoire is a distribution over the nodes in the
@@ -371,8 +338,8 @@ class Subsystem:
         # Preallocate the purview's joint distribution
         # TODO extend to nonbinary nodes
         accumulated_cjd = np.ones(
-            [1] * len(self.tpm_indices) +
-            [2 if i in purview else 1 for i in self.tpm_indices])
+            [1] * self.tpm_size +
+            utils.repertoire_shape(purview, self.tpm_size))
 
         # Loop over all nodes in the purview, successively taking the product
         # (with 'expansion'/'broadcasting' of singleton dimensions) of each
@@ -399,16 +366,13 @@ class Subsystem:
 
             # Expand the dimensions so the TPM can be indexed as described
             first_half_shape = list(tpm.shape[:-1])
-            second_half_shape = [1] * len(self.tpm_indices)
+            second_half_shape = [1] * self.tpm_size
             second_half_shape[purview_node.index] = 2
             tpm = tpm.reshape(first_half_shape + second_half_shape)
 
-            # Marginalize-out non-mechanism purview inputs.
-            non_mechanism_inputs = (set(purview_node.input_indices) -
-                                    set(mechanism))
-            for index in non_mechanism_inputs:
-                tpm = utils.marginalize_out(index, tpm,
-                                            self.perturb_vector[index])
+            # Marginalize-out non-mechanism inputs.
+            other_inputs = set(purview_node.input_indices) - set(mechanism)
+            tpm = utils.marginalize_out(other_inputs, tpm)
 
             # Incorporate this node's CPT into the future_nodes' conditional
             # joint distribution (with singleton broadcasting).
@@ -427,7 +391,7 @@ class Subsystem:
         # (the second half of the shape may also contain singleton dimensions,
         # depending on how many nodes are in the purview).
         accumulated_cjd = accumulated_cjd.reshape(
-            accumulated_cjd.shape[len(self.tpm_indices):])
+            accumulated_cjd.shape[self.tpm_size:])
 
         return accumulated_cjd
 
@@ -435,7 +399,8 @@ class Subsystem:
         """Return the cause or effect repertoire based on a direction.
 
         Args:
-            direction (str): One of 'past' or 'future'.
+            direction (Direction): :const:`~pyphi.constants.Direction.PAST` or
+                :const:`~pyphi.constants.Direction.FUTURE`.
             mechanism (tuple[int]): The mechanism for which to calculate the
                 repertoire.
             purview (tuple[int]): The purview over which to calculate the
@@ -443,12 +408,19 @@ class Subsystem:
 
         Returns:
             np.ndarray: The cause or effect repertoire of the mechanism over
-                the purview.
+            the purview.
+
+        Raises:
+            ValueError: If ``direction`` is invalid.
         """
-        if direction == DIRECTIONS[PAST]:
+        if direction == Direction.PAST:
             return self.cause_repertoire(mechanism, purview)
-        elif direction == DIRECTIONS[FUTURE]:
+        elif direction == Direction.FUTURE:
             return self.effect_repertoire(mechanism, purview)
+        else:
+            # TODO: test that ValueError is raised
+            validate.direction(direction)
+
 
     def _unconstrained_repertoire(self, direction, purview):
         """Return the unconstrained cause/effect repertoire over a purview."""
@@ -459,30 +431,30 @@ class Subsystem:
 
         This is just the cause repertoire in the absence of any mechanism.
         """
-        return self._unconstrained_repertoire(DIRECTIONS[PAST], purview)
+        return self._unconstrained_repertoire(Direction.PAST, purview)
 
     def unconstrained_effect_repertoire(self, purview):
         """Return the unconstrained effect repertoire for a purview.
 
         This is just the effect repertoire in the absence of any mechanism.
         """
-        return self._unconstrained_repertoire(DIRECTIONS[FUTURE], purview)
+        return self._unconstrained_repertoire(Direction.FUTURE, purview)
 
     def partitioned_repertoire(self, direction, partition):
         """Compute the repertoire of a partitioned mechanism and purview."""
-        part1rep = self._repertoire(direction, partition[0].mechanism,
-                                    partition[0].purview)
-        part2rep = self._repertoire(direction, partition[1].mechanism,
-                                    partition[1].purview)
+        repertoires = [
+            self._repertoire(direction, part.mechanism, part.purview)
+            for part in partition]
 
-        return part1rep * part2rep
+        return functools.reduce(np.multiply, repertoires)
 
     def expand_repertoire(self, direction, repertoire, new_purview=None):
         """Expand a partial repertoire over a purview to a distribution over a
         new state space.
 
         Args:
-            direction (str): Either |past| or |future|.
+            direction (Direction): :const:`~pyphi.constants.Direction.PAST` or
+                :const:`~pyphi.constants.Direction.FUTURE`.
             repertoire (np.ndarray): A repertoire.
 
         Keyword Args:
@@ -491,7 +463,14 @@ class Subsystem:
 
         Returns:
             np.ndarray: The expanded repertoire.
+
+        Raises:
+            ValueError: If the expanded purview doesn't contain the original
+                purview.
         """
+        if repertoire is None:
+            return None
+
         purview = utils.purview(repertoire)
 
         if new_purview is None:
@@ -513,27 +492,27 @@ class Subsystem:
         """Expand a partial cause repertoire over a purview to a distribution
         over the entire subsystem's state space.
         """
-        return self.expand_repertoire(DIRECTIONS[PAST], repertoire,
+        return self.expand_repertoire(Direction.PAST, repertoire,
                                       new_purview)
 
     def expand_effect_repertoire(self, repertoire, new_purview=None):
         """Expand a partial effect repertoire over a purview to a distribution
         over the entire subsystem's state space.
         """
-        return self.expand_repertoire(DIRECTIONS[FUTURE], repertoire,
+        return self.expand_repertoire(Direction.FUTURE, repertoire,
                                       new_purview)
 
     def cause_info(self, mechanism, purview):
         """Return the cause information for a mechanism over a purview."""
-        return emd(DIRECTIONS[PAST],
-                   self.cause_repertoire(mechanism, purview),
-                   self.unconstrained_cause_repertoire(purview))
+        return measure(Direction.PAST,
+                       self.cause_repertoire(mechanism, purview),
+                       self.unconstrained_cause_repertoire(purview))
 
     def effect_info(self, mechanism, purview):
         """Return the effect information for a mechanism over a purview."""
-        return emd(DIRECTIONS[FUTURE],
-                   self.effect_repertoire(mechanism, purview),
-                   self.unconstrained_effect_repertoire(purview))
+        return measure(Direction.FUTURE,
+                       self.effect_repertoire(mechanism, purview),
+                       self.unconstrained_effect_repertoire(purview))
 
     def cause_effect_info(self, mechanism, purview):
         """Return the cause-effect information for a mechanism over a purview.
@@ -546,12 +525,45 @@ class Subsystem:
     # MIP methods
     # =========================================================================
 
+    def evaluate_partition(self, direction, mechanism, purview, partition,
+                           unpartitioned_repertoire=None):
+        """Return the |small_phi| of a mechanism over a purview for the given
+        partition.
+
+        Args:
+            direction (Direction): :const:`~pyphi.constants.Direction.PAST` or
+                :const:`~pyphi.constants.Direction.FUTURE`.
+            mechanism (tuple[int]): The nodes in the mechanism.
+            purview (tuple[int]): The nodes in the purview.
+            partition (Bipartition): The partition to evaluate.
+
+        Keyword Args:
+            unpartitioned_repertoire (np.array): The unpartitioned repertoire.
+                If not supplied, it will be computed.
+
+        Returns:
+            tuple[phi, partitioned_repertoire]: The distance between the
+            unpartitioned and partitioned repertoires, and the partitioned
+            repertoire.
+        """
+        if unpartitioned_repertoire is None:
+            unpartitioned_repertoire = self._repertoire(direction, mechanism,
+                                                        purview)
+
+        partitioned_repertoire = self.partitioned_repertoire(direction, partition)
+
+        phi = measure(direction, unpartitioned_repertoire,
+                      partitioned_repertoire)
+
+        return (phi, partitioned_repertoire)
+
     def find_mip(self, direction, mechanism, purview):
         """Return the minimum information partition for a mechanism over a
         purview.
 
         Args:
-            direction (str): Either |past| or |future|.
+            direction (Direction): :const:`~pyphi.constants.Direction.PAST` or
+                :const:`~pyphi.constants.Direction.FUTURE`.
             mechanism (tuple[int]): The nodes in the mechanism.
             purview (tuple[int]): The nodes in the purview.
 
@@ -566,7 +578,7 @@ class Subsystem:
 
         phi_min = float('inf')
         # Calculate the unpartitioned repertoire to compare against the
-        # partitioned ones
+        # partitioned ones.
         unpartitioned_repertoire = self._repertoire(direction, mechanism,
                                                     purview)
 
@@ -584,22 +596,22 @@ class Subsystem:
                        subsystem=self)
 
         # State is unreachable - return 0 instead of giving nonsense results
-        if (direction == DIRECTIONS[PAST] and
+        if (direction == Direction.PAST and
                 np.all(unpartitioned_repertoire == 0)):
             return _mip(0, None, None)
 
         # Loop over possible MIP bipartitions
-        for partition in mip_bipartitions(mechanism, purview):
-            partitioned_repertoire = self.partitioned_repertoire(direction,
-                                                                 partition)
+        if config.PARTITION_MECHANISMS:
+            partitions = wedge_partitions(mechanism, purview)
+        else:
+            partitions = mip_bipartitions(mechanism, purview)
 
-            if config.L1_DISTANCE_APPROXIMATION:
-                phi = utils.l1(unpartitioned_repertoire,
-                               partitioned_repertoire)
-                phi = round(phi, PRECISION)
-            else:
-                phi = emd(direction, unpartitioned_repertoire,
-                          partitioned_repertoire)
+        for partition in partitions:
+            # Find the distance between the unpartitioned and partitioned
+            # repertoire.
+            phi, partitioned_repertoire = self.evaluate_partition(
+                direction, mechanism, purview, partition,
+                unpartitioned_repertoire=unpartitioned_repertoire)
 
             # Return immediately if mechanism is reducible.
             if phi == 0:
@@ -610,8 +622,9 @@ class Subsystem:
                 phi_min = phi
                 mip = _mip(phi, partition, partitioned_repertoire)
 
-        # Recompute distance for minimal MIP using the EMD
-        if config.L1_DISTANCE_APPROXIMATION:
+        # Recompute distance for minimal MIP using the EMD.
+        # (See `config.MEASURE`)
+        if config.MEASURE == L1:
             phi = emd(direction, mip.unpartitioned_repertoire,
                       mip.partitioned_repertoire)
             mip = _mip(phi, mip.partition, mip.partitioned_repertoire)
@@ -621,16 +634,16 @@ class Subsystem:
     def mip_past(self, mechanism, purview):
         """Return the past minimum information partition.
 
-        Alias for |find_mip| with ``direction`` set to |past|.
+        Alias for |find_mip| with ``direction`` set to ``Direction.FUTURE``.
         """
-        return self.find_mip(DIRECTIONS[PAST], mechanism, purview)
+        return self.find_mip(Direction.PAST, mechanism, purview)
 
     def mip_future(self, mechanism, purview):
         """Return the future minimum information partition.
 
         Alias for |find_mip| with ``direction`` set to |future|.
         """
-        return self.find_mip(DIRECTIONS[FUTURE], mechanism, purview)
+        return self.find_mip(Direction.FUTURE, mechanism, purview)
 
     def phi_mip_past(self, mechanism, purview):
         """Return the |small_phi| of the past minimum information partition.
@@ -664,7 +677,8 @@ class Subsystem:
         Filters out trivially-reducible purviews.
 
         Args:
-            direction ('str'): Either |past| or |future|.
+            direction (Direction): :const:`~pyphi.constants.Direction.PAST` or
+                :const:`~pyphi.constants.Direction.FUTURE`.
             mechanism (tuple[int]): The mechanism of interest.
 
         Keyword Args:
@@ -686,8 +700,8 @@ class Subsystem:
         """Return the maximally irreducible cause or effect for a mechanism.
 
         Args:
-            direction (str): The temporal direction (|past| or |future|)
-                specifying cause or effect.
+            direction (Direction): :const:`~pyphi.constants.Direction.PAST` or
+                :const:`~pyphi.constants.Direction.FUTURE`.
             mechanism (tuple[int]): The mechanism to be tested for
                 irreducibility.
 
@@ -698,40 +712,50 @@ class Subsystem:
                 nodes.
 
         Returns:
-            |Mice|: The maximally-irreducible cause or effect.
+            |Mice|: The maximally-irreducible cause or effect in one temporal
+            direction.
 
         .. note::
             Strictly speaking, the MICE is a pair of repertoires: the core
             cause repertoire and core effect repertoire of a mechanism, which
             are maximally different than the unconstrained cause/effect
             repertoires (*i.e.*, those that maximize |small_phi|). Here, we
-            return only information corresponding to one direction, |past| or
-            |future|, i.e., we return a core cause or core effect, not the pair
-            of them.
+            return only information corresponding to one direction,
+            ``Direction.PAST`` or ``Direction.FUTURE``, i.e., we return a
+            core cause or core effect, not the pair of them.
         """
         purviews = self._potential_purviews(direction, mechanism, purviews)
 
         if not purviews:
             max_mip = _null_mip(direction, mechanism, ())
         else:
-            max_mip = max(self.find_mip(direction, mechanism, purview)
-                          for purview in purviews)
+            mips = [self.find_mip(direction, mechanism, purview)
+                    for purview in purviews]
+
+            if config.PARTITION_MECHANISMS:
+                # In the case of tie, chose the mip with smallest purview.
+                # (The default behavior is to chose the larger purview.)
+                max_mip = max(mips, key=lambda m: (m.phi, -len(m.purview)))
+            else:
+                max_mip = max(mips)
 
         return Mice(max_mip)
 
     def core_cause(self, mechanism, purviews=False):
         """Return the core cause repertoire of a mechanism.
 
-        Alias for |find_mice| with ``direction`` set to |past|.
+        Alias for |find_mice| with ``direction`` set to
+        :const:`~pyphi.constants.Direction.PAST`.
         """
-        return self.find_mice('past', mechanism, purviews=purviews)
+        return self.find_mice(Direction.PAST, mechanism, purviews=purviews)
 
     def core_effect(self, mechanism, purviews=False):
         """Return the core effect repertoire of a mechanism.
 
-        Alias for |find_mice| with ``direction`` set to |past|.
+        Alias for |find_mice| with ``direction`` set to
+        :const:`~pyphi.constants.Direction.FUTURE`.
         """
-        return self.find_mice('future', mechanism, purviews=purviews)
+        return self.find_mice(Direction.FUTURE, mechanism, purviews=purviews)
 
     def phi_max(self, mechanism):
         """Return the |small_phi_max| of a mechanism.
@@ -758,9 +782,9 @@ class Subsystem:
         effect_repertoire = self.effect_repertoire((), ())
 
         # Null cause.
-        cause = Mice(_null_mip(DIRECTIONS[PAST], (), (), cause_repertoire))
+        cause = Mice(_null_mip(Direction.PAST, (), (), cause_repertoire))
         # Null effect.
-        effect = Mice(_null_mip(DIRECTIONS[FUTURE], (), (), effect_repertoire))
+        effect = Mice(_null_mip(Direction.FUTURE, (), (), effect_repertoire))
 
         # All together now...
         return Concept(mechanism=(), phi=0, cause=cause, effect=effect,
@@ -788,20 +812,29 @@ class Subsystem:
 
 
 def mip_bipartitions(mechanism, purview):
-    """Return all |small_phi| bipartitions of a mechanism over a purview.
+    """Return an generator of all |small_phi| bipartitions of a mechanism over
+    a purview.
 
     Excludes all bipartitions where one half is entirely empty, e.g::
 
-         A    []                     A    []
-        --- X -- is not valid,  but --- X --- is.
-         B    []                    []     B
+         A    []
+        --- X --
+         B    []
+
+    is not valid, but ::
+
+        A    []
+        -- X --
+        []   B
+
+    is.
 
     Args:
         mechanism (tuple[int]): The mechanism to partition
         purview (tuple[int]): The purview to partition
 
-    Returns:
-        list[|Bipartition|]: Where each partition is
+    Yields:
+        Bipartition: Where each bipartition is
 
         ::
 
@@ -829,9 +862,68 @@ def mip_bipartitions(mechanism, purview):
     numerators = utils.bipartition(mechanism)
     denominators = utils.directed_bipartition(purview)
 
-    return [Bipartition(Part(n[0], d[0]), Part(n[1], d[1]))
-            for (n, d) in itertools.product(numerators, denominators)
-            if len(n[0]) + len(d[0]) > 0 and len(n[1]) + len(d[1]) > 0]
+    for (n, d) in itertools.product(numerators, denominators):
+        if (n[0] or d[0]) and (n[1] or d[1]):
+            yield Bipartition(Part(n[0], d[0]), Part(n[1], d[1]))
+
+
+def wedge_partitions(mechanism, purview):
+    """Return an iterator over all wedge partitions.
+
+    These are partitions which strictly split the mechanism and allow a subset
+    of the purview to be split into a third partition, eg::
+
+        A    B   []
+        -- X - X --
+        B    C   D
+
+    See ``pyphi.config.PARTITION_MECHANISMS`` for more information.
+
+    Args:
+        mechanism (tuple[int]): A mechanism.
+        purview (tuple[int]): A purview.
+
+    Yields:
+        Tripartition: all unique tripartitions of this mechanism and purview.
+    """
+
+    numerators = utils.bipartition(mechanism)
+    denominators = utils.directed_tripartition(purview)
+
+    yielded = set()
+
+    for n, d in itertools.product(numerators, denominators):
+        if ((n[0] or d[0]) and (n[1] or d[1]) and
+           ((n[0] and n[1]) or not d[0] or not d[1])):
+
+            # Normalize order of parts to remove duplicates.
+            tripart = Tripartition(*sorted((
+                Part(n[0], d[0]),
+                Part(n[1], d[1]),
+                Part((),   d[2]))))
+
+            def nonempty(part):
+                return part.mechanism or part.purview
+
+            # Check if the tripartition can be transformed into a causally
+            # equivalent partition by combing two of its parts; eg.
+            # A/[] x B/[] x []/CD is equivalent to AB/[] x []/CD so we don't
+            # include it.
+            def compressible(tripart):
+                pairs = [
+                    (tripart[0], tripart[1]),
+                    (tripart[0], tripart[2]),
+                    (tripart[1], tripart[2])]
+
+                for x, y in pairs:
+                    if (nonempty(x) and nonempty(y) and
+                        (x.mechanism + y.mechanism == () or
+                         x.purview + y.purview == ())):
+                        return True
+
+            if not compressible(tripart) and tripart not in yielded:
+                yielded.add(tripart)
+                yield tripart
 
 
 def effect_emd(d1, d2):
@@ -860,17 +952,50 @@ def emd(direction, d1, d2):
     solution is used for effect repertoires.
 
     Args:
-        direction (str): Either |past| or |future|.
+        direction (Direction): :const:`~pyphi.constants.Direction.PAST` or
+            :const:`~pyphi.constants.Direction.FUTURE`.
         d1 (np.ndarray): The first repertoire.
         d2 (np.ndarray): The second repertoire.
 
     Returns:
         float: The EMD between ``d1`` and ``d2``, rounded to |PRECISION|.
+
+    Raises:
+        ValueError: If ``direction`` is invalid.
     """
-
-    if direction == DIRECTIONS[PAST]:
+    if direction == Direction.PAST:
         func = utils.hamming_emd
-    elif direction == DIRECTIONS[FUTURE]:
+    elif direction == Direction.FUTURE:
         func = effect_emd
+    else:
+        # TODO: test that ValueError is raised
+        validate.direction(direction)
 
-    return round(func(d1, d2), PRECISION)
+    return round(func(d1, d2), config.PRECISION)
+
+
+def measure(direction, d1, d2):
+    """Compute the distance between two repertoires for the given direction.
+
+    Args:
+        direction (Direction): :const:`~pyphi.constants.Direction.PAST` or
+            :const:`~pyphi.constants.Direction.FUTURE`.
+        d1 (np.ndarray): The first repertoire.
+        d2 (np.ndarray): The second repertoire.
+
+    Returns:
+        float: The distance between ``d1`` and ``d2``, rounded to |PRECISION|.
+    """
+    if config.MEASURE == EMD:
+        dist = emd(direction, d1, d2)
+
+    elif config.MEASURE == KLD:
+        dist = utils.kld(d1, d2)
+
+    elif config.MEASURE == L1:
+        dist = utils.l1(d1, d2)
+
+    else:
+        validate.measure(config.MEASURE)
+
+    return round(dist, config.PRECISION)
