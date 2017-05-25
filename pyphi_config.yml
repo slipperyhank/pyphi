@@ -14,7 +14,7 @@ ASSUME_CUTS_CANNOT_CREATE_NEW_CONCEPTS: false
 # cut off a single node. It is possible that the MIP cut will cut off multiple
 # nodes, but this approximation is usually correct, and at worst provides an
 # upper bound for integrated information.
-CUT_ONE_APPROXIMATION: false
+CUT_ONE_APPROXIMATION: true
 # Use L1 distance to approximate the EMD when computing MIPs.
 L1_DISTANCE_APPROXIMATION: false
 
