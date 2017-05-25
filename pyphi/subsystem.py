@@ -10,7 +10,8 @@ import itertools
 import numpy as np
 
 from . import cache, config, utils, validate, approximations
-from .constants import EMD, KLD, L1, Direction, BIPARTITION, WEDGE, FULL
+from .constants import (EMD, KLD, L1, Direction, BIPARTITION, WEDGE,
+                        FULL, LARGEST, SMALLEST)
 from .models import (Bipartition, Concept, Cut, Mice, Mip, Part, Tripartition,
                      _null_mip)
 from .network import irreducible_purviews
@@ -600,11 +601,8 @@ class Subsystem:
                 np.all(unpartitioned_repertoire == 0)):
             return _mip(0, None, None)
 
-        # Loop over possible MIP bipartitions
-        if config.PARTITION_MECHANISMS:
-            partitions = wedge_partitions(mechanism, purview)
-        else:
-            partitions = mip_bipartitions(mechanism, purview)
+        # Loop over possible MIP partitions
+        partitions = get_partitions(self, mechanism, purview)
 
         for partition in partitions:
             # Find the distance between the unpartitioned and partitioned
@@ -732,12 +730,14 @@ class Subsystem:
             mips = [self.find_mip(direction, mechanism, purview)
                     for purview in purviews]
 
-            if config.PARTITION_MECHANISMS:
+            if config.TIES == SMALLEST:
                 # In the case of tie, chose the mip with smallest purview.
                 # (The default behavior is to chose the larger purview.)
                 max_mip = max(mips, key=lambda m: (m.phi, -len(m.purview)))
-            else:
+            elif config.TIES == LARGEST:
                 max_mip = max(mips)
+            else:
+                validate.ties(config.TIES)
 
         return Mice(max_mip)
 
@@ -782,9 +782,9 @@ class Subsystem:
         effect_repertoire = self.effect_repertoire((), ())
 
         # Null cause.
-        cause = Mice(_null_mip(Direction.PAST, (), (), cause_repertoire, self))
+        cause = Mice(_null_mip(Direction.PAST, (), (), self, cause_repertoire))
         # Null effect.
-        effect = Mice(_null_mip(Direction.FUTURE, (), (), effect_repertoire, self))
+        effect = Mice(_null_mip(Direction.FUTURE, (), (), self, effect_repertoire))
 
         # All together now...
         return Concept(mechanism=(), phi=0, cause=cause, effect=effect,
@@ -1001,7 +1001,7 @@ def measure(direction, d1, d2):
     return round(dist, config.PRECISION)
 
 
-def get_partitions(mechanism, purview, subsystem=None):
+def get_partitions(subsystem, mechanism, purview):
     """Compute the set of partitions of a mechanism-purview combination, potentially within a subsystem with given connectivity matrix.
 
     Args:
@@ -1012,16 +1012,16 @@ def get_partitions(mechanism, purview, subsystem=None):
     Returns:
         list(partition): List of all partitions to be checked.
     """
-    if config.PARTITON == BIPARTITION:
+    if config.PARTITIONS == BIPARTITION:
         partitions = mip_bipartitions(mechanism, purview)
 
-    elif config.MEASURE == WEDGE:
+    elif config.PARTITIONS == WEDGE:
         partitions = wedge_partitions(mechanism, purview)
 
-    elif config.MEASURE == FULL:
-        partitions = approximations.full(mechanism, purview)
+    elif config.PARTITIONS == FULL:
+        partitions = approximations.full_cut(mechanism, purview)
 
     else:
-        validate.partitions(config.PARTITION)
+        validate.partitions(config.PARTITIONS)
 
     return partitions

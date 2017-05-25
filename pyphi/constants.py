@@ -63,3 +63,12 @@ FULL = 'FULL'
 
 # All available sets of partitions
 PARTITIONS = [BIPARTITION, WEDGE, FULL]
+
+# Break ties to largest purview
+LARGEST = 'LARGEST'
+
+# Break ties to smallest purview
+SMALLEST = 'SMALLEST'
+
+# All available tie breaking options
+TIES = [LARGEST, SMALLEST]

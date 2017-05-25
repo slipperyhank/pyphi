@@ -422,7 +422,9 @@ DEFAULTS = {
     # Use prettier __str__-like formatting in `repr` calls.
     'REPR_VERBOSITY': 2,
     # What set of partitions to use for calculating small phi.
-    'PARTITION_MECHANISMS': 'Wedge',
+    'PARTITIONS': 'BIPARTITION',
+    # Whether to break ties for largest or smallest purview
+    'TIES': 'SMALLEST'
 }
 
 # Get a reference to this module's dictionary so we can set the configuration
