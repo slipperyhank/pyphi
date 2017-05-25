@@ -130,7 +130,7 @@ class Mip(cmp._Orderable):
         return {attr: getattr(self, attr) for attr in _mip_attributes}
 
 
-def _null_mip(direction, mechanism, purview, unpartitioned_repertoire=None):
+def _null_mip(direction, mechanism, purview, subsystem, unpartitioned_repertoire=None):
     """The null mip (of a reducible mechanism)."""
     # TODO Use properties here to infer mechanism and purview from
     # partition yet access them with .mechanism and .partition
@@ -140,7 +140,8 @@ def _null_mip(direction, mechanism, purview, unpartitioned_repertoire=None):
                partition=None,
                unpartitioned_repertoire=unpartitioned_repertoire,
                partitioned_repertoire=None,
-               phi=0.0)
+               phi=0.0,
+               subsystem=subsystem)
 
 
 # =============================================================================

@@ -51,3 +51,15 @@ L1 = 'L1'
 
 #: All available measures
 MEASURES = [EMD, KLD, L1]
+
+# Bipartitions
+BIPARTITION = 'BIPARTITION'
+
+# "Wedge" Tripartitions
+WEDGE = 'WEDGE'
+
+# Approximation: Full mechanism cut
+FULL = 'FULL'
+
+# All available sets of partitions
+PARTITIONS = [BIPARTITION, WEDGE, FULL]

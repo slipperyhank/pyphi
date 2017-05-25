@@ -421,8 +421,8 @@ DEFAULTS = {
     'SINGLE_NODES_WITH_SELFLOOPS_HAVE_PHI': False,
     # Use prettier __str__-like formatting in `repr` calls.
     'REPR_VERBOSITY': 2,
-    # Only consider bipartitions which strictly partition the mechanism.
-    'PARTITION_MECHANISMS': False,
+    # What set of partitions to use for calculating small phi.
+    'PARTITION_MECHANISMS': 'Wedge',
 }
 
 # Get a reference to this module's dictionary so we can set the configuration

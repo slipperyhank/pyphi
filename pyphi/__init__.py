@@ -58,12 +58,12 @@ and their defaults.
 """
 
 from .__about__ import *
-from . import (config, constants, convert, db, examples, jsonify, macro,
+from . import (approximations, config, constants, convert, db, examples, jsonify, macro,
                models, network, node, subsystem, utils, validate)
 from .network import Network
 from .subsystem import Subsystem
 from .actual import Context
 
-__all__ = ['Network', 'Subsystem', 'config', 'constants', 'convert', 'db',
-           'examples', 'jsonify', 'macro', 'models', 'network', 'node',
-           'subsystem', 'utils', 'validate']
+__all__ = ['Context', 'Network', 'Subsystem', 'approximations', 'config',
+           'constants', 'convert', 'db', 'examples', 'jsonify', 'macro',
+           'models', 'network', 'node', 'subsystem', 'utils', 'validate']

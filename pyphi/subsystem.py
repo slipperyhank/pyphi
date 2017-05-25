@@ -9,8 +9,8 @@ import itertools
 
 import numpy as np
 
-from . import cache, config, utils, validate
-from .constants import EMD, KLD, L1, Direction
+from . import cache, config, utils, validate, approximations
+from .constants import EMD, KLD, L1, Direction, BIPARTITION, WEDGE, FULL
 from .models import (Bipartition, Concept, Cut, Mice, Mip, Part, Tripartition,
                      _null_mip)
 from .network import irreducible_purviews
@@ -571,7 +571,7 @@ class Subsystem:
             |Mip|: The mininum-information partition in one temporal direction.
         """
         # We default to the null MIP (the MIP of a reducible mechanism)
-        mip = _null_mip(direction, mechanism, purview)
+        mip = _null_mip(direction, mechanism, purview, self)
 
         if not purview:
             return mip
@@ -727,7 +727,7 @@ class Subsystem:
         purviews = self._potential_purviews(direction, mechanism, purviews)
 
         if not purviews:
-            max_mip = _null_mip(direction, mechanism, ())
+            max_mip = _null_mip(direction, mechanism, (), self)
         else:
             mips = [self.find_mip(direction, mechanism, purview)
                     for purview in purviews]
@@ -782,9 +782,9 @@ class Subsystem:
         effect_repertoire = self.effect_repertoire((), ())
 
         # Null cause.
-        cause = Mice(_null_mip(Direction.PAST, (), (), cause_repertoire))
+        cause = Mice(_null_mip(Direction.PAST, (), (), cause_repertoire, self))
         # Null effect.
-        effect = Mice(_null_mip(Direction.FUTURE, (), (), effect_repertoire))
+        effect = Mice(_null_mip(Direction.FUTURE, (), (), effect_repertoire, self))
 
         # All together now...
         return Concept(mechanism=(), phi=0, cause=cause, effect=effect,
@@ -999,3 +999,29 @@ def measure(direction, d1, d2):
         validate.measure(config.MEASURE)
 
     return round(dist, config.PRECISION)
+
+
+def get_partitions(mechanism, purview, subsystem=None):
+    """Compute the set of partitions of a mechanism-purview combination, potentially within a subsystem with given connectivity matrix.
+
+    Args:
+        mechanism (tuple(int)): Tuple of mechanism indices.
+        purview (tuple(int)): Tuple of purview indices.
+        subsystem (Subsystem): The subsystem the mechanism is within.
+
+    Returns:
+        list(partition): List of all partitions to be checked.
+    """
+    if config.PARTITON == BIPARTITION:
+        partitions = mip_bipartitions(mechanism, purview)
+
+    elif config.MEASURE == WEDGE:
+        partitions = wedge_partitions(mechanism, purview)
+
+    elif config.MEASURE == FULL:
+        partitions = approximations.full(mechanism, purview)
+
+    else:
+        validate.partitions(config.PARTITION)
+
+    return partitions
