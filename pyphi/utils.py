@@ -484,6 +484,20 @@ def kld(d1, d2):
     return entropy(d1, d2, 2.0)
 
 
+def ent(d1, d2):
+    """Return the absolute difference in entropy between the two distributions.
+
+    Args:
+        d1 (np.ndarray): The first distribution.
+        d2 (np.ndarray): The second distribution.
+
+    Returns:
+        float: |H(d1) - H(d2)|.
+    """
+    d1, d2 = d1.squeeze().ravel(), d2.squeeze().ravel()
+    return abs(entropy(d1, 2.0) - entropy(d2, 2.0))
+
+
 def bipartition(a):
     """Return a list of bipartitions for a sequence.
 

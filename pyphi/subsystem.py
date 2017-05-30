@@ -10,8 +10,8 @@ import itertools
 import numpy as np
 
 from . import cache, config, utils, validate, approximations
-from .constants import (EMD, KLD, L1, Direction, BIPARTITION, WEDGE,
-                        FULL, LARGEST, SMALLEST)
+from .constants import (EMD, KLD, L1, ENT, Direction, BIPARTITION,
+                        WEDGE, FULL, LARGEST, SMALLEST)
 from .models import (Bipartition, Concept, Cut, Mice, Mip, Part, Tripartition,
                      _null_mip)
 from .network import irreducible_purviews
@@ -994,6 +994,9 @@ def measure(direction, d1, d2):
 
     elif config.MEASURE == L1:
         dist = utils.l1(d1, d2)
+
+    elif config.MEASURE == ENT:
+        dist = utils.ent(d1, d2)
 
     else:
         validate.measure(config.MEASURE)

@@ -49,8 +49,11 @@ KLD = 'KLD'
 #: L1 distance
 L1 = 'L1'
 
+# Difference in Entropy distance
+ENT = 'ENT'
+
 #: All available measures
-MEASURES = [EMD, KLD, L1]
+MEASURES = [EMD, KLD, L1, ENT]
 
 # Bipartitions
 BIPARTITION = 'BIPARTITION'
