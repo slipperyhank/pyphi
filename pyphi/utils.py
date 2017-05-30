@@ -495,7 +495,7 @@ def ent(d1, d2):
         float: |H(d1) - H(d2)|.
     """
     d1, d2 = d1.squeeze().ravel(), d2.squeeze().ravel()
-    return abs(entropy(d1, 2.0) - entropy(d2, 2.0))
+    return abs(entropy(d1, base=2.0) - entropy(d2, base=2.0))
 
 
 def bipartition(a):
