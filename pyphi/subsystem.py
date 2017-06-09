@@ -1031,27 +1031,29 @@ def k_partitions(collection, k):
 
 
 def all_partitions(m, p):
+    yield KPartition(Part(m, p), Part((), ()))
     m = list(m)
     p = list(p)
     mechanism_partitions = partitions(m)
     for mechanism_partition in mechanism_partitions:
-        mechanism_partition.append([])
-        n_mechanism_parts = len(mechanism_partition)
-        max_purview_partition = min(len(p), n_mechanism_parts)
-        for n_purview_parts in range(1, max_purview_partition + 1):
-            purview_partitions = k_partitions(p, n_purview_parts)
-            n_empty = n_mechanism_parts - n_purview_parts
-            for purview_partition in purview_partitions:
-                purview_partition = [tuple(_list)
-                                     for _list in purview_partition]
-                # Extend with empty tuples so purview partition has same size
-                # as mechanism purview
-                purview_partition.extend([() for j in range(n_empty)])
-                # Unique permutations to avoid duplicates empties
-                for permutation in set(itertools.permutations(purview_partition)):
-                    yield KPartition(
-                        *(Part(tuple(mechanism_partition[i]), tuple(permutation[i]))
-                          for i in range(n_mechanism_parts)))
+        if len(mechanism_partition) > 1:
+            mechanism_partition.append([])
+            n_mechanism_parts = len(mechanism_partition)
+            max_purview_partition = min(len(p), n_mechanism_parts)
+            for n_purview_parts in range(1, max_purview_partition + 1):
+                purview_partitions = k_partitions(p, n_purview_parts)
+                n_empty = n_mechanism_parts - n_purview_parts
+                for purview_partition in purview_partitions:
+                    purview_partition = [tuple(_list)
+                                         for _list in purview_partition]
+                    # Extend with empty tuples so purview partition has same size
+                    # as mechanism purview
+                    purview_partition.extend([() for j in range(n_empty)])
+                    # Unique permutations to avoid duplicates empties
+                    for permutation in set(itertools.permutations(purview_partition)):
+                        yield KPartition(
+                            *(Part(tuple(mechanism_partition[i]), tuple(permutation[i]))
+                              for i in range(n_mechanism_parts)))
 
 
 def effect_emd(d1, d2):
