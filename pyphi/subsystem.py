@@ -1031,7 +1031,7 @@ def k_partitions(collection, k):
 
 
 def all_partitions(m, p):
-    yield KPartition(Part(m, p), Part((), ()))
+    yield KPartition(Part(m, ()), Part((), p))
     m = list(m)
     p = list(p)
     mechanism_partitions = partitions(m)
