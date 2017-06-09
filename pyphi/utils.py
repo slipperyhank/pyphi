@@ -14,7 +14,6 @@ import os
 from itertools import chain, combinations
 
 import numpy as np
-
 from pyemd import emd
 from scipy.misc import comb
 from scipy.sparse import csc_matrix
@@ -34,20 +33,26 @@ def state_of(nodes, network_state):
     return tuple(network_state[n] for n in nodes) if nodes else ()
 
 
-def all_states(n):
+def all_states(n, holi=False):
     """Return all binary states for a system.
 
     Args:
         n (int): The number of elements in the system.
+        holi (bool): Whether to return the states in HOLI order instead of LOLI
+            order.
 
     Yields:
-        tuple[int]: The next state of an ``n``-element system, in LOLI order.
+        tuple[int]: The next state of an ``n``-element system, in LOLI order
+            unless ``holi`` is ``True``.
     """
     if n == 0:
         return
 
     for state in itertools.product((0, 1), repeat=n):
-        yield state[::-1]  # Convert to LOLI-ordering
+        if holi:
+            yield state
+        else:
+            yield state[::-1]  # Convert to LOLI-ordering
 
 
 # Methods for converting the time scale of the tpm
@@ -195,6 +200,12 @@ def causally_significant_nodes(cm):
     outputs = cm.sum(1)
     nodes_with_inputs_and_outputs = np.logical_and(inputs > 0, outputs > 0)
     return tuple(np.where(nodes_with_inputs_and_outputs)[0])
+
+
+def np_immutable(a):
+    """Make a NumPy array immutable."""
+    a.flags.writeable = False
+    return a
 
 
 def np_hash(a):
@@ -366,8 +377,8 @@ def independent(repertoire):
         joint = joint * m
 
     # TODO: should we round here?
-    #repertoire = repertoire.round(config.PRECISION)
-    #joint = joint.round(config.PRECISION)
+    # repertoire = repertoire.round(config.PRECISION)
+    # joint = joint.round(config.PRECISION)
 
     return np.array_equal(repertoire, joint)
 
@@ -484,16 +495,7 @@ def kld(d1, d2):
     return entropy(d1, d2, 2.0)
 
 
-def ent(d1, d2):
-    """Return the absolute difference in entropy between the two distributions.
-
-    Args:
-        d1 (np.ndarray): The first distribution.
-        d2 (np.ndarray): The second distribution.
-
-    Returns:
-        float: |H(d1) - H(d2)|.
-    """
+def entropy_difference(d1, d2):
     d1, d2 = d1.squeeze().ravel(), d2.squeeze().ravel()
     return abs(entropy(d1, base=2.0) - entropy(d2, base=2.0))
 
@@ -614,7 +616,7 @@ def bipartition_indices(N):
     if N <= 0:
         return result
 
-    for i in range(2 ** (N-1)):
+    for i in range(2**(N - 1)):
         part = [[], []]
         for n in range(N):
             bit = (i >> n) & 1
@@ -631,7 +633,8 @@ def directed_tripartition_indices(N):
         N (int): The length of the sequence.
 
     Returns:
-        list[tuple]: A list of tuples containing the indices for each partition.
+        list[tuple]: A list of tuples containing the indices for each
+            partition.
 
     Example:
         >>> N = 1
@@ -912,33 +915,3 @@ def weakly_connected(cm, nodes=None):
             connectivity over.
     """
     return _connected(cm, nodes, 'weak')
-
-
-# Custom printing methods
-# =============================================================================
-
-
-def print_repertoire(r):
-    """Print a vertical, human-readable cause/effect repertoire."""
-    r = np.squeeze(r)
-    print('\n', '-' * 80)
-    for i in range(r.size):
-        strindex = bin(i)[2:].zfill(r.ndim)
-        index = tuple(map(int, list(strindex)))
-        print('\n', strindex, '\t', r[index])
-    print('\n', '-' * 80, '\n')
-
-
-def print_repertoire_horiz(r):
-    """Print a horizontal, human-readable cause/effect repertoire."""
-    r = np.squeeze(r)
-    colwidth = 11
-    print('\n' + '-' * 70 + '\n')
-    index_labels = [bin(i)[2:].zfill(r.ndim) for i in range(r.size)]
-    indices = [tuple(map(int, list(s))) for s in index_labels]
-    print('     p:  ', '|'.join('{0:.3f}'.format(r[index]).center(colwidth) for
-                                index in indices))
-    print('         ', '|'.join(' ' * colwidth for index in indices))
-    print(' state:  ', '|'.join(label.center(colwidth) for label in
-                                index_labels))
-    print('\n' + '-' * 70 + '\n')

@@ -7,7 +7,7 @@ Conversion functions.
 """
 
 import logging
-import math
+from math import log2
 
 import numpy as np
 
@@ -15,12 +15,36 @@ import numpy as np
 log = logging.getLogger(__name__)
 
 
+def reverse_bits(i, n):
+    """Reverse the bits of the ``n``-bit number ``i``.
+
+    Examples:
+        >>> reverse_bits(10, 8)
+        80
+        >>> reverse_bits(0, 1)
+        0
+        >>> reverse_bits(1, 2)
+        2
+    """
+    return int(bin(i)[2:].zfill(n)[::-1], 2)
+
+
 def nodes2indices(nodes):
+    """Convert nodes to a tuple of their indices."""
     return tuple(n.index for n in nodes) if nodes else ()
 
 
 def nodes2state(nodes):
+    """Convert nodes to a tuple of their states."""
     return tuple(n.state for n in nodes) if nodes else ()
+
+
+def holi2loli(i, n):
+    """Convert between **HOLI** and **LOLI** for indices in ``range(n)``."""
+    return reverse_bits(i, n)
+
+
+loli2holi = holi2loli
 
 
 def state2holi_index(state):
@@ -36,7 +60,6 @@ def state2holi_index(state):
         **HOLI** convention.
 
     Examples:
-        >>> from pyphi.convert import state2loli_index
         >>> state2holi_index((1, 0, 0, 0, 0))
         16
         >>> state2holi_index((1, 1, 1, 0, 0, 0, 0, 0))
@@ -58,7 +81,6 @@ def state2loli_index(state):
         **LOLI** convention.
 
     Examples:
-        >>> from pyphi.convert import state2loli_index
         >>> state2loli_index((1, 0, 0, 0, 0))
         1
         >>> state2loli_index((1, 1, 1, 0, 0, 0, 0, 0))
@@ -82,7 +104,6 @@ def loli_index2state(i, number_of_nodes):
         the state of the |ith| node.
 
     Examples:
-        >>> from pyphi.convert import loli_index2state
         >>> number_of_nodes = 5
         >>> loli_index2state(1, number_of_nodes)
         (1, 0, 0, 0, 0)
@@ -108,7 +129,6 @@ def holi_index2state(i, number_of_nodes):
         the state of the |ith| node.
 
     Examples:
-        >>> from pyphi.convert import holi_index2state
         >>> number_of_nodes = 5
         >>> holi_index2state(1, number_of_nodes)
         (0, 0, 0, 0, 1)
@@ -117,6 +137,34 @@ def holi_index2state(i, number_of_nodes):
         (0, 0, 0, 0, 0, 1, 1, 1)
     """
     return loli_index2state(i, number_of_nodes)[::-1]
+
+
+def holi2loli_state_by_state(tpm):
+    """Convert a state-by-state TPM from **HOLI** to **LOLI** or vice versa.
+
+    Args:
+        tpm (np.ndarray): A state-by-state TPM.
+
+    Returns:
+        np.ndarray: The state-by-state TPM in the other indexing format.
+
+    Examples:
+        >>> tpm = np.arange(16).reshape([4, 4])
+        >>> holi2loli_state_by_state(tpm)
+        array([[  0.,   1.,   2.,   3.],
+               [  8.,   9.,  10.,  11.],
+               [  4.,   5.,   6.,   7.],
+               [ 12.,  13.,  14.,  15.]])
+    """
+    loli = np.empty(tpm.shape)
+    N = tpm.shape[0]
+    n = int(log2(N))
+    for i in range(N):
+        loli[i, :] = tpm[holi2loli(i, n), :]
+    return loli
+
+
+loli2holi_state_by_state = holi2loli_state_by_state
 
 
 def to_n_dimensional(tpm):
@@ -155,7 +203,6 @@ def state_by_state2state_by_node(tpm):
         **LOLI** convention.
 
     Examples:
-        >>> from pyphi.convert import state_by_state2state_by_node
         >>> tpm = np.array([[0.5, 0.5, 0.0, 0.0],
         ...                 [0.0, 1.0, 0.0, 0.0],
         ...                 [0.0, 0.2, 0.0, 0.8],
@@ -172,7 +219,7 @@ def state_by_state2state_by_node(tpm):
     # Get the number of states from the length of one side of the TPM.
     S = tpm.shape[-1]
     # Get the number of nodes from the number of states.
-    N = int(math.log(S, 2))
+    N = int(log2(S))
     # Initialize the new state-by node TPM.
     sbn_tpm = np.zeros(([2] * N + [N]))
     # Map indices to state-tuples with the LOLI convention.
@@ -216,7 +263,6 @@ def state_by_node2state_by_state(tpm):
         np.ndarray: A state-by-state TPM, with both row and column indices
         following the **HOLI** convention.
 
-    >>> from pyphi.convert import state_by_node2state_by_state
     >>> tpm = np.array([[1, 1, 0],
     ...                 [0, 0, 1],
     ...                 [0, 1, 1],
@@ -265,3 +311,17 @@ def state_by_node2state_by_state(tpm):
                     np.prod(marginal_tpm[current_state == 1]) *
                     np.prod(1 - marginal_tpm[current_state == 0]))
     return sbs_tpm
+
+
+# Short aliases
+
+h2l = holi2loli
+l2h = loli2holi
+l2s = loli_index2state
+h2s = holi_index2state
+s2h = state2loli_index
+s2l = state2holi_index
+h2l_sbs = holi2loli_state_by_state
+l2h_sbs = loli2holi_state_by_state
+sbn2sbs = state_by_node2state_by_state
+sbs2sbn = state_by_state2state_by_node

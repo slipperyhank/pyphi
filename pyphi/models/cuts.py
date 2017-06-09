@@ -7,8 +7,8 @@ from itertools import chain
 
 import numpy as np
 
-from .. import utils
 from . import fmt
+from .. import config, utils
 
 
 class Cut(namedtuple('Cut', ['severed', 'intact'])):
@@ -221,8 +221,17 @@ class Part(namedtuple('Part', ['mechanism', 'purview'])):
         return {'mechanism': self.mechanism, 'purview': self.purview}
 
 
-class _BasePartition:
+class KPartition(tuple):
+    """A partition with an arbitrary number of parts."""
     __slots__ = ()
+
+    def __new__(cls, *args):
+        """Construct the base tuple with multiple ``Part`` arguments."""
+        return super().__new__(cls, args)
+
+    def __getnewargs__(self):
+        """And support unpickling with this ``__new__`` signature."""
+        return tuple(self)
 
     @property
     def mechanism(self):
@@ -237,31 +246,33 @@ class _BasePartition:
     def __str__(self):
         return fmt.fmt_bipartition(self)
 
+    def __repr__(self):
+        if config.REPR_VERBOSITY > 0:
+            return str(self)
 
-class Bipartition(_BasePartition, namedtuple('Bipartition',
-                                             ['part0', 'part1'])):
+        return '{}{}'.format(self.__class__.__name__, super().__repr__())
+
+    def to_json(self):
+        raise NotImplemented
+
+
+class Bipartition(KPartition):
     """A bipartition of a mechanism and purview.
 
     Attributes:
         part0 (Part): The first part of the partition.
         part1 (Part): The second part of the partition.
     """
-
     __slots__ = ()
 
     def to_json(self):
-        return {'part0': self.part0, 'part1': self.part1}
+        return {'part0': self[0], 'part1': self[1]}
 
-    def __repr__(self):
-        return fmt.make_repr(self, ['part0', 'part1'])
+    @classmethod
+    def from_json(cls, json):
+        return cls(json['part0'], json['part1'])
 
 
-class Tripartition(_BasePartition, namedtuple('Tripartition',
-                                              ['part0', 'part1', 'part2'])):
+class Tripartition(KPartition):
+
     __slots__ = ()
-
-    def to_json(self):
-        raise NotImplemented
-
-    def __repr__(self):
-        return fmt.make_repr(self, ['part0', 'part1', 'part2'])

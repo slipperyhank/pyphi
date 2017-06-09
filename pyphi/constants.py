@@ -6,8 +6,8 @@
 Package-wide constants.
 """
 
-from enum import Enum
 import pickle
+from enum import Enum
 
 import joblib
 
@@ -49,23 +49,11 @@ KLD = 'KLD'
 #: L1 distance
 L1 = 'L1'
 
-# Difference in Entropy distance
-ENT = 'ENT'
+#: Entropy difference
+ENTROPY_DIFFERENCE = 'ENTROPY_DIFFERENCE'
 
 #: All available measures
-MEASURES = [EMD, KLD, L1, ENT]
-
-# Bipartitions
-BIPARTITION = 'BIPARTITION'
-
-# "Wedge" Tripartitions
-WEDGE = 'WEDGE'
-
-# Approximation: Full mechanism cut
-FULL = 'FULL'
-
-# All available sets of partitions
-PARTITIONS = [BIPARTITION, WEDGE, FULL]
+MEASURES = [EMD, KLD, L1, ENTROPY_DIFFERENCE]
 
 # Break ties to largest purview
 LARGEST = 'LARGEST'
