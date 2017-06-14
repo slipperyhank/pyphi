@@ -22,3 +22,16 @@ def one_mechanism(mechanism, purview):
     return [Bipartition(Part((mechanism[i],), ()),
                         Part(mechanism[:i] + mechanism[(i + 1):], purview))
             for i in range(len(mechanism))]
+
+
+def one_slice(mechanism, purview):
+    if len(mechanism) == 2:
+        return [Bipartition(Part((mechanism[0],), (purview[j],)),
+                            Part((mechanism[1],),
+                                 purview[:j] + purview[(j + 1):]))
+                for j in range(len(purview))]
+    return [Bipartition(Part((mechanism[i],), (purview[j],)),
+                        Part(mechanism[:i] + mechanism[(i + 1):],
+                             purview[:j] + purview[(j + 1):]))
+            for i in range(len(mechanism))
+            for j in range(len(purview))]
