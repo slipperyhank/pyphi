@@ -616,6 +616,8 @@ class Subsystem:
             partitions = approximations.one_mechanism(mechanism, purview)
         elif config.PARTITION_TYPE == 'ONE_SLICE':
             partitions = approximations.one_slice(mechanism, purview)
+        elif config.PARTITION_TYPE == 'BI':
+            partitions = approximations.bipartitions(mechanism, purview)
 
         for partition in partitions:
             # Find the distance between the unpartitioned and partitioned
