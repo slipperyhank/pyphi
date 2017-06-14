@@ -604,9 +604,9 @@ class Subsystem:
         # Loop over possible MIP partitions
         # TODO: refactor this to a function and share with actual.py
         # TODO: validate `PARTITION_TYPE` value
-        if config.PARTITION_TYPE == 'BI':
+        if config.PARTITION_TYPE == 'IIT3':
             partitions = mip_bipartitions(mechanism, purview)
-        elif config.PARTITION_TYPE == 'TRI':
+        elif config.PARTITION_TYPE == 'BI_W':
             partitions = wedge_partitions(mechanism, purview)
         elif config.PARTITION_TYPE == 'ALL':
             partitions = all_partitions(mechanism, purview)
