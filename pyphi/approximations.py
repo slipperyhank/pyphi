@@ -67,20 +67,22 @@ def intensity_based(mechanism, purview, cm, direction):
     elif direction == future:
         purview_intensities = np.sum(cm[np.ix_(mechanism, purview)], 0)
     for purview_intensity in non_empty_powerset(set(purview_intensities)):
-        cut_purview_index = tuple(np.where(purview_intensities == k)[0][0]
-                                  for k in purview_intensity)
-        uncut_purview_index = tuple(index for index in purview
-                                    if index not in cut_purview_index)
+        purview_index = [np.where(purview_intensities == k)[0][0]
+                         for k in purview_intensity]
+        cut_purview = tuple(purview[index] for index in purview_index)
+        uncut_purview = tuple(index for index in purview
+                              if index not in cut_purview)
         if direction == past:
-            mechanism_intensities = np.sum(cm[np.ix_(cut_purview_index,
+            mechanism_intensities = np.sum(cm[np.ix_(cut_purview,
                                                      mechanism)], 0)
         elif direction == future:
             mechanism_intensities = np.sum(cm[np.ix_(mechanism,
-                                                     cut_purview_index)], 1)
+                                                     cut_purview)], 1)
         for mechanism_intensity in non_empty_powerset(set(mechanism_intensities[mechanism_intensities > 0])):
-            cut_mechanism_index = tuple(np.where(mechanism_intensities == k)[0][0]
-                                        for k in mechanism_intensity)
-            uncut_mechanism_index = tuple(index for index in mechanism
-                                          if index not in cut_mechanism_index)
-            yield Bipartition(Part(cut_mechanism_index, cut_purview_index),
-                              Part(uncut_mechanism_index, uncut_purview_index))
+            mechanism_index = [np.where(mechanism_intensities == k)[0][0]
+                               for k in mechanism_intensity]
+            cut_mechanism = tuple(mechanism[index] for index in mechanism_index)
+            uncut_mechanism = tuple(index for index in mechanism
+                                    if index not in cut_mechanism)
+            yield Bipartition(Part(cut_mechanism, cut_purview),
+                              Part(uncut_mechanism, uncut_purview))
