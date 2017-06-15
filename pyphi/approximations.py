@@ -92,9 +92,7 @@ def all_mechanism(mechanism, purview, cm, direction):
     # Try all possible bipartitions of the mechanism, and then the one purview
     # partition that minimizes cut connections.
     if direction == past:
-        cm = np.transpose(cm[np.ix_(purview, mechanism)])
-    elif direction == future:
-        cm = cm[np.ix_(mechanism, purview)]
+        cm = np.transpose(cm)
     mechanism_partitions = utils.bipartition(mechanism)[1:]
     for partition in mechanism_partitions:
         cut_purview = tuple(index for index in purview
