@@ -86,3 +86,21 @@ def intensity_based(mechanism, purview, cm, direction):
                                     if index not in cut_mechanism)
             yield Bipartition(Part(cut_mechanism, cut_purview),
                               Part(uncut_mechanism, uncut_purview))
+
+
+def all_mechanism(mechanism, purview, cm, direction):
+    # Try all possible bipartitions of the mechanism, and then the one purview
+    # partition that minimizes cut connections.
+    if direction == past:
+        cm = np.transpose(cm[np.ix_(purview, mechanism)])
+    elif direction == future:
+        cm = cm[np.ix_(mechanism, purview)]
+    mechanism_partitions = utils.bipartition(mechanism)[1:]
+    for partition in mechanism_partitions:
+        cut_purview = tuple(index for index in purview
+                            if (sum(cm[partition[1], index]) >
+                                sum(cm[partition[0], index])))
+        uncut_purview = tuple(element for element in purview
+                              if element not in cut_purview)
+        yield Bipartition(Part(partition[0], uncut_purview),
+                          Part(partition[1], cut_purview))

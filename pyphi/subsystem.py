@@ -621,6 +621,9 @@ class Subsystem:
         elif config.PARTITION_TYPE == 'INTENSITY':
             partitions = approximations.intensity_based(mechanism, purview,
                                                        self.connectivity_matrix, direction)
+        elif config.PARTITION_TYPE == 'ALL_MECHANISM':
+            partitions = approximations.all_mechanism(mechanism, purview,
+                                                      self.connectivity_matrix, direction)
 
         for partition in partitions:
             # Find the distance between the unpartitioned and partitioned
