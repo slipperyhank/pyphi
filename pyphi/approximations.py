@@ -1,7 +1,7 @@
 # Module which contains all different approximations
 
-from pyphi.models import Part, Bipartition
-from pyphi import utils
+from pyphi.models import Part, Bipartition, KPartition
+from pyphi import utils, config, validate, subsystem
 from itertools import product
 import numpy as np
 from pyphi.constants import Direction
@@ -102,3 +102,54 @@ def all_mechanism(mechanism, purview, cm, direction):
                               if element not in cut_purview)
         yield Bipartition(Part(partition[0], uncut_purview),
                           Part(partition[1], cut_purview))
+
+
+def prewedge(mechanism, purview, subsystem, direction):
+    # Test for information in each purview element to determine if wedge is
+    # desired
+    if direction == past:
+        info = subsystem.cause_info
+    elif direction == future:
+        info = subsystem.effect_info
+    else:
+        validate.direction(direction)
+    wedged = tuple(element for element in purview
+                   if info(mechanism, (element,)) == 0)
+    if len(wedged) == len(purview):
+        yield Bipartition(Part(mechanism, ()), Part((), purview))
+    else:
+        cm = subsystem.connectivity_matrix
+        new_purview = tuple(element for element in purview
+                            if element not in wedged)
+        partitions = get_partitions(mechanism, new_purview, cm, direction)
+        for partition in partitions:
+            mechanism_parts = [part[0] for part in partition] + [()]
+            purview_parts = [part[1] for part in partition] + [wedged]
+            yield KPartition(
+                *(Part(mechanism_parts[i], purview_parts[i])
+                  for i in range(len(mechanism_parts))))
+
+
+def get_partitions(mechanism, purview, cm, direction):
+    # Get all partitions corresponding to the PARTITION_TYPE
+    if config.PARTITION_TYPE == 'IIT3':
+        partitions = subsystem.mip_bipartitions(mechanism, purview)
+    elif config.PARTITION_TYPE == 'BI_W':
+        partitions = subsystem.wedge_partitions(mechanism, purview)
+    elif config.PARTITION_TYPE == 'ALL':
+        partitions = subsystem.all_partitions(mechanism, purview)
+    elif config.PARTITION_TYPE == 'FULL':
+        partitions = full_cut(mechanism, purview)
+    elif config.PARTITION_TYPE == 'ONE_MECHANISM':
+        partitions = one_mechanism(mechanism, purview)
+    elif config.PARTITION_TYPE == 'ONE_SLICE':
+        partitions = one_slice(mechanism, purview)
+    elif config.PARTITION_TYPE == 'BI':
+        partitions = bipartitions(mechanism, purview)
+    elif config.PARTITION_TYPE == 'INTENSITY':
+        partitions = intensity_based(mechanism, purview, cm, direction)
+    elif config.PARTITION_TYPE == 'ALL_MECHANISM':
+        partitions = all_mechanism(mechanism, purview, cm, direction)
+    else:
+        partitions = None
+    return partitions
